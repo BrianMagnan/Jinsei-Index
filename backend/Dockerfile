@@ -14,9 +14,9 @@ COPY . .
 # Expose port (Railway will set PORT env var)
 EXPOSE 3000
 
-# Health check
+# Health check (Railway handles this automatically, but we can define it here)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:${PORT}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-3000}/health || exit 1
 
 # Start the server
 CMD ["npm", "start"]
