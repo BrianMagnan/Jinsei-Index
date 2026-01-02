@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(",") || "http://localhost:8080",
+    origin: process.env.ALLOWED_ORIGINS?.split(",").map(origin => origin.trim()) || "http://localhost:8080",
     credentials: true,
   })
 );
