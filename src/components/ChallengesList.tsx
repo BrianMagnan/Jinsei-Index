@@ -28,6 +28,9 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   const [dragOverChallengeId, setDragOverChallengeId] = useState<string | null>(
     null
   );
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [detailMenuOpen, setDetailMenuOpen] = useState(false);
+  const [menuCloseTimeout, setMenuCloseTimeout] = useState<number | null>(null);
 
   useEffect(() => {
     loadSkill();
@@ -43,6 +46,39 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       setSelectedChallengeId(skill.challenges[0]._id);
     }
   }, [skill, selectedChallengeId]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openMenuId && !target.closest(".challenge-menu-container")) {
+        setOpenMenuId(null);
+      }
+      if (
+        detailMenuOpen &&
+        !target.closest(".challenge-detail-menu-container")
+      ) {
+        setDetailMenuOpen(false);
+      }
+    };
+
+    if (openMenuId || detailMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId, detailMenuOpen]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimeout) {
+        clearTimeout(menuCloseTimeout);
+      }
+    };
+  }, [menuCloseTimeout]);
 
   const loadSkill = async () => {
     try {
@@ -259,7 +295,11 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   }
 
   return (
-    <div className="challenges-container">
+    <div
+      className={`challenges-container ${
+        !selectedChallengeId ? "full-width" : ""
+      }`}
+    >
       <div className="challenges-list">
         <div className="section-header">
           <div className="header-title-section">
@@ -335,6 +375,29 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                 onDrop={(e) => handleDrop(e, challenge._id)}
                 onDragEnd={handleDragEnd}
                 onClick={() => setSelectedChallengeId(challenge._id)}
+                onMouseLeave={(e) => {
+                  if (openMenuId === challenge._id) {
+                    // Check if mouse is moving to the menu
+                    const relatedTarget = e.relatedTarget as HTMLElement;
+                    if (
+                      !relatedTarget ||
+                      !relatedTarget.closest(".challenge-menu-container")
+                    ) {
+                      // Add a small delay to allow moving to the menu
+                      const timeout = setTimeout(() => {
+                        setOpenMenuId(null);
+                      }, 150);
+                      setMenuCloseTimeout(timeout);
+                    }
+                  }
+                }}
+                onMouseEnter={() => {
+                  // Clear any pending close timeout when hovering back
+                  if (menuCloseTimeout) {
+                    clearTimeout(menuCloseTimeout);
+                    setMenuCloseTimeout(null);
+                  }
+                }}
               >
                 {editingChallengeId === challenge._id ? (
                   <form
@@ -387,31 +450,70 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                   <>
                     <div className="challenge-info">
                       <div className="challenge-name">{challenge.name}</div>
-                      <div className="challenge-xp">
-                        +{challenge.xpReward} XP
+                      <div className="challenge-stats">
+                        <span className="challenge-xp">
+                          +{challenge.xpReward} XP
+                        </span>
+                        <div
+                          className="challenge-menu-container"
+                          onMouseEnter={() => {
+                            // Clear any pending close timeout when hovering over menu
+                            if (menuCloseTimeout) {
+                              clearTimeout(menuCloseTimeout);
+                              setMenuCloseTimeout(null);
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            // Close menu when leaving the menu container
+                            if (openMenuId === challenge._id) {
+                              setOpenMenuId(null);
+                            }
+                          }}
+                        >
+                          <button
+                            className="challenge-menu-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(
+                                openMenuId === challenge._id
+                                  ? null
+                                  : challenge._id
+                              );
+                            }}
+                            title="More options"
+                          >
+                            ⋯
+                          </button>
+                          {openMenuId === challenge._id && (
+                            <div className="challenge-menu">
+                              <button
+                                className="challenge-menu-item"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditChallenge(challenge, e);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="challenge-menu-item delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteChallenge(
+                                    challenge._id,
+                                    challenge.name,
+                                    e
+                                  );
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="challenge-actions">
-                      <button
-                        className="edit-button"
-                        onClick={(e) => handleEditChallenge(challenge, e)}
-                        title="Edit challenge"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={(e) =>
-                          handleDeleteChallenge(
-                            challenge._id,
-                            challenge.name,
-                            e
-                          )
-                        }
-                        title="Delete challenge"
-                      >
-                        ×
-                      </button>
                     </div>
                   </>
                 )}
@@ -425,27 +527,45 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
         <div className="challenge-detail">
           <div className="challenge-detail-header">
             <h2 className="challenge-detail-title">{selectedChallenge.name}</h2>
-            <div className="challenge-detail-header-actions">
+            <div className="challenge-detail-menu-container">
               <button
-                className="edit-button"
-                onClick={(e) => handleEditChallenge(selectedChallenge, e)}
-                title="Edit challenge"
+                className="challenge-detail-menu-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDetailMenuOpen(!detailMenuOpen);
+                }}
+                title="More options"
               >
-                ✎
+                ⋯
               </button>
-              <button
-                className="delete-button"
-                onClick={(e) =>
-                  handleDeleteChallenge(
-                    selectedChallenge._id,
-                    selectedChallenge.name,
-                    e
-                  )
-                }
-                title="Delete challenge"
-              >
-                ×
-              </button>
+              {detailMenuOpen && (
+                <div className="challenge-detail-menu">
+                  <button
+                    className="challenge-detail-menu-item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditChallenge(selectedChallenge, e);
+                      setDetailMenuOpen(false);
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="challenge-detail-menu-item delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteChallenge(
+                        selectedChallenge._id,
+                        selectedChallenge.name,
+                        e
+                      );
+                      setDetailMenuOpen(false);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           {selectedChallenge.description ? (

@@ -7,7 +7,10 @@ interface RegisterProps {
   onSwitchToLogin: () => void;
 }
 
-export function Register({ onRegisterSuccess, onSwitchToLogin }: RegisterProps) {
+export function Register({
+  onRegisterSuccess,
+  onSwitchToLogin,
+}: RegisterProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -137,4 +140,3 @@ export function Register({ onRegisterSuccess, onSwitchToLogin }: RegisterProps) 
     </div>
   );
 }
-

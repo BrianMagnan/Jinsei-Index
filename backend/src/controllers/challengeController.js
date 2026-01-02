@@ -7,7 +7,7 @@ export const getChallenges = async (req, res) => {
     if (!req.profileId) {
       return res.status(401).json({ error: "Authentication required" });
     }
-    
+
     const query = { profile: req.profileId };
     if (req.query.skill) {
       query.skill = req.query.skill;
@@ -27,7 +27,10 @@ export const getChallenges = async (req, res) => {
 // Get single challenge by ID
 export const getChallenge = async (req, res) => {
   try {
-    const challenge = await Challenge.findOne({ _id: req.params.id, profile: req.profileId }).populate({
+    const challenge = await Challenge.findOne({
+      _id: req.params.id,
+      profile: req.profileId,
+    }).populate({
       path: "skill",
       populate: "category",
     });
@@ -48,7 +51,7 @@ export const createChallenge = async (req, res) => {
     if (!req.profileId) {
       return res.status(401).json({ error: "Authentication required" });
     }
-    
+
     const { name, description, skill, xpReward } = req.body;
 
     if (!name || !skill) {
@@ -56,7 +59,10 @@ export const createChallenge = async (req, res) => {
     }
 
     // Verify skill belongs to this profile
-    const skillDoc = await Skill.findOne({ _id: skill, profile: req.profileId });
+    const skillDoc = await Skill.findOne({
+      _id: skill,
+      profile: req.profileId,
+    });
     if (!skillDoc) {
       return res.status(404).json({ error: "Skill not found" });
     }
@@ -83,10 +89,13 @@ export const createChallenge = async (req, res) => {
 export const updateChallenge = async (req, res) => {
   try {
     const { name, description, skill, xpReward } = req.body;
-    
+
     // If skill is being updated, verify it belongs to this profile
     if (skill) {
-      const skillDoc = await Skill.findOne({ _id: skill, profile: req.profileId });
+      const skillDoc = await Skill.findOne({
+        _id: skill,
+        profile: req.profileId,
+      });
       if (!skillDoc) {
         return res.status(404).json({ error: "Skill not found" });
       }
@@ -114,7 +123,10 @@ export const updateChallenge = async (req, res) => {
 // Delete challenge
 export const deleteChallenge = async (req, res) => {
   try {
-    const challenge = await Challenge.findOne({ _id: req.params.id, profile: req.profileId });
+    const challenge = await Challenge.findOne({
+      _id: req.params.id,
+      profile: req.profileId,
+    });
 
     if (!challenge) {
       return res.status(404).json({ error: "Challenge not found" });

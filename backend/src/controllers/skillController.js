@@ -21,14 +21,20 @@ export const getSkills = async (req, res) => {
 // Get single skill by ID
 export const getSkill = async (req, res) => {
   try {
-    const skill = await Skill.findOne({ _id: req.params.id, profile: req.profileId }).populate("category");
+    const skill = await Skill.findOne({
+      _id: req.params.id,
+      profile: req.profileId,
+    }).populate("category");
 
     if (!skill) {
       return res.status(404).json({ error: "Skill not found" });
     }
 
     // Manually populate challenges (only for this profile)
-    const challenges = await Challenge.find({ skill: skill._id, profile: req.profileId });
+    const challenges = await Challenge.find({
+      skill: skill._id,
+      profile: req.profileId,
+    });
 
     const skillWithHierarchy = {
       ...skill.toObject(),
@@ -51,12 +57,20 @@ export const createSkill = async (req, res) => {
     }
 
     // Verify category belongs to this profile
-    const categoryDoc = await Category.findOne({ _id: category, profile: req.profileId });
+    const categoryDoc = await Category.findOne({
+      _id: category,
+      profile: req.profileId,
+    });
     if (!categoryDoc) {
       return res.status(404).json({ error: "Category not found" });
     }
 
-    const skill = new Skill({ name, description, category, profile: req.profileId });
+    const skill = new Skill({
+      name,
+      description,
+      category,
+      profile: req.profileId,
+    });
     await skill.save();
     await skill.populate("category");
     res.status(201).json(skill);
@@ -69,10 +83,13 @@ export const createSkill = async (req, res) => {
 export const updateSkill = async (req, res) => {
   try {
     const { name, description, category } = req.body;
-    
+
     // If category is being updated, verify it belongs to this profile
     if (category) {
-      const categoryDoc = await Category.findOne({ _id: category, profile: req.profileId });
+      const categoryDoc = await Category.findOne({
+        _id: category,
+        profile: req.profileId,
+      });
       if (!categoryDoc) {
         return res.status(404).json({ error: "Category not found" });
       }
@@ -97,7 +114,10 @@ export const updateSkill = async (req, res) => {
 // Delete skill
 export const deleteSkill = async (req, res) => {
   try {
-    const skill = await Skill.findOne({ _id: req.params.id, profile: req.profileId });
+    const skill = await Skill.findOne({
+      _id: req.params.id,
+      profile: req.profileId,
+    });
 
     if (!skill) {
       return res.status(404).json({ error: "Skill not found" });

@@ -23,10 +23,39 @@ export function SkillsList({
   const [editSkillDescription, setEditSkillDescription] = useState("");
   const [draggedSkillId, setDraggedSkillId] = useState<string | null>(null);
   const [dragOverSkillId, setDragOverSkillId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuCloseTimeout, setMenuCloseTimeout] = useState<number | null>(null);
 
   useEffect(() => {
     loadSkills();
   }, [categoryId]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openMenuId && !target.closest(".skill-menu-container")) {
+        setOpenMenuId(null);
+      }
+    };
+
+    if (openMenuId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimeout) {
+        clearTimeout(menuCloseTimeout);
+      }
+    };
+  }, [menuCloseTimeout]);
 
   const loadSkills = async () => {
     try {
@@ -42,18 +71,37 @@ export function SkillsList({
             .map((id) => data.find((skill: Skill) => skill._id === id))
             .filter((skill): skill is Skill => skill !== undefined);
 
-          // Add any new skills that aren't in the saved order
+          // Add any new skills that aren't in the saved order to the end
           const existingIds = new Set(orderArray);
           const newSkills = data.filter(
             (skill: Skill) => !existingIds.has(skill._id)
           );
 
+          // Sort new skills by creation date (newest last) to ensure they appear at bottom
+          newSkills.sort((a: Skill, b: Skill) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateA - dateB; // Oldest first, so newest appear at end
+          });
+
           setSkills([...orderedSkills, ...newSkills]);
         } catch {
-          setSkills(data);
+          // If parsing fails, sort by creation date (newest last)
+          const sorted = [...data].sort((a: Skill, b: Skill) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateA - dateB;
+          });
+          setSkills(sorted);
         }
       } else {
-        setSkills(data);
+        // No saved order: sort by creation date (newest last) so new skills appear at bottom
+        const sorted = [...data].sort((a: Skill, b: Skill) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateA - dateB;
+        });
+        setSkills(sorted);
       }
     } catch (err) {
       console.error("Failed to load skills:", err);
@@ -67,11 +115,41 @@ export function SkillsList({
     if (!newSkillName.trim()) return;
 
     try {
-      await skillAPI.create({
+      const newSkill = await skillAPI.create({
         name: newSkillName.trim(),
         description: newSkillDescription.trim() || undefined,
         category: categoryId,
       });
+
+      // Add the new skill to the end of the saved order
+      const savedOrder = localStorage.getItem(`skillOrder-${categoryId}`);
+      if (savedOrder) {
+        try {
+          const orderArray: string[] = JSON.parse(savedOrder);
+          orderArray.push(newSkill._id);
+          localStorage.setItem(
+            `skillOrder-${categoryId}`,
+            JSON.stringify(orderArray)
+          );
+        } catch {
+          // If parsing fails, create new order with the new skill at the end
+          const currentSkills = skills.map((s) => s._id);
+          currentSkills.push(newSkill._id);
+          localStorage.setItem(
+            `skillOrder-${categoryId}`,
+            JSON.stringify(currentSkills)
+          );
+        }
+      } else {
+        // If no saved order exists, create one with existing skills + new skill at the end
+        const currentSkills = skills.map((s) => s._id);
+        currentSkills.push(newSkill._id);
+        localStorage.setItem(
+          `skillOrder-${categoryId}`,
+          JSON.stringify(currentSkills)
+        );
+      }
+
       setNewSkillName("");
       setNewSkillDescription("");
       setShowAddForm(false);
@@ -238,6 +316,29 @@ export function SkillsList({
               onDrop={(e) => handleDrop(e, skill._id)}
               onDragEnd={handleDragEnd}
               onClick={() => onSkillSelect(skill._id)}
+              onMouseLeave={(e) => {
+                if (openMenuId === skill._id) {
+                  // Check if mouse is moving to the menu
+                  const relatedTarget = e.relatedTarget as HTMLElement;
+                  if (
+                    !relatedTarget ||
+                    !relatedTarget.closest(".skill-menu-container")
+                  ) {
+                    // Add a small delay to allow moving to the menu
+                    const timeout = setTimeout(() => {
+                      setOpenMenuId(null);
+                    }, 150);
+                    setMenuCloseTimeout(timeout);
+                  }
+                }
+              }}
+              onMouseEnter={() => {
+                // Clear any pending close timeout when hovering back
+                if (menuCloseTimeout) {
+                  clearTimeout(menuCloseTimeout);
+                  setMenuCloseTimeout(null);
+                }
+              }}
             >
               {editingSkillId === skill._id ? (
                 <form
@@ -269,30 +370,77 @@ export function SkillsList({
               ) : (
                 <>
                   <div className="skill-content">
-                    <div className="skill-name">{skill.name}</div>
+                    <div className="skill-header">
+                      <div className="skill-name">{skill.name}</div>
+                      <div className="skill-stats">
+                        <span className="skill-stat">
+                          <span className="stat-label">XP:</span>
+                          <span className="stat-value">{skill.xp || 0}</span>
+                        </span>
+                        <span className="skill-stat">
+                          <span className="stat-label">LV:</span>
+                          <span className="stat-value">{skill.level || 1}</span>
+                        </span>
+                        <div
+                          className="skill-menu-container"
+                          onMouseEnter={() => {
+                            // Clear any pending close timeout when hovering over menu
+                            if (menuCloseTimeout) {
+                              clearTimeout(menuCloseTimeout);
+                              setMenuCloseTimeout(null);
+                            }
+                          }}
+                          onMouseLeave={() => {
+                            // Close menu when leaving the menu container
+                            if (openMenuId === skill._id) {
+                              setOpenMenuId(null);
+                            }
+                          }}
+                        >
+                          <button
+                            className="skill-menu-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(
+                                openMenuId === skill._id ? null : skill._id
+                              );
+                            }}
+                            title="More options"
+                          >
+                            ⋯
+                          </button>
+                          {openMenuId === skill._id && (
+                            <div className="skill-menu">
+                              <button
+                                className="skill-menu-item"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditSkill(skill, e);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="skill-menu-item delete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSkill(skill._id, skill.name, e);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     {skill.description && (
                       <div className="skill-description">
                         {skill.description}
                       </div>
                     )}
-                  </div>
-                  <div className="skill-actions">
-                    <button
-                      className="edit-button"
-                      onClick={(e) => handleEditSkill(skill, e)}
-                      title="Edit skill"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="delete-button"
-                      onClick={(e) =>
-                        handleDeleteSkill(skill._id, skill.name, e)
-                      }
-                      title="Delete skill"
-                    >
-                      ×
-                    </button>
                   </div>
                 </>
               )}

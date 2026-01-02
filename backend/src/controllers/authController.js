@@ -1,7 +1,8 @@
 import Profile from "../models/Profile.js";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-secret-key-change-in-production";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 // Generate JWT token
@@ -18,18 +19,26 @@ export const register = async (req, res) => {
 
     // Validate required fields
     if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, and password are required" });
+      return res
+        .status(400)
+        .json({ error: "Name, email, and password are required" });
     }
 
     // Check if password meets minimum length
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters" });
     }
 
     // Check if profile with same email already exists
-    const existingProfile = await Profile.findOne({ email: email.toLowerCase() });
+    const existingProfile = await Profile.findOne({
+      email: email.toLowerCase(),
+    });
     if (existingProfile) {
-      return res.status(400).json({ error: "Profile with this email already exists" });
+      return res
+        .status(400)
+        .json({ error: "Profile with this email already exists" });
     }
 
     // Create new profile
@@ -83,9 +92,13 @@ export const login = async (req, res) => {
     // Find profile by email or name and include password field
     let profile;
     if (email) {
-      profile = await Profile.findOne({ email: email.toLowerCase() }).select("+password");
+      profile = await Profile.findOne({ email: email.toLowerCase() }).select(
+        "+password"
+      );
     } else {
-      profile = await Profile.findOne({ name: name.trim() }).select("+password");
+      profile = await Profile.findOne({ name: name.trim() }).select(
+        "+password"
+      );
     }
 
     if (!profile) {
@@ -159,4 +172,3 @@ export const getCurrentProfile = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-

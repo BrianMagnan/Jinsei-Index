@@ -21,15 +21,13 @@ export function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
     setLoading(true);
 
     try {
-      const loginData = useEmail 
-        ? { email, password }
-        : { name, password };
+      const loginData = useEmail ? { email, password } : { name, password };
       const response = await authAPI.login(loginData);
-      
+
       // Store token and user
       setAuthToken(response.token);
       setCurrentUser(response.profile);
-      
+
       // Call success callback
       onLoginSuccess(response.profile);
     } catch (err) {
@@ -121,4 +119,3 @@ export function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
     </div>
   );
 }
-

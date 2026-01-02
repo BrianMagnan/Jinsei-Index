@@ -25,7 +25,10 @@ export const getAchievements = async (req, res) => {
 // Get single achievement by ID
 export const getAchievement = async (req, res) => {
   try {
-    const achievement = await Achievement.findOne({ _id: req.params.id, profile: req.profileId }).populate({
+    const achievement = await Achievement.findOne({
+      _id: req.params.id,
+      profile: req.profileId,
+    }).populate({
       path: "challenge",
       populate: {
         path: "skill",
@@ -53,7 +56,10 @@ export const createAchievement = async (req, res) => {
     }
 
     // Verify challenge belongs to this profile
-    const challengeDoc = await Challenge.findOne({ _id: challenge, profile: req.profileId });
+    const challengeDoc = await Challenge.findOne({
+      _id: challenge,
+      profile: req.profileId,
+    });
     if (!challengeDoc) {
       return res.status(404).json({ error: "Challenge not found" });
     }
@@ -111,7 +117,10 @@ export const updateAchievement = async (req, res) => {
 // Delete achievement
 export const deleteAchievement = async (req, res) => {
   try {
-    const achievement = await Achievement.findOne({ _id: req.params.id, profile: req.profileId });
+    const achievement = await Achievement.findOne({
+      _id: req.params.id,
+      profile: req.profileId,
+    });
 
     if (!achievement) {
       return res.status(404).json({ error: "Achievement not found" });

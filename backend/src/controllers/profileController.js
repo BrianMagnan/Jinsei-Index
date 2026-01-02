@@ -4,7 +4,7 @@ import Profile from "../models/Profile.js";
 export const getProfiles = async (req, res) => {
   try {
     const profiles = await Profile.find().select("-password").sort({ name: 1 });
-    
+
     // Calculate total XP and level for each profile
     const profilesWithStats = await Promise.all(
       profiles.map(async (profile) => {
@@ -19,7 +19,7 @@ export const getProfiles = async (req, res) => {
         };
       })
     );
-    
+
     res.json(profilesWithStats);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -64,11 +64,18 @@ export const createProfile = async (req, res) => {
     }
 
     if (!password) {
-      return res.status(400).json({ error: "Password is required. Use /auth/register to create a profile." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Password is required. Use /auth/register to create a profile.",
+        });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: "Password must be at least 6 characters" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters" });
     }
 
     const profile = new Profile({ name, email, password, bio, avatar });

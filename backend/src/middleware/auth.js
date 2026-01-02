@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 // Authentication middleware
 export const authenticate = (req, res, next) => {
@@ -31,4 +32,3 @@ export const authenticate = (req, res, next) => {
     return res.status(500).json({ error: "Authentication error" });
   }
 };
-

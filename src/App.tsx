@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
-import { categoryAPI, getCurrentUser, setCurrentUser, setAuthToken, authAPI } from "./services/api";
+import {
+  categoryAPI,
+  getCurrentUser,
+  setCurrentUser,
+  setAuthToken,
+  authAPI,
+} from "./services/api";
 import { Sidebar } from "./components/Sidebar";
 import { SkillsList } from "./components/SkillsList";
 import { ChallengesList } from "./components/ChallengesList";
@@ -124,41 +130,16 @@ function App() {
   // Show main app if authenticated
   return (
     <div className="app">
-      <nav className="app-nav">
-        <div className="nav-left">
-          <button
-            className={`nav-button ${viewMode === "main" ? "active" : ""}`}
-            onClick={() => handleViewModeChange("main")}
-          >
-            Skills & Challenges
-          </button>
-          <button
-            className={`nav-button ${viewMode === "profiles" ? "active" : ""}`}
-            onClick={() => handleViewModeChange("profiles")}
-          >
-            Profiles
-          </button>
-        </div>
-        <div className="nav-right">
-          {currentUser && (
-            <div className="user-info">
-              <span className="user-name">{currentUser.name}</span>
-              {currentUser.totalLevel && (
-                <span className="user-level">Level {currentUser.totalLevel}</span>
-              )}
-            </div>
-          )}
-          <button className="logout-button" onClick={handleLogout}>
-            Logout
-          </button>
-        </div>
-      </nav>
-
       {viewMode === "main" ? (
         <>
           <Sidebar
             selectedCategoryId={selectedCategoryId}
             onCategorySelect={handleCategorySelect}
+            onSkillSelect={handleSkillSelect}
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            currentUser={currentUser}
+            onLogout={handleLogout}
           />
           <main className="app-main">
             {selectedCategoryId && !selectedSkillId && (
@@ -178,9 +159,20 @@ function App() {
           </main>
         </>
       ) : (
-        <main className="app-main profiles-main">
-          <ProfilesList />
-        </main>
+        <>
+          <Sidebar
+            selectedCategoryId={null}
+            onCategorySelect={() => {}}
+            onSkillSelect={handleSkillSelect}
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+          />
+          <main className="app-main profiles-main">
+            <ProfilesList />
+          </main>
+        </>
       )}
     </div>
   );
