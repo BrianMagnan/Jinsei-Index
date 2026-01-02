@@ -26,10 +26,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to MongoDB
+// Connect to MongoDB (don't block server startup)
 connectDB().catch((error) => {
   console.error("Failed to connect to MongoDB:", error);
-  process.exit(1);
+  // Don't exit - let the server start and retry connections
 });
 
 // Routes
