@@ -16,8 +16,13 @@ console.log(`Starting server on port ${PORT}`);
 // Railway checks these immediately for readiness
 app.get("/health", (req, res) => {
   console.log(`[HEALTH CHECK] GET /health - ${new Date().toISOString()}`);
+  console.log(`[HEALTH CHECK] Headers: ${JSON.stringify(req.headers)}`);
   res.setHeader('Content-Type', 'application/json');
-  res.status(200).json({ status: "OK", message: "Server is running", timestamp: new Date().toISOString() });
+  res.setHeader('Cache-Control', 'no-cache');
+  const response = { status: "OK", message: "Server is running", timestamp: new Date().toISOString() };
+  console.log(`[HEALTH CHECK] Sending response: ${JSON.stringify(response)}`);
+  res.status(200).json(response);
+  console.log(`[HEALTH CHECK] Response sent successfully`);
 });
 
 app.get("/", (req, res) => {
