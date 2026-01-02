@@ -22,8 +22,35 @@ const connectDBOnce = async () => {
   }
 };
 
+// Helper to parse request body for Vercel
+async function parseBody(req) {
+  if (req.body) {
+    if (typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+      return req.body;
+    }
+    if (typeof req.body === "string") {
+      try {
+        return JSON.parse(req.body);
+      } catch (e) {
+        throw new Error("Invalid JSON in request body");
+      }
+    }
+  }
+  return {};
+}
+
 export default async function handler(req, res) {
   try {
+    // Parse request body for POST/PUT requests
+    if (
+      (req.method === "POST" ||
+        req.method === "PUT" ||
+        req.method === "PATCH") &&
+      req.body
+    ) {
+      req.body = await parseBody(req);
+    }
+
     await connectDBOnce();
 
     const app = express();
