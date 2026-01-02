@@ -9,16 +9,14 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware - CORS configuration
-// Temporarily allow all origins for testing - we'll restrict this later
-app.use(
-  cors({
-    origin: true, // Allow all origins for now
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+// CORS must be first middleware
+// Temporarily allow all origins for testing
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
