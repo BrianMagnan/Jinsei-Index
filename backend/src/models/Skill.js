@@ -17,6 +17,11 @@ const skillSchema = new mongoose.Schema(
       ref: "Category",
       required: true,
     },
+    profile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+      required: true,
+    },
     xp: {
       type: Number,
       default: 0,

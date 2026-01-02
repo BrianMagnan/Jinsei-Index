@@ -60,3 +60,15 @@ export interface AchievementWithHierarchy extends Achievement {
   challenge: ChallengeWithHierarchy;
 }
 
+export interface Profile {
+  _id: string;
+  name: string;
+  email?: string;
+  bio?: string;
+  avatar?: string;
+  totalXP?: number;
+  totalLevel?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+

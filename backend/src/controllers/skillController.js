@@ -1,10 +1,14 @@
 import Skill from "../models/Skill.js";
 import Challenge from "../models/Challenge.js";
+import Category from "../models/Category.js";
 
-// Get all skills (optionally filtered by category)
+// Get all skills (optionally filtered by category) for the authenticated profile
 export const getSkills = async (req, res) => {
   try {
-    const query = req.query.category ? { category: req.query.category } : {};
+    const query = { profile: req.profileId };
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
     const skills = await Skill.find(query)
       .populate("category")
       .sort({ name: 1 });
@@ -17,14 +21,14 @@ export const getSkills = async (req, res) => {
 // Get single skill by ID
 export const getSkill = async (req, res) => {
   try {
-    const skill = await Skill.findById(req.params.id).populate("category");
+    const skill = await Skill.findOne({ _id: req.params.id, profile: req.profileId }).populate("category");
 
     if (!skill) {
       return res.status(404).json({ error: "Skill not found" });
     }
 
-    // Manually populate challenges
-    const challenges = await Challenge.find({ skill: skill._id });
+    // Manually populate challenges (only for this profile)
+    const challenges = await Challenge.find({ skill: skill._id, profile: req.profileId });
 
     const skillWithHierarchy = {
       ...skill.toObject(),
@@ -46,7 +50,13 @@ export const createSkill = async (req, res) => {
       return res.status(400).json({ error: "Name and category are required" });
     }
 
-    const skill = new Skill({ name, description, category });
+    // Verify category belongs to this profile
+    const categoryDoc = await Category.findOne({ _id: category, profile: req.profileId });
+    if (!categoryDoc) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    const skill = new Skill({ name, description, category, profile: req.profileId });
     await skill.save();
     await skill.populate("category");
     res.status(201).json(skill);
@@ -59,8 +69,17 @@ export const createSkill = async (req, res) => {
 export const updateSkill = async (req, res) => {
   try {
     const { name, description, category } = req.body;
-    const skill = await Skill.findByIdAndUpdate(
-      req.params.id,
+    
+    // If category is being updated, verify it belongs to this profile
+    if (category) {
+      const categoryDoc = await Category.findOne({ _id: category, profile: req.profileId });
+      if (!categoryDoc) {
+        return res.status(404).json({ error: "Category not found" });
+      }
+    }
+
+    const skill = await Skill.findOneAndUpdate(
+      { _id: req.params.id, profile: req.profileId },
       { name, description, category },
       { new: true, runValidators: true }
     ).populate("category");
@@ -78,14 +97,14 @@ export const updateSkill = async (req, res) => {
 // Delete skill
 export const deleteSkill = async (req, res) => {
   try {
-    const skill = await Skill.findById(req.params.id);
+    const skill = await Skill.findOne({ _id: req.params.id, profile: req.profileId });
 
     if (!skill) {
       return res.status(404).json({ error: "Skill not found" });
     }
 
-    // Delete associated challenges
-    await Challenge.deleteMany({ skill: skill._id });
+    // Delete associated challenges (only for this profile)
+    await Challenge.deleteMany({ skill: skill._id, profile: req.profileId });
 
     await skill.deleteOne();
     res.json({ message: "Skill deleted successfully" });

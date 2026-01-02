@@ -2,12 +2,50 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Get auth token from localStorage
+function getAuthToken(): string | null {
+  return localStorage.getItem('authToken');
+}
+
+// Set auth token in localStorage
+export function setAuthToken(token: string | null) {
+  if (token) {
+    localStorage.setItem('authToken', token);
+  } else {
+    localStorage.removeItem('authToken');
+  }
+}
+
+// Get current user from localStorage
+export function getCurrentUser() {
+  const userStr = localStorage.getItem('currentUser');
+  return userStr ? JSON.parse(userStr) : null;
+}
+
+// Set current user in localStorage
+export function setCurrentUser(user: any) {
+  if (user) {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  } else {
+    localStorage.removeItem('currentUser');
+  }
+}
+
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
+  const token = getAuthToken();
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Add auth token if available
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   });
 
@@ -70,5 +108,25 @@ export const achievementAPI = {
   update: (id: string, data: { notes?: string; completedAt?: string }) =>
     fetchAPI(`/achievements/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => fetchAPI(`/achievements/${id}`, { method: 'DELETE' }),
+};
+
+// Authentication API
+export const authAPI = {
+  register: (data: { name: string; email: string; password: string; avatar?: string }) =>
+    fetchAPI('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data: { email?: string; name?: string; password: string }) =>
+    fetchAPI('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  getCurrentUser: () => fetchAPI('/auth/me'),
+};
+
+// Profile API
+export const profileAPI = {
+  getAll: () => fetchAPI('/profiles'),
+  getById: (id: string) => fetchAPI(`/profiles/${id}`),
+  create: (data: { name: string; email?: string; password: string; bio?: string; avatar?: string }) =>
+    fetchAPI('/profiles', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: { name?: string; email?: string; bio?: string; avatar?: string }) =>
+    fetchAPI(`/profiles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: string) => fetchAPI(`/profiles/${id}`, { method: 'DELETE' }),
 };
 

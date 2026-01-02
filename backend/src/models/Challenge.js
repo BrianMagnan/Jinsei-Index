@@ -17,6 +17,11 @@ const challengeSchema = new mongoose.Schema(
       ref: "Skill",
       required: true,
     },
+    profile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+      required: true,
+    },
     xpReward: {
       type: Number,
       required: true,

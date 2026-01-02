@@ -10,6 +10,11 @@ const achievementSchema = new mongoose.Schema(
       ref: "Challenge",
       required: true,
     },
+    profile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+      required: true,
+    },
     completedAt: {
       type: Date,
       default: Date.now,

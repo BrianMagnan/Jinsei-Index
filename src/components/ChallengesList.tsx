@@ -56,13 +56,15 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
           try {
             const orderArray: string[] = JSON.parse(savedOrder);
             const orderedChallenges = orderArray
-              .map((id) => data.challenges?.find((c) => c._id === id))
+              .map((id) =>
+                data.challenges?.find((c: Challenge) => c._id === id)
+              )
               .filter((c): c is Challenge => c !== undefined);
 
             // Add any new challenges that aren't in the saved order
             const existingIds = new Set(orderArray);
             const newChallenges = data.challenges.filter(
-              (c) => !existingIds.has(c._id)
+              (c: Challenge) => !existingIds.has(c._id)
             );
 
             data.challenges = [...orderedChallenges, ...newChallenges];

@@ -1,18 +1,18 @@
 import Achievement from "../models/Achievement.js";
 
-// Get all achievements (optionally filtered by challenge)
+// Get all achievements (optionally filtered by challenge) for the authenticated profile
 export const getAchievements = async (req, res) => {
   try {
-    const query = req.query.challenge ? { challenge: req.query.challenge } : {};
+    const query = { profile: req.profileId };
+    if (req.query.challenge) {
+      query.challenge = req.query.challenge;
+    }
     const achievements = await Achievement.find(query)
       .populate({
         path: "challenge",
         populate: {
-          path: "subSkill",
-          populate: {
-            path: "skill",
-            populate: "category",
-          },
+          path: "skill",
+          populate: "category",
         },
       })
       .sort({ completedAt: -1 });
@@ -25,14 +25,11 @@ export const getAchievements = async (req, res) => {
 // Get single achievement by ID
 export const getAchievement = async (req, res) => {
   try {
-    const achievement = await Achievement.findById(req.params.id).populate({
+    const achievement = await Achievement.findOne({ _id: req.params.id, profile: req.profileId }).populate({
       path: "challenge",
       populate: {
-        path: "subSkill",
-        populate: {
-          path: "skill",
-          populate: "category",
-        },
+        path: "skill",
+        populate: "category",
       },
     });
 
@@ -55,8 +52,15 @@ export const createAchievement = async (req, res) => {
       return res.status(400).json({ error: "Challenge is required" });
     }
 
+    // Verify challenge belongs to this profile
+    const challengeDoc = await Challenge.findOne({ _id: challenge, profile: req.profileId });
+    if (!challengeDoc) {
+      return res.status(404).json({ error: "Challenge not found" });
+    }
+
     const achievement = new Achievement({
       challenge,
+      profile: req.profileId,
       notes,
       completedAt: completedAt ? new Date(completedAt) : undefined,
     });
@@ -67,11 +71,8 @@ export const createAchievement = async (req, res) => {
     await achievement.populate({
       path: "challenge",
       populate: {
-        path: "subSkill",
-        populate: {
-          path: "skill",
-          populate: "category",
-        },
+        path: "skill",
+        populate: "category",
       },
     });
 
@@ -85,18 +86,15 @@ export const createAchievement = async (req, res) => {
 export const updateAchievement = async (req, res) => {
   try {
     const { notes, completedAt } = req.body;
-    const achievement = await Achievement.findByIdAndUpdate(
-      req.params.id,
+    const achievement = await Achievement.findOneAndUpdate(
+      { _id: req.params.id, profile: req.profileId },
       { notes, completedAt: completedAt ? new Date(completedAt) : undefined },
       { new: true, runValidators: true }
     ).populate({
       path: "challenge",
       populate: {
-        path: "subSkill",
-        populate: {
-          path: "skill",
-          populate: "category",
-        },
+        path: "skill",
+        populate: "category",
       },
     });
 
@@ -113,7 +111,7 @@ export const updateAchievement = async (req, res) => {
 // Delete achievement
 export const deleteAchievement = async (req, res) => {
   try {
-    const achievement = await Achievement.findById(req.params.id);
+    const achievement = await Achievement.findOne({ _id: req.params.id, profile: req.profileId });
 
     if (!achievement) {
       return res.status(404).json({ error: "Achievement not found" });

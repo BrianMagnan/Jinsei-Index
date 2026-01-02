@@ -6,8 +6,12 @@ import {
   updateSkill,
   deleteSkill,
 } from "../controllers/skillController.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// All skill routes require authentication
+router.use(authenticate);
 
 router.get("/", getSkills);
 router.get("/:id", getSkill);

@@ -12,6 +12,11 @@ const categorySchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    profile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Profile",
+      required: true,
+    },
     xp: {
       type: Number,
       default: 0,

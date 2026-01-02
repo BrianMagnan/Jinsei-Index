@@ -6,8 +6,12 @@ import {
   updateChallenge,
   deleteChallenge,
 } from "../controllers/challengeController.js";
+import { authenticate } from "../middleware/auth.js";
 
 const router = express.Router();
+
+// All challenge routes require authentication
+router.use(authenticate);
 
 router.get("/", getChallenges);
 router.get("/:id", getChallenge);
