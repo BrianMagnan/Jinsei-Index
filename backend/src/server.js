@@ -13,42 +13,50 @@ const PORT = process.env.PORT || 3000;
 console.log(`Starting server on port ${PORT}`);
 
 // Handle OPTIONS preflight requests FIRST, before CORS middleware
-app.options('*', (req, res) => {
-  const origin = req.headers.origin;
-  console.log(`[OPTIONS] Preflight request from origin: ${origin || 'none'}`);
-  
-  // Set CORS headers for preflight
-  if (origin) {
-    // Allow Vercel origins
-    if (origin.includes('.vercel.app')) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
-      console.log(`[OPTIONS] ✅ Allowing preflight for Vercel origin: ${origin}`);
-      return res.status(204).send();
+// This must be before any other middleware to catch all OPTIONS requests
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin;
+    console.log(`[OPTIONS] Preflight request for ${req.path} from origin: ${origin || 'none'}`);
+    console.log(`[OPTIONS] Request headers: ${JSON.stringify(req.headers)}`);
+    
+    // Always allow preflight requests - set CORS headers
+    if (origin) {
+      // Allow Vercel origins
+      if (origin.includes('.vercel.app')) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
+        console.log(`[OPTIONS] ✅ Allowing preflight for Vercel origin: ${origin}`);
+        return res.status(204).end();
+      }
+      
+      // Check allowed origins from env
+      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+      if (allowedOrigins.includes(origin) || allowedOrigins.length === 0) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        res.setHeader('Access-Control-Max-Age', '86400');
+        console.log(`[OPTIONS] ✅ Allowing preflight for origin: ${origin}`);
+        return res.status(204).end();
+      }
     }
     
-    // Check allowed origins from env
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
-    if (allowedOrigins.includes(origin) || allowedOrigins.length === 0) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    // Allow requests with no origin or any origin for preflight
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    if (origin) {
       res.setHeader('Access-Control-Allow-Credentials', 'true');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.setHeader('Access-Control-Max-Age', '86400');
-      console.log(`[OPTIONS] ✅ Allowing preflight for origin: ${origin}`);
-      return res.status(204).send();
     }
+    console.log(`[OPTIONS] ✅ Allowing preflight (fallback)`);
+    return res.status(204).end();
   }
-  
-  // Allow requests with no origin
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  console.log(`[OPTIONS] ✅ Allowing preflight (no origin)`);
-  return res.status(204).send();
+  next();
 });
 
 // CORS middleware for all other requests
