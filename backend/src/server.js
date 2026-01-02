@@ -36,20 +36,20 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use("/api", routes);
-
-// Health check endpoint (Railway uses this)
+// Health check endpoints - MUST be before routes for Railway readiness checks
 app.get("/health", (req, res) => {
-  console.log("Health check requested");
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ status: "OK", message: "Server is running", timestamp: new Date().toISOString() });
 });
 
 // Root endpoint for Railway health checks
 app.get("/", (req, res) => {
-  res.json({ status: "OK", message: "Jinsei Index API" });
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).json({ status: "OK", message: "Jinsei Index API", timestamp: new Date().toISOString() });
 });
+
+// Routes
+app.use("/api", routes);
 
 // Start server first - bind to 0.0.0.0 to accept connections from Railway
 const server = app.listen(PORT, '0.0.0.0', () => {
@@ -59,6 +59,17 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ CORS enabled for all origins`);
   console.log(`✅ Server listening on 0.0.0.0:${PORT}`);
   console.log(`✅ Ready to accept connections`);
+  console.log(`✅ Health check available at http://0.0.0.0:${PORT}/health`);
+  console.log(`✅ Root endpoint available at http://0.0.0.0:${PORT}/`);
+  
+  // Immediately test that server responds
+  const http = require('http');
+  const testReq = http.get(`http://localhost:${PORT}/health`, (testRes) => {
+    console.log(`✅ Health check test: ${testRes.statusCode}`);
+    testReq.on('error', (err) => {
+      console.error(`❌ Health check test failed: ${err.message}`);
+    });
+  });
   
   // Connect to MongoDB after server starts (non-blocking)
   connectDB().catch((error) => {
