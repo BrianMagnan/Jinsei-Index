@@ -10,30 +10,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware - CORS configuration
+// Temporarily allow all origins for testing - we'll restrict this later
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) {
-        return callback(null, true);
-      }
-      
-      // Get allowed origins from environment
-      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map(o => o.trim()) || ["http://localhost:8080"];
-      
-      // Check if origin is in allowed list
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // Allow all Vercel URLs (production and preview)
-      if (origin.includes('.vercel.app')) {
-        return callback(null, true);
-      }
-      
-      // Reject other origins
-      return callback(null, false);
-    },
+    origin: true, // Allow all origins for now
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
