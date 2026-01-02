@@ -64,15 +64,6 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Health check available at http://0.0.0.0:${PORT}/health`);
   console.log(`✅ Root endpoint available at http://0.0.0.0:${PORT}/`);
   
-  // Immediately test that server responds
-  const http = require('http');
-  const testReq = http.get(`http://localhost:${PORT}/health`, (testRes) => {
-    console.log(`✅ Health check test: ${testRes.statusCode}`);
-    testReq.on('error', (err) => {
-      console.error(`❌ Health check test failed: ${err.message}`);
-    });
-  });
-  
   // Connect to MongoDB after server starts (non-blocking)
   connectDB().catch((error) => {
     console.error("❌ Failed to connect to MongoDB:", error);
