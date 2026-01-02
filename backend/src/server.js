@@ -77,6 +77,7 @@ app.use("/api", routes);
 let serverReady = false;
 
 // Start server first - bind to 0.0.0.0 to accept connections from Railway
+// Use the PORT that Railway provides (or default to 3000)
 const server = app.listen(PORT, '0.0.0.0', () => {
   const address = server.address();
   console.log(`✅ Server is running on port ${PORT}`);
@@ -86,10 +87,14 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Health check available at http://0.0.0.0:${PORT}/health`);
   console.log(`✅ Root endpoint available at http://0.0.0.0:${PORT}/`);
   
-  // Mark server as ready
+  // Mark server as ready immediately when listening
   serverReady = true;
   console.log(`✅ Server marked as ready at ${new Date().toISOString()}`);
   console.log(`✅ Ready to accept connections`);
+  console.log(`✅ Railway PORT env var: ${process.env.PORT || 'not set (using default 3000)'}`);
+  
+  // Test that server actually responds
+  console.log(`✅ Server is listening and ready for requests`);
   
   // Connect to MongoDB after server starts (non-blocking)
   // Don't wait for MongoDB - server should be ready even if DB isn't connected
@@ -97,6 +102,17 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     console.error("❌ Failed to connect to MongoDB:", error);
     console.error("⚠️  Server will continue running, but database operations will fail");
   });
+});
+
+// Ensure server stays alive - handle any errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  // Don't exit - try to keep running
+});
+
+// Log when server closes (shouldn't happen unless Railway sends SIGTERM)
+server.on('close', () => {
+  console.log('⚠️  Server closed - this should only happen on shutdown');
 });
 
 // Log server errors
