@@ -13,10 +13,14 @@ const PORT = process.env.PORT || 3000;
 console.log(`Starting server on port ${PORT}`);
 
 // CORS must be first middleware
-// Temporarily allow all origins for testing
+// Allow all origins for now
 app.use(cors({
-  origin: true,
+  origin: '*', // Allow all origins
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Log all requests for debugging
