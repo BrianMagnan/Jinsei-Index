@@ -51,10 +51,11 @@ app.get("/", (req, res) => {
   res.json({ status: "OK", message: "Jinsei Index API" });
 });
 
-// Start server first
-const server = app.listen(PORT, () => {
+// Start server first - bind to 0.0.0.0 to accept connections from Railway
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`CORS enabled for all origins`);
+  console.log(`Server listening on 0.0.0.0:${PORT}`);
   
   // Connect to MongoDB after server starts (non-blocking)
   connectDB().catch((error) => {
@@ -63,12 +64,33 @@ const server = app.listen(PORT, () => {
   });
 });
 
+// Graceful shutdown handling
+const gracefulShutdown = (signal) => {
+  console.log(`Received ${signal}, shutting down gracefully...`);
+  server.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (error) => {
   console.error('Unhandled Promise Rejection:', error);
+  // Don't exit - keep server running
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
+  // Don't exit - keep server running
 });
