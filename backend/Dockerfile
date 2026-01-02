@@ -14,6 +14,6 @@ COPY . .
 # Expose port (Railway will set PORT env var)
 EXPOSE 3000
 
-# Start the server
-CMD ["npm", "start"]
+# Start the server directly with Node.js (not npm) so Railway can properly manage the process
+CMD ["node", "src/server.js"]
 
