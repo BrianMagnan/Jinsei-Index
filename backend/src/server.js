@@ -9,6 +9,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Make sure we're using Railway's PORT
+console.log(`Starting server on port ${PORT}`);
+
 // CORS must be first middleware
 // Temporarily allow all origins for testing
 app.use(cors({
@@ -29,9 +32,14 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api", routes);
 
-// Health check endpoint
+// Health check endpoint (Railway uses this)
 app.get("/health", (req, res) => {
   res.json({ status: "OK", message: "Server is running" });
+});
+
+// Root endpoint for Railway health checks
+app.get("/", (req, res) => {
+  res.json({ status: "OK", message: "Jinsei Index API" });
 });
 
 // Start server first
