@@ -15,11 +15,13 @@ console.log(`Starting server on port ${PORT}`);
 // Health check endpoints - MUST be FIRST, before any middleware
 // Railway checks these immediately for readiness
 app.get("/health", (req, res) => {
+  console.log(`[HEALTH CHECK] GET /health - ${new Date().toISOString()}`);
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ status: "OK", message: "Server is running", timestamp: new Date().toISOString() });
 });
 
 app.get("/", (req, res) => {
+  console.log(`[ROOT CHECK] GET / - ${new Date().toISOString()}`);
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ status: "OK", message: "Jinsei Index API", timestamp: new Date().toISOString() });
 });
