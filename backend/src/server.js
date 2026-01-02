@@ -12,14 +12,57 @@ const PORT = process.env.PORT || 3000;
 // Make sure we're using Railway's PORT
 console.log(`Starting server on port ${PORT}`);
 
-// Health check endpoints - MUST be FIRST, before any middleware
-// Railway checks these immediately for readiness
+// CORS must be FIRST (before health checks) to handle preflight requests
+// Configure CORS to allow requests from Vercel frontend
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log(`[CORS] Request from origin: ${origin || 'none'}`);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log(`[CORS] ✅ Allowing request with no origin`);
+      return callback(null, true);
+    }
+    
+    // Get allowed origins from environment variable
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
+    console.log(`[CORS] Allowed origins: ${JSON.stringify(allowedOrigins)}`);
+    
+    // Allow Vercel preview URLs
+    if (origin.includes('.vercel.app')) {
+      console.log(`[CORS] ✅ Allowing Vercel origin: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      console.log(`[CORS] ✅ Allowing origin from list: ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Allow all origins if no specific list is set (for development)
+    if (allowedOrigins.length === 0) {
+      console.log(`[CORS] ✅ Allowing origin (no restrictions): ${origin}`);
+      return callback(null, true);
+    }
+    
+    // Reject other origins
+    console.log(`[CORS] ❌ Rejecting origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+}));
+
+// Health check endpoints - after CORS
 app.get("/health", (req, res) => {
   const timestamp = new Date().toISOString();
   console.log(`[HEALTH CHECK] GET /health at ${timestamp}`);
   console.log(`[HEALTH CHECK] Server ready: ${serverReady}`);
-  console.log(`[HEALTH CHECK] User-Agent: ${req.headers['user-agent']}`);
-  console.log(`[HEALTH CHECK] Origin: ${req.headers.origin || 'none'}`);
   
   if (!serverReady) {
     console.log(`[HEALTH CHECK] ⚠️  Server not ready yet, returning 503`);
@@ -42,53 +85,6 @@ app.get("/", (req, res) => {
   console.log(`[ROOT CHECK] GET / - ${new Date().toISOString()}`);
   res.setHeader('Content-Type', 'application/json');
   res.status(200).json({ status: "OK", message: "Jinsei Index API", timestamp: new Date().toISOString() });
-});
-
-// CORS must be after health checks but before other routes
-// Configure CORS to allow requests from Vercel frontend
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      return callback(null, true);
-    }
-    
-    // Get allowed origins from environment variable
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [];
-    
-    // Allow Vercel preview URLs
-    if (origin.includes('.vercel.app')) {
-      return callback(null, true);
-    }
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    // Allow all origins if no specific list is set (for development)
-    if (allowedOrigins.length === 0) {
-      return callback(null, true);
-    }
-    
-    // Reject other origins
-    callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
-
-// Explicitly handle OPTIONS requests for CORS preflight
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.sendStatus(204);
 });
 
 // Log all requests for debugging (skip health checks to reduce noise)
