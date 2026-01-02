@@ -3,5 +3,27 @@
     "api/**/*.js": {
       "includeFiles": "backend/**"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/categories/:path*",
+      "destination": "/api/categories/[...]"
+    },
+    {
+      "source": "/api/skills/:path*",
+      "destination": "/api/skills/[...]"
+    },
+    {
+      "source": "/api/challenges/:path*",
+      "destination": "/api/challenges/[...]"
+    },
+    {
+      "source": "/api/achievements/:path*",
+      "destination": "/api/achievements/[...]"
+    },
+    {
+      "source": "/api/profiles/:path*",
+      "destination": "/api/profiles/[...]"
+    }
+  ]
 }

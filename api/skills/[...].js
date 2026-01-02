@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // Mount skill routes at /api/skills
+    // Mount skill routes
     app.use("/api/skills", authenticate, skillRoutes);
 
     return app(req, res);
@@ -50,4 +50,3 @@ export default async function handler(req, res) {
     }
   }
 }
-

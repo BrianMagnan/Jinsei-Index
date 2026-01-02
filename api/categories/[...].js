@@ -37,9 +37,12 @@ export default async function handler(req, res) {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // Mount category routes at /api/categories
+    // Mount category routes
+    // Vercel routes /api/categories/* to this function
+    // The routes are already set up to handle /, /:id, etc.
     app.use("/api/categories", authenticate, categoryRoutes);
 
+    // Handle the request
     return app(req, res);
   } catch (error) {
     console.error("Categories handler error:", error);
@@ -50,4 +53,3 @@ export default async function handler(req, res) {
     }
   }
 }
-

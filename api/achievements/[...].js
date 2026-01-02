@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // Mount achievement routes at /api/achievements
+    // Mount achievement routes
     app.use("/api/achievements", authenticate, achievementRoutes);
 
     return app(req, res);
@@ -50,4 +50,3 @@ export default async function handler(req, res) {
     }
   }
 }
-

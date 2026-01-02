@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // Mount profile routes at /api/profiles (with authentication)
+    // Mount profile routes
     app.use("/api/profiles", authenticate, profileRoutes);
 
     return app(req, res);
@@ -50,4 +50,3 @@ export default async function handler(req, res) {
     }
   }
 }
-

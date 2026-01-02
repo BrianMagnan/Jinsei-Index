@@ -6,4 +6,3 @@ export default async function handler(req, res) {
 
   return res.json({ status: "OK", message: "Server is running" });
 }
-

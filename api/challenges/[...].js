@@ -37,7 +37,7 @@ export default async function handler(req, res) {
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
 
-    // Mount challenge routes at /api/challenges
+    // Mount challenge routes
     app.use("/api/challenges", authenticate, challengeRoutes);
 
     return app(req, res);
@@ -50,4 +50,3 @@ export default async function handler(req, res) {
     }
   }
 }
-
