@@ -12,7 +12,19 @@ const PORT = process.env.PORT || 3000;
 // Make sure we're using Railway's PORT
 console.log(`Starting server on port ${PORT}`);
 
-// CORS must be first middleware
+// Health check endpoints - MUST be FIRST, before any middleware
+// Railway checks these immediately for readiness
+app.get("/health", (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).json({ status: "OK", message: "Server is running", timestamp: new Date().toISOString() });
+});
+
+app.get("/", (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.status(200).json({ status: "OK", message: "Jinsei Index API", timestamp: new Date().toISOString() });
+});
+
+// CORS must be after health checks but before other routes
 // Allow all origins for now (we'll restrict later)
 app.use(cors({
   origin: function (origin, callback) {
@@ -26,27 +38,17 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Log all requests for debugging
+// Log all requests for debugging (skip health checks to reduce noise)
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  if (req.path !== '/health' && req.path !== '/') {
+    console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  }
   next();
 });
 
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Health check endpoints - MUST be before routes for Railway readiness checks
-app.get("/health", (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).json({ status: "OK", message: "Server is running", timestamp: new Date().toISOString() });
-});
-
-// Root endpoint for Railway health checks
-app.get("/", (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).json({ status: "OK", message: "Jinsei Index API", timestamp: new Date().toISOString() });
-});
 
 // Routes
 app.use("/api", routes);
