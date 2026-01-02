@@ -15,14 +15,27 @@ console.log(`Starting server on port ${PORT}`);
 // Health check endpoints - MUST be FIRST, before any middleware
 // Railway checks these immediately for readiness
 app.get("/health", (req, res) => {
-  console.log(`[HEALTH CHECK] GET /health - ${new Date().toISOString()}`);
-  console.log(`[HEALTH CHECK] Headers: ${JSON.stringify(req.headers)}`);
+  const timestamp = new Date().toISOString();
+  console.log(`[HEALTH CHECK] GET /health at ${timestamp}`);
+  console.log(`[HEALTH CHECK] Server ready: ${serverReady}`);
+  console.log(`[HEALTH CHECK] User-Agent: ${req.headers['user-agent']}`);
+  console.log(`[HEALTH CHECK] Origin: ${req.headers.origin || 'none'}`);
+  
+  if (!serverReady) {
+    console.log(`[HEALTH CHECK] ⚠️  Server not ready yet, returning 503`);
+    return res.status(503).json({ status: "NOT_READY", message: "Server is starting up" });
+  }
+  
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-cache');
-  const response = { status: "OK", message: "Server is running", timestamp: new Date().toISOString() };
-  console.log(`[HEALTH CHECK] Sending response: ${JSON.stringify(response)}`);
+  const response = { 
+    status: "OK", 
+    message: "Server is running", 
+    timestamp: timestamp,
+    ready: serverReady
+  };
+  console.log(`[HEALTH CHECK] ✅ Sending 200 OK response`);
   res.status(200).json(response);
-  console.log(`[HEALTH CHECK] Response sent successfully`);
 });
 
 app.get("/", (req, res) => {
@@ -60,6 +73,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use("/api", routes);
 
+// Track if server is fully ready
+let serverReady = false;
+
 // Start server first - bind to 0.0.0.0 to accept connections from Railway
 const server = app.listen(PORT, '0.0.0.0', () => {
   const address = server.address();
@@ -67,11 +83,16 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`✅ Server address: ${JSON.stringify(address)}`);
   console.log(`✅ CORS enabled for all origins`);
   console.log(`✅ Server listening on 0.0.0.0:${PORT}`);
-  console.log(`✅ Ready to accept connections`);
   console.log(`✅ Health check available at http://0.0.0.0:${PORT}/health`);
   console.log(`✅ Root endpoint available at http://0.0.0.0:${PORT}/`);
   
+  // Mark server as ready
+  serverReady = true;
+  console.log(`✅ Server marked as ready at ${new Date().toISOString()}`);
+  console.log(`✅ Ready to accept connections`);
+  
   // Connect to MongoDB after server starts (non-blocking)
+  // Don't wait for MongoDB - server should be ready even if DB isn't connected
   connectDB().catch((error) => {
     console.error("❌ Failed to connect to MongoDB:", error);
     console.error("⚠️  Server will continue running, but database operations will fail");
