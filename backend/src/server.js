@@ -34,7 +34,8 @@ app.use("/api", routes);
 
 // Health check endpoint (Railway uses this)
 app.get("/health", (req, res) => {
-  res.json({ status: "OK", message: "Server is running" });
+  console.log("Health check requested");
+  res.status(200).json({ status: "OK", message: "Server is running" });
 });
 
 // Root endpoint for Railway health checks
