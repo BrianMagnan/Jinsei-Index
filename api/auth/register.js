@@ -5,17 +5,55 @@ let dbConnected = false;
 
 const connectDBOnce = async () => {
   if (!dbConnected) {
-    await connectDB();
-    dbConnected = true;
+    try {
+      await connectDB();
+      dbConnected = true;
+    } catch (error) {
+      console.error("Database connection error:", error);
+      throw error;
+    }
   }
 };
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+// Helper to parse request body for Vercel
+async function parseBody(req) {
+  if (req.body) {
+    // If body is already parsed, return it
+    if (typeof req.body === "object") {
+      return req.body;
+    }
+    // If body is a string, parse it
+    if (typeof req.body === "string") {
+      try {
+        return JSON.parse(req.body);
+      } catch (e) {
+        throw new Error("Invalid JSON in request body");
+      }
+    }
   }
-
-  await connectDBOnce();
-  return register(req, res);
+  return {};
 }
 
+export default async function handler(req, res) {
+  try {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+
+    // Parse request body
+    req.body = await parseBody(req);
+
+    // Connect to database
+    await connectDBOnce();
+
+    // Call the controller
+    await register(req, res);
+  } catch (error) {
+    console.error("Register error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: error.message || "Internal server error",
+      });
+    }
+  }
+}
