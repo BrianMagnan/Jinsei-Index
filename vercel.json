@@ -2,7 +2,9 @@
   "functions": {
     "api/[...].js": {
       "includeFiles": "backend/**"
+    },
+    "api/auth/*.js": {
+      "includeFiles": "backend/**"
     }
   }
 }
-

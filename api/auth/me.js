@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   }
 
   await connectDBOnce();
-  
+
   // Apply authentication middleware
   return new Promise((resolve) => {
     authenticate(req, res, (err) => {
@@ -26,9 +26,10 @@ export default async function handler(req, res) {
         resolve();
       } else {
         // Call the controller
-        getCurrentProfile(req, res).then(() => resolve()).catch(() => resolve());
+        getCurrentProfile(req, res)
+          .then(() => resolve())
+          .catch(() => resolve());
       }
     });
   });
 }
-
