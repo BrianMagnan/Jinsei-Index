@@ -74,6 +74,13 @@ export function Sidebar({
             (cat: Category) => !existingIds.has(cat._id)
           );
 
+          // Sort new categories by creation date (oldest first) so newest appear at bottom
+          newCategories.sort((a: Category, b: Category) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateA - dateB;
+          });
+
           setCategories([...orderedCategories, ...newCategories]);
         } catch {
           setCategories(data);
