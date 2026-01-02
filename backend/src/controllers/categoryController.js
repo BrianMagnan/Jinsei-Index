@@ -5,8 +5,9 @@ import Challenge from "../models/Challenge.js";
 // Get all categories for the authenticated profile
 export const getCategories = async (req, res) => {
   try {
+    // Sort by creation date (oldest first) so new categories appear at bottom
     const categories = await Category.find({ profile: req.profileId }).sort({
-      name: 1,
+      createdAt: 1,
     });
     res.json(categories);
   } catch (error) {

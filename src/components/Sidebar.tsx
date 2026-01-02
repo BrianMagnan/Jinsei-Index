@@ -239,13 +239,29 @@ export function Sidebar({
     if (!newCategoryName.trim()) return;
 
     try {
-      await categoryAPI.create({
+      const newCategory = await categoryAPI.create({
         name: newCategoryName.trim(),
         description: newCategoryDescription.trim() || undefined,
       });
       setNewCategoryName("");
       setNewCategoryDescription("");
       setShowAddForm(false);
+      
+      // Add new category to the end of the list and update localStorage order
+      const savedOrder = localStorage.getItem("categoryOrder");
+      if (savedOrder) {
+        try {
+          const orderArray: string[] = JSON.parse(savedOrder);
+          orderArray.push(newCategory._id);
+          localStorage.setItem("categoryOrder", JSON.stringify(orderArray));
+        } catch {
+          // If parsing fails, just reload
+        }
+      } else {
+        // No saved order, create one with the new category
+        localStorage.setItem("categoryOrder", JSON.stringify([newCategory._id]));
+      }
+      
       await loadCategories();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create category");
