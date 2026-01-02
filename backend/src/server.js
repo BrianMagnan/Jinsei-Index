@@ -53,15 +53,32 @@ app.get("/", (req, res) => {
 
 // Start server first - bind to 0.0.0.0 to accept connections from Railway
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`CORS enabled for all origins`);
-  console.log(`Server listening on 0.0.0.0:${PORT}`);
+  const address = server.address();
+  console.log(`✅ Server is running on port ${PORT}`);
+  console.log(`✅ Server address: ${JSON.stringify(address)}`);
+  console.log(`✅ CORS enabled for all origins`);
+  console.log(`✅ Server listening on 0.0.0.0:${PORT}`);
+  console.log(`✅ Ready to accept connections`);
   
   // Connect to MongoDB after server starts (non-blocking)
   connectDB().catch((error) => {
-    console.error("Failed to connect to MongoDB:", error);
-    console.error("Server will continue running, but database operations will fail");
+    console.error("❌ Failed to connect to MongoDB:", error);
+    console.error("⚠️  Server will continue running, but database operations will fail");
   });
+});
+
+// Log server errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+});
+
+// Keep process alive
+process.on('beforeExit', (code) => {
+  console.log(`⚠️  Process beforeExit with code: ${code}`);
+});
+
+process.on('exit', (code) => {
+  console.log(`⚠️  Process exiting with code: ${code}`);
 });
 
 // Graceful shutdown handling
