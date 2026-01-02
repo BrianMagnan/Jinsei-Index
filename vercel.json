@@ -6,5 +6,31 @@
     "api/auth/*.js": {
       "includeFiles": "backend/**"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/categories/:path*",
+      "destination": "/api/[...]"
+    },
+    {
+      "source": "/api/skills/:path*",
+      "destination": "/api/[...]"
+    },
+    {
+      "source": "/api/challenges/:path*",
+      "destination": "/api/[...]"
+    },
+    {
+      "source": "/api/achievements/:path*",
+      "destination": "/api/[...]"
+    },
+    {
+      "source": "/api/profiles/:path*",
+      "destination": "/api/[...]"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/[...]"
+    }
+  ]
 }
