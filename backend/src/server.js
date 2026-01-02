@@ -143,3 +143,21 @@ process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   // Don't exit - keep server running
 });
+
+// Keep the process alive - prevent accidental exits
+setInterval(() => {
+  // Just keep the process running
+  if (serverReady) {
+    // Log every 30 seconds that we're still alive (only in verbose mode)
+    // This helps Railway see the process is active
+  }
+}, 30000);
+
+// Prevent the process from exiting
+process.on('beforeExit', (code) => {
+  console.log(`⚠️  Process beforeExit with code: ${code} - keeping alive`);
+  // Don't exit - keep the process running
+});
+
+// Log that we're staying alive
+console.log('🔵 Process started, will stay alive');
