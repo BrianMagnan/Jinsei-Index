@@ -20,16 +20,6 @@ export interface Skill {
   level: number;
   createdAt?: string;
   updatedAt?: string;
-  subSkills?: SubSkill[];
-}
-
-export interface SubSkill {
-  _id: string;
-  name: string;
-  description?: string;
-  skill: string | Skill;
-  createdAt?: string;
-  updatedAt?: string;
   challenges?: Challenge[];
 }
 
@@ -37,7 +27,7 @@ export interface Challenge {
   _id: string;
   name: string;
   description?: string;
-  subSkill: string | SubSkill;
+  skill: string | Skill;
   xpReward: number;
   createdAt?: string;
   updatedAt?: string;
@@ -59,16 +49,11 @@ export interface CategoryWithHierarchy extends Category {
 
 export interface SkillWithHierarchy extends Skill {
   category: Category;
-  subSkills: SubSkillWithHierarchy[];
-}
-
-export interface SubSkillWithHierarchy extends SubSkill {
-  skill: Skill;
   challenges: Challenge[];
 }
 
 export interface ChallengeWithHierarchy extends Challenge {
-  subSkill: SubSkillWithHierarchy;
+  skill: SkillWithHierarchy;
 }
 
 export interface AchievementWithHierarchy extends Achievement {

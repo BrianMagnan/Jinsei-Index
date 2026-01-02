@@ -1,84 +1,67 @@
-import { useState } from "react";
-import { CharacterDashboard } from "./components/CharacterDashboard";
-import { SkillTree } from "./components/SkillTree";
-import { Management } from "./components/Management";
-import { CategoryDetail } from "./components/CategoryDetail";
-import { SkillDetail } from "./components/SkillDetail";
-import { SubSkillDetail } from "./components/SubSkillDetail";
+import { useState, useEffect } from "react";
+import { categoryAPI } from "./services/api";
 import { Sidebar } from "./components/Sidebar";
+import { SkillsList } from "./components/SkillsList";
+import { ChallengesList } from "./components/ChallengesList";
+import type { Category } from "./types";
 import "./App.css";
 
 function App() {
-  const [activeView, setActiveView] = useState<
-    "dashboard" | "skilltree" | "management" | "category" | "skill" | "subskill"
-  >("dashboard");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null
   );
-  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
-  const [selectedSubSkillId, setSelectedSubSkillId] = useState<string | null>(
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(
     null
   );
+  const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedCategoryId) {
+      loadCategory();
+    } else {
+      setSelectedCategory(null);
+    }
+  }, [selectedCategoryId]);
+
+  const loadCategory = async () => {
+    if (!selectedCategoryId) return;
+    try {
+      const category = await categoryAPI.getById(selectedCategoryId);
+      setSelectedCategory(category);
+    } catch (err) {
+      console.error("Failed to load category:", err);
+    }
+  };
+
+  const handleCategorySelect = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+    setSelectedSkillId(null); // Reset skill selection when category changes
+  };
+
+  const handleSkillSelect = (skillId: string) => {
+    setSelectedSkillId(skillId);
+  };
 
   return (
     <div className="app">
       <Sidebar
-        activeView={activeView}
         selectedCategoryId={selectedCategoryId}
-        onViewChange={setActiveView}
-        onCategoryClick={(categoryId) => {
-          setSelectedCategoryId(categoryId);
-        }}
+        onCategorySelect={handleCategorySelect}
       />
-
       <main className="app-main">
-        {activeView === "dashboard" && <CharacterDashboard />}
-        {activeView === "skilltree" && <SkillTree />}
-        {activeView === "management" && <Management />}
-        {activeView === "category" && selectedCategoryId && (
-          <CategoryDetail
+        {selectedCategoryId && !selectedSkillId && (
+          <SkillsList
             categoryId={selectedCategoryId}
-            onBack={() => {
-              setActiveView("dashboard");
-              setSelectedCategoryId(null);
-            }}
-            onSkillClick={(skillId) => {
-              setSelectedSkillId(skillId);
-              setActiveView("skill");
-            }}
+            categoryName={selectedCategory?.name || ""}
+            onSkillSelect={handleSkillSelect}
           />
         )}
-        {activeView === "skill" && selectedSkillId && (
-          <SkillDetail
-            skillId={selectedSkillId}
-            onBack={() => {
-              if (selectedCategoryId) {
-                setActiveView("category");
-              } else {
-                setActiveView("dashboard");
-              }
-              setSelectedSkillId(null);
-            }}
-            onSubSkillClick={(subSkillId) => {
-              setSelectedSubSkillId(subSkillId);
-              setActiveView("subskill");
-            }}
-          />
-        )}
-        {activeView === "subskill" && selectedSubSkillId && (
-          <SubSkillDetail
-            subSkillId={selectedSubSkillId}
-            onBack={() => {
-              if (selectedSkillId) {
-                setActiveView("skill");
-              } else if (selectedCategoryId) {
-                setActiveView("category");
-              } else {
-                setActiveView("dashboard");
-              }
-              setSelectedSubSkillId(null);
-            }}
-          />
+        {selectedSkillId && <ChallengesList skillId={selectedSkillId} />}
+        {!selectedCategoryId && (
+          <div className="welcome-message">
+            <h1>Welcome to Jinsei Index</h1>
+            <p>Select a category from the sidebar to get started.</p>
+          </div>
         )}
       </main>
     </div>

@@ -1,44 +1,41 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { categoryAPI } from "../services/api";
 import type { Category } from "../types";
 
-type ViewType =
-  | "dashboard"
-  | "skilltree"
-  | "management"
-  | "category"
-  | "skill"
-  | "subskill";
-
 interface SidebarProps {
-  activeView: ViewType;
   selectedCategoryId: string | null;
-  onViewChange: (view: ViewType) => void;
-  onCategoryClick: (categoryId: string) => void;
+  onCategorySelect: (categoryId: string | null) => void;
 }
 
 export function Sidebar({
-  activeView,
   selectedCategoryId,
-  onViewChange,
-  onCategoryClick,
+  onCategorySelect,
 }: SidebarProps) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
-  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
+    null
+  );
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryDescription, setEditCategoryDescription] = useState("");
   const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(
     null
   );
   const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(
     null
   );
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const loadCategories = useCallback(async () => {
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const loadCategories = async () => {
     try {
-      setLoadingCategories(true);
+      setLoading(true);
       const data = await categoryAPI.getAll();
 
       // Apply saved order from localStorage
@@ -58,7 +55,6 @@ export function Sidebar({
 
           setCategories([...orderedCategories, ...newCategories]);
         } catch {
-          // If parsing fails, use default order
           setCategories(data);
         }
       } else {
@@ -67,64 +63,13 @@ export function Sidebar({
     } catch (err) {
       console.error("Failed to load categories:", err);
     } finally {
-      setLoadingCategories(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
-
-  // Reload categories when switching views (except management)
-  useEffect(() => {
-    if (activeView !== "management") {
-      loadCategories();
-    }
-  }, [activeView, loadCategories]);
-
-  // Clean up order when categories are deleted
-  useEffect(() => {
-    const savedOrder = localStorage.getItem("categoryOrder");
-    if (savedOrder) {
-      try {
-        const orderArray: string[] = JSON.parse(savedOrder);
-        const currentIds = new Set(categories.map((cat) => cat._id));
-        const validOrder = orderArray.filter((id) => currentIds.has(id));
-
-        if (validOrder.length !== orderArray.length) {
-          localStorage.setItem("categoryOrder", JSON.stringify(validOrder));
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }, [categories]);
-
-  const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) return;
-
-    try {
-      setCreatingCategory(true);
-      await categoryAPI.create({
-        name: newCategoryName.trim(),
-        description: newCategoryDescription.trim() || undefined,
-      });
-      setNewCategoryName("");
-      setNewCategoryDescription("");
-      setShowCategoryForm(false);
-      await loadCategories();
-    } catch (err) {
-      console.error("Failed to create category:", err);
-      alert(err instanceof Error ? err.message : "Failed to create category");
-    } finally {
-      setCreatingCategory(false);
+      setLoading(false);
     }
   };
 
-  const saveCategoryOrder = (orderedCategories: Category[]) => {
-    const orderArray = orderedCategories.map((cat) => cat._id);
-    localStorage.setItem("categoryOrder", JSON.stringify(orderArray));
+  const saveCategoryOrder = (newOrder: Category[]) => {
+    const orderIds = newOrder.map((cat) => cat._id);
+    localStorage.setItem("categoryOrder", JSON.stringify(orderIds));
   };
 
   const handleDragStart = (categoryId: string) => {
@@ -144,10 +89,9 @@ export function Sidebar({
 
   const handleDrop = (e: React.DragEvent, targetCategoryId: string) => {
     e.preventDefault();
-    setDragOverCategoryId(null);
-
     if (!draggedCategoryId || draggedCategoryId === targetCategoryId) {
       setDraggedCategoryId(null);
+      setDragOverCategoryId(null);
       return;
     }
 
@@ -158,18 +102,16 @@ export function Sidebar({
       (cat) => cat._id === targetCategoryId
     );
 
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedCategoryId(null);
-      return;
-    }
+    if (draggedIndex === -1 || targetIndex === -1) return;
 
     const newCategories = [...categories];
-    const [removed] = newCategories.splice(draggedIndex, 1);
-    newCategories.splice(targetIndex, 0, removed);
+    const [draggedItem] = newCategories.splice(draggedIndex, 1);
+    newCategories.splice(targetIndex, 0, draggedItem);
 
     setCategories(newCategories);
     saveCategoryOrder(newCategories);
     setDraggedCategoryId(null);
+    setDragOverCategoryId(null);
   };
 
   const handleDragEnd = () => {
@@ -177,117 +119,205 @@ export function Sidebar({
     setDragOverCategoryId(null);
   };
 
-  const handleCategoryClick = (categoryId: string) => {
-    onCategoryClick(categoryId);
-    onViewChange("category");
+  const filteredCategories = categories.filter((category) =>
+    category.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    try {
+      await categoryAPI.create({
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim() || undefined,
+      });
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setShowAddForm(false);
+      await loadCategories();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to create category");
+    }
+  };
+
+  const handleEditCategory = (category: Category, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCategoryId(category._id);
+    setEditCategoryName(category.name);
+    setEditCategoryDescription(category.description || "");
+  };
+
+  const handleUpdateCategory = async (
+    categoryId: string,
+    e: React.FormEvent
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!editCategoryName.trim()) return;
+
+    try {
+      await categoryAPI.update(categoryId, {
+        name: editCategoryName.trim(),
+        description: editCategoryDescription.trim() || undefined,
+      });
+      setEditingCategoryId(null);
+      await loadCategories();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update category");
+    }
+  };
+
+  const handleDeleteCategory = async (
+    categoryId: string,
+    categoryName: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (
+      !confirm(
+        `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await categoryAPI.delete(categoryId);
+      if (selectedCategoryId === categoryId) {
+        onCategorySelect(null); // Clear selection if deleted
+      }
+      await loadCategories();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete category");
+    }
   };
 
   return (
-    <nav className="app-nav">
-      <div className="nav-buttons">
+    <aside className="sidebar">
+      <div className="sidebar-header">
+        <h2>Categories</h2>
         <button
-          className={activeView === "dashboard" ? "active" : ""}
-          onClick={() => onViewChange("dashboard")}
+          className="add-button"
+          onClick={() => setShowAddForm(!showAddForm)}
+          title="Add category"
         >
-          Dashboard
+          +
         </button>
       </div>
 
-      <div className="sidebar-categories">
-        <div className="sidebar-categories-header">
-          <h2 className="sidebar-categories-title">Categories</h2>
-          <button
-            className="sidebar-add-button"
-            onClick={() => setShowCategoryForm(!showCategoryForm)}
-            title="Add new category"
-          >
-            +
-          </button>
-        </div>
-
-        {showCategoryForm && (
-          <form
-            className="sidebar-category-form"
-            onSubmit={handleCreateCategory}
-          >
-            <input
-              type="text"
-              placeholder="Category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              required
-              autoFocus
-              className="sidebar-form-input"
-            />
-            <input
-              type="text"
-              placeholder="Description (optional)"
-              value={newCategoryDescription}
-              onChange={(e) => setNewCategoryDescription(e.target.value)}
-              className="sidebar-form-input"
-            />
-            <div className="sidebar-form-actions">
-              <button
-                type="submit"
-                className="sidebar-form-submit"
-                disabled={creatingCategory}
-              >
-                {creatingCategory ? "Creating..." : "Add"}
-              </button>
-              <button
-                type="button"
-                className="sidebar-form-cancel"
-                onClick={() => {
-                  setShowCategoryForm(false);
-                  setNewCategoryName("");
-                  setNewCategoryDescription("");
-                }}
-                disabled={creatingCategory}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
-        {loadingCategories ? (
-          <div className="sidebar-loading">Loading...</div>
-        ) : categories.length === 0 ? (
-          <div className="sidebar-empty">No categories yet</div>
-        ) : (
-          <div className="category-list">
-            {categories.map((category) => (
-              <div
-                key={category._id}
-                draggable
-                onDragStart={() => handleDragStart(category._id)}
-                onDragOver={(e) => handleDragOver(e, category._id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, category._id)}
-                onDragEnd={handleDragEnd}
-                className={`category-item-wrapper ${
-                  draggedCategoryId === category._id ? "dragging" : ""
-                } ${dragOverCategoryId === category._id ? "drag-over" : ""}`}
-              >
-                <button
-                  className={`category-item ${
-                    activeView === "category" &&
-                    selectedCategoryId === category._id
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() => handleCategoryClick(category._id)}
-                >
-                  <div className="category-item-drag-handle">☰</div>
-                  <div className="category-item-content">
-                    <div className="category-item-name">{category.name}</div>
-                  </div>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="sidebar-search">
+        <input
+          type="text"
+          placeholder="Search categories..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
       </div>
-    </nav>
+
+      {showAddForm && (
+        <form className="add-form" onSubmit={handleCreateCategory}>
+          <input
+            type="text"
+            placeholder="Category name"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            required
+            autoFocus
+          />
+
+          <div className="form-actions">
+            <button type="submit">Add</button>
+            <button type="button" onClick={() => setShowAddForm(false)}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {loading ? (
+        <div className="sidebar-loading">Loading...</div>
+      ) : (
+        <>
+          {filteredCategories.length === 0 && searchQuery ? (
+            <div className="sidebar-empty">
+              No categories match "{searchQuery}"
+            </div>
+          ) : (
+            <ul className="category-list">
+              {filteredCategories.map((category) => (
+            <li
+              key={category._id}
+              className={`category-item ${
+                selectedCategoryId === category._id ? "active" : ""
+              } ${draggedCategoryId === category._id ? "dragging" : ""} ${
+                dragOverCategoryId === category._id ? "drag-over" : ""
+              }`}
+              draggable={editingCategoryId !== category._id}
+              onDragStart={() => handleDragStart(category._id)}
+              onDragOver={(e) => handleDragOver(e, category._id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, category._id)}
+              onDragEnd={handleDragEnd}
+              onClick={() => onCategorySelect(category._id)}
+            >
+              {editingCategoryId === category._id ? (
+                <form
+                  className="edit-form"
+                  onSubmit={(e) => handleUpdateCategory(category._id, e)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="text"
+                    value={editCategoryName}
+                    onChange={(e) => setEditCategoryName(e.target.value)}
+                    required
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="edit-form-actions">
+                    <button type="submit" className="save-button">
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => setEditingCategoryId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <span className="category-name">{category.name}</span>
+                  <div className="category-actions">
+                    <button
+                      className="edit-button"
+                      onClick={(e) => handleEditCategory(category, e)}
+                      title="Edit category"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="delete-button"
+                      onClick={(e) =>
+                        handleDeleteCategory(category._id, category.name, e)
+                      }
+                      title="Delete category"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+          )}
+        </>
+      )}
+    </aside>
   );
 }

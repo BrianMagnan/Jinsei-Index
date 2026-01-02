@@ -44,30 +44,16 @@ export const skillAPI = {
   delete: (id: string) => fetchAPI(`/skills/${id}`, { method: 'DELETE' }),
 };
 
-// SubSkill API
-export const subSkillAPI = {
-  getAll: (skillId?: string) => {
-    const query = skillId ? `?skill=${skillId}` : '';
-    return fetchAPI(`/subskills${query}`);
-  },
-  getById: (id: string) => fetchAPI(`/subskills/${id}`),
-  create: (data: { name: string; description?: string; skill: string }) =>
-    fetchAPI('/subskills', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { name?: string; description?: string; skill?: string }) =>
-    fetchAPI(`/subskills/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  delete: (id: string) => fetchAPI(`/subskills/${id}`, { method: 'DELETE' }),
-};
-
 // Challenge API
 export const challengeAPI = {
-  getAll: (subSkillId?: string) => {
-    const query = subSkillId ? `?subSkill=${subSkillId}` : '';
+  getAll: (skillId?: string) => {
+    const query = skillId ? `?skill=${skillId}` : '';
     return fetchAPI(`/challenges${query}`);
   },
   getById: (id: string) => fetchAPI(`/challenges/${id}`),
-  create: (data: { name: string; description?: string; subSkill: string; xpReward?: number }) =>
+  create: (data: { name: string; description?: string; skill: string; xpReward?: number }) =>
     fetchAPI('/challenges', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: string, data: { name?: string; description?: string; subSkill?: string; xpReward?: number }) =>
+  update: (id: string, data: { name?: string; description?: string; skill?: string; xpReward?: number }) =>
     fetchAPI(`/challenges/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: string) => fetchAPI(`/challenges/${id}`, { method: 'DELETE' }),
 };

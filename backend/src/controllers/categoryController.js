@@ -1,6 +1,5 @@
 import Category from "../models/Category.js";
 import Skill from "../models/Skill.js";
-import SubSkill from "../models/SubSkill.js";
 import Challenge from "../models/Challenge.js";
 
 // Get all categories
@@ -22,30 +21,21 @@ export const getCategory = async (req, res) => {
       return res.status(404).json({ error: "Category not found" });
     }
 
-    // Manually populate skills -> subSkills -> challenges
+    // Manually populate skills with challenges
     const skills = await Skill.find({ category: category._id });
-    const skillsWithSubSkills = await Promise.all(
+    const skillsWithChallenges = await Promise.all(
       skills.map(async (skill) => {
-        const subSkills = await SubSkill.find({ skill: skill._id });
-        const subSkillsWithChallenges = await Promise.all(
-          subSkills.map(async (subSkill) => {
-            const challenges = await Challenge.find({ subSkill: subSkill._id });
-            return {
-              ...subSkill.toObject(),
-              challenges,
-            };
-          })
-        );
+        const challenges = await Challenge.find({ skill: skill._id });
         return {
           ...skill.toObject(),
-          subSkills: subSkillsWithChallenges,
+          challenges,
         };
       })
     );
 
     const categoryWithHierarchy = {
       ...category.toObject(),
-      skills: skillsWithSubSkills,
+      skills: skillsWithChallenges,
     };
 
     res.json(categoryWithHierarchy);

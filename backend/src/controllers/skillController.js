@@ -1,5 +1,4 @@
 import Skill from "../models/Skill.js";
-import SubSkill from "../models/SubSkill.js";
 import Challenge from "../models/Challenge.js";
 
 // Get all skills (optionally filtered by category)
@@ -24,21 +23,12 @@ export const getSkill = async (req, res) => {
       return res.status(404).json({ error: "Skill not found" });
     }
 
-    // Manually populate subSkills and challenges
-    const subSkills = await SubSkill.find({ skill: skill._id });
-    const subSkillsWithChallenges = await Promise.all(
-      subSkills.map(async (subSkill) => {
-        const challenges = await Challenge.find({ subSkill: subSkill._id });
-        return {
-          ...subSkill.toObject(),
-          challenges,
-        };
-      })
-    );
+    // Manually populate challenges
+    const challenges = await Challenge.find({ skill: skill._id });
 
     const skillWithHierarchy = {
       ...skill.toObject(),
-      subSkills: subSkillsWithChallenges,
+      challenges,
     };
 
     res.json(skillWithHierarchy);
@@ -94,11 +84,8 @@ export const deleteSkill = async (req, res) => {
       return res.status(404).json({ error: "Skill not found" });
     }
 
-    // Delete associated subSkills and challenges
-    const subSkills = await SubSkill.find({ skill: skill._id });
-    const subSkillIds = subSkills.map((s) => s._id);
-    await Challenge.deleteMany({ subSkill: { $in: subSkillIds } });
-    await SubSkill.deleteMany({ skill: skill._id });
+    // Delete associated challenges
+    await Challenge.deleteMany({ skill: skill._id });
 
     await skill.deleteOne();
     res.json({ message: "Skill deleted successfully" });

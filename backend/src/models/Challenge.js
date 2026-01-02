@@ -12,9 +12,9 @@ const challengeSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
-    subSkill: {
+    skill: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "SubSkill",
+      ref: "Skill",
       required: true,
     },
     xpReward: {

@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import Challenge from "./Challenge.js";
-import SubSkill from "./SubSkill.js";
 import Skill from "./Skill.js";
 import Category from "./Category.js";
 
@@ -30,21 +29,17 @@ const achievementSchema = new mongoose.Schema(
 achievementSchema.post("save", async function () {
   try {
     // Manually fetch the full hierarchy
-    const challenge = await Challenge.findById(this.challenge);
+    const challenge = await Challenge.findById(this.challenge).populate(
+      "skill"
+    );
     if (!challenge) {
       console.error("Challenge not found for achievement");
       return;
     }
 
-    const subSkill = await SubSkill.findById(challenge.subSkill);
-    if (!subSkill) {
-      console.error("SubSkill not found for challenge");
-      return;
-    }
-
-    const skill = await Skill.findById(subSkill.skill);
+    const skill = await Skill.findById(challenge.skill);
     if (!skill) {
-      console.error("Skill not found for subSkill");
+      console.error("Skill not found for challenge");
       return;
     }
 
