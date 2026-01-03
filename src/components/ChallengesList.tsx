@@ -23,7 +23,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newChallengeName, setNewChallengeName] = useState("");
   const [newChallengeDescription, setNewChallengeDescription] = useState("");
-  const [newChallengeXPReward, setNewChallengeXPReward] = useState(10);
+  const [newChallengeXPReward, setNewChallengeXPReward] = useState(5);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(
     null
   );
@@ -32,7 +32,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   );
   const [editChallengeName, setEditChallengeName] = useState("");
   const [editChallengeDescription, setEditChallengeDescription] = useState("");
-  const [editChallengeXPReward, setEditChallengeXPReward] = useState(10);
+  const [editChallengeXPReward, setEditChallengeXPReward] = useState(5);
   const [draggedChallengeId, setDraggedChallengeId] = useState<string | null>(
     null
   );
@@ -274,7 +274,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       });
       setNewChallengeName("");
       setNewChallengeDescription("");
-      setNewChallengeXPReward(10);
+      setNewChallengeXPReward(5);
       setShowAddForm(false);
       await loadSkill();
       // Auto-select the newly created challenge
@@ -453,7 +453,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
               placeholder="XP Reward"
               value={newChallengeXPReward}
               onChange={(e) =>
-                setNewChallengeXPReward(parseInt(e.target.value) || 10)
+                setNewChallengeXPReward(parseInt(e.target.value) || 5)
               }
               min="1"
               required
@@ -553,7 +553,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                       placeholder="XP Reward"
                       value={editChallengeXPReward}
                       onChange={(e) =>
-                        setEditChallengeXPReward(parseInt(e.target.value) || 10)
+                        setEditChallengeXPReward(parseInt(e.target.value) || 5)
                       }
                       min="1"
                       required
