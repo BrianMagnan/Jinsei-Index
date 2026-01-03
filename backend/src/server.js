@@ -9,10 +9,41 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Simple CORS configuration - allow all origins for now
+// CORS configuration - restrict to allowed origins
 app.use(
   cors({
-    origin: true, // Allow all origins
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // Get allowed origins from environment variable
+      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()) || [];
+
+      // Always allow Vercel preview URLs (for preview deployments)
+      if (origin.includes(".vercel.app")) {
+        return callback(null, true);
+      }
+
+      // Always allow localhost for local development
+      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+        return callback(null, true);
+      }
+
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // If no allowed origins configured, allow all (for development)
+      if (allowedOrigins.length === 0) {
+        return callback(null, true);
+      }
+
+      // Reject other origins
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
