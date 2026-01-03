@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { authAPI, setAuthToken, setCurrentUser } from "../services/api";
 import type { Profile } from "../types";
+import { Spinner } from "./Spinner";
 
 interface LoginProps {
   onLoginSuccess: (profile: Profile) => void;
@@ -100,7 +101,14 @@ export function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
             />
           </div>
           <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
+            {loading ? (
+              <>
+                <Spinner size="sm" />
+                <span>Logging in...</span>
+              </>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
         <div className="auth-switch">

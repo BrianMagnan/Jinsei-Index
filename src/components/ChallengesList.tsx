@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { challengeAPI, achievementAPI, skillAPI } from "../services/api";
 import type { SkillWithHierarchy, Challenge } from "../types";
+import { Spinner } from "./Spinner";
 
 interface ChallengesListProps {
   skillId: string;
@@ -9,6 +10,9 @@ interface ChallengesListProps {
 export function ChallengesList({ skillId }: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
+  const [creatingChallenge, setCreatingChallenge] = useState(false);
+  const [updatingChallenge, setUpdatingChallenge] = useState<string | null>(null);
+  const [deletingChallenge, setDeletingChallenge] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newChallengeName, setNewChallengeName] = useState("");
   const [newChallengeDescription, setNewChallengeDescription] = useState("");
@@ -176,8 +180,9 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
 
   const handleCreateChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newChallengeName.trim()) return;
+    if (!newChallengeName.trim() || creatingChallenge) return;
 
+    setCreatingChallenge(true);
     try {
       await challengeAPI.create({
         name: newChallengeName.trim(),
@@ -199,6 +204,8 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create challenge");
+    } finally {
+      setCreatingChallenge(false);
     }
   };
 
@@ -235,8 +242,9 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!editChallengeName.trim()) return;
+    if (!editChallengeName.trim() || updatingChallenge === challengeId) return;
 
+    setUpdatingChallenge(challengeId);
     try {
       await challengeAPI.update(challengeId, {
         name: editChallengeName.trim(),
@@ -248,6 +256,8 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       setSelectedChallengeId(challengeId); // Keep same challenge selected
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update challenge");
+    } finally {
+      setUpdatingChallenge(null);
     }
   };
 
@@ -257,10 +267,13 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
+    if (deletingChallenge === challengeId) return;
+    
     if (!confirm(`Are you sure you want to delete "${challengeName}"?`)) {
       return;
     }
 
+    setDeletingChallenge(challengeId);
     try {
       await challengeAPI.delete(challengeId);
       await loadSkill();
@@ -279,6 +292,8 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete challenge");
+    } finally {
+      setDeletingChallenge(null);
     }
   };
 
@@ -287,7 +302,12 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   );
 
   if (loading) {
-    return <div className="loading">Loading challenges...</div>;
+    return (
+      <div className="loading">
+        <Spinner size="md" />
+        <span>Loading challenges...</span>
+      </div>
+    );
   }
 
   if (!skill) {
@@ -346,8 +366,21 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
               required
             />
             <div className="form-actions">
-              <button type="submit">Add</button>
-              <button type="button" onClick={() => setShowAddForm(false)}>
+              <button type="submit" disabled={creatingChallenge}>
+                {creatingChallenge ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Adding...</span>
+                  </>
+                ) : (
+                  "Add"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                disabled={creatingChallenge}
+              >
                 Cancel
               </button>
             </div>
@@ -434,13 +467,25 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div className="edit-form-actions">
-                      <button type="submit" className="save-button">
-                        Save
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingChallenge === challenge._id}
+                      >
+                        {updatingChallenge === challenge._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
                       </button>
                       <button
                         type="button"
                         className="cancel-button"
                         onClick={() => setEditingChallengeId(null)}
+                        disabled={updatingChallenge === challenge._id}
                       >
                         Cancel
                       </button>
@@ -493,6 +538,10 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                                   handleEditChallenge(challenge, e);
                                   setOpenMenuId(null);
                                 }}
+                                disabled={
+                                  deletingChallenge === challenge._id ||
+                                  updatingChallenge === challenge._id
+                                }
                               >
                                 Edit
                               </button>
@@ -507,8 +556,19 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                                   );
                                   setOpenMenuId(null);
                                 }}
+                                disabled={
+                                  deletingChallenge === challenge._id ||
+                                  updatingChallenge === challenge._id
+                                }
                               >
-                                Delete
+                                {deletingChallenge === challenge._id ? (
+                                  <>
+                                    <Spinner size="sm" />
+                                    <span>Deleting...</span>
+                                  </>
+                                ) : (
+                                  "Delete"
+                                )}
                               </button>
                             </div>
                           )}
@@ -547,6 +607,10 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                       handleEditChallenge(selectedChallenge, e);
                       setDetailMenuOpen(false);
                     }}
+                    disabled={
+                      deletingChallenge === selectedChallenge._id ||
+                      updatingChallenge === selectedChallenge._id
+                    }
                   >
                     Edit
                   </button>
@@ -561,8 +625,19 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                       );
                       setDetailMenuOpen(false);
                     }}
+                    disabled={
+                      deletingChallenge === selectedChallenge._id ||
+                      updatingChallenge === selectedChallenge._id
+                    }
                   >
-                    Delete
+                    {deletingChallenge === selectedChallenge._id ? (
+                      <>
+                        <Spinner size="sm" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      "Delete"
+                    )}
                   </button>
                 </div>
               )}

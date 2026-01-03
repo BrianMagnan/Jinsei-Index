@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { skillAPI } from "../services/api";
 import type { Skill } from "../types";
+import { Spinner } from "./Spinner";
 
 interface SkillsListProps {
   categoryId: string;
@@ -112,8 +113,9 @@ export function SkillsList({
 
   const handleCreateSkill = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSkillName.trim()) return;
+    if (!newSkillName.trim() || creatingSkill) return;
 
+    setCreatingSkill(true);
     try {
       const newSkill = await skillAPI.create({
         name: newSkillName.trim(),
@@ -156,6 +158,8 @@ export function SkillsList({
       await loadSkills();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create skill");
+    } finally {
+      setCreatingSkill(false);
     }
   };
 
@@ -169,8 +173,9 @@ export function SkillsList({
   const handleUpdateSkill = async (skillId: string, e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!editSkillName.trim()) return;
+    if (!editSkillName.trim() || updatingSkill === skillId) return;
 
+    setUpdatingSkill(skillId);
     try {
       await skillAPI.update(skillId, {
         name: editSkillName.trim(),
@@ -180,6 +185,8 @@ export function SkillsList({
       await loadSkills();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update skill");
+    } finally {
+      setUpdatingSkill(null);
     }
   };
 
@@ -189,6 +196,8 @@ export function SkillsList({
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
+    if (deletingSkill === skillId) return;
+    
     if (
       !confirm(
         `Are you sure you want to delete "${skillName}"? This will also delete all associated challenges.`
@@ -197,11 +206,14 @@ export function SkillsList({
       return;
     }
 
+    setDeletingSkill(skillId);
     try {
       await skillAPI.delete(skillId);
       await loadSkills();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete skill");
+    } finally {
+      setDeletingSkill(null);
     }
   };
 
@@ -287,8 +299,21 @@ export function SkillsList({
             onChange={(e) => setNewSkillDescription(e.target.value)}
           /> */}
           <div className="form-actions">
-            <button type="submit">Add</button>
-            <button type="button" onClick={() => setShowAddForm(false)}>
+            <button type="submit" disabled={creatingSkill}>
+              {creatingSkill ? (
+                <>
+                  <Spinner size="sm" />
+                  <span>Adding...</span>
+                </>
+              ) : (
+                "Add"
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(false)}
+              disabled={creatingSkill}
+            >
               Cancel
             </button>
           </div>
@@ -296,7 +321,10 @@ export function SkillsList({
       )}
 
       {loading ? (
-        <div className="loading">Loading skills...</div>
+        <div className="loading">
+          <Spinner size="md" />
+          <span>Loading skills...</span>
+        </div>
       ) : skills.length === 0 ? (
         <div className="empty-state">
           No skills yet. Create your first skill!
@@ -355,13 +383,25 @@ export function SkillsList({
                     onClick={(e) => e.stopPropagation()}
                   />
                   <div className="edit-form-actions">
-                    <button type="submit" className="save-button">
-                      Save
+                    <button
+                      type="submit"
+                      className="save-button"
+                      disabled={updatingSkill === skill._id}
+                    >
+                      {updatingSkill === skill._id ? (
+                        <>
+                          <Spinner size="sm" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        "Save"
+                      )}
                     </button>
                     <button
                       type="button"
                       className="cancel-button"
                       onClick={() => setEditingSkillId(null)}
+                      disabled={updatingSkill === skill._id}
                     >
                       Cancel
                     </button>
@@ -418,6 +458,10 @@ export function SkillsList({
                                   handleEditSkill(skill, e);
                                   setOpenMenuId(null);
                                 }}
+                                disabled={
+                                  deletingSkill === skill._id ||
+                                  updatingSkill === skill._id
+                                }
                               >
                                 Edit
                               </button>
@@ -428,8 +472,19 @@ export function SkillsList({
                                   handleDeleteSkill(skill._id, skill.name, e);
                                   setOpenMenuId(null);
                                 }}
+                                disabled={
+                                  deletingSkill === skill._id ||
+                                  updatingSkill === skill._id
+                                }
                               >
-                                Delete
+                                {deletingSkill === skill._id ? (
+                                  <>
+                                    <Spinner size="sm" />
+                                    <span>Deleting...</span>
+                                  </>
+                                ) : (
+                                  "Delete"
+                                )}
                               </button>
                             </div>
                           )}

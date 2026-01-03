@@ -63,7 +63,10 @@ export function ProfilesList() {
   if (loading) {
     return (
       <div className="profiles-container">
-        <div className="profiles-loading">Loading...</div>
+        <div className="profiles-loading">
+          <Spinner size="md" />
+          <span>Loading profile...</span>
+        </div>
       </div>
     );
   }

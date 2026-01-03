@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { categoryAPI, skillAPI, challengeAPI } from "../services/api";
 import type { Category, Profile, Skill, Challenge } from "../types";
 import { Search, type SearchResult } from "./Search";
+import { Spinner } from "./Spinner";
 
 interface SidebarProps {
   selectedCategoryId: string | null;
@@ -43,6 +44,9 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
+  const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
   useEffect(() => {
     loadCategories();
@@ -243,8 +247,9 @@ export function Sidebar({
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCategoryName.trim()) return;
+    if (!newCategoryName.trim() || creatingCategory) return;
 
+    setCreatingCategory(true);
     try {
       const newCategory = await categoryAPI.create({
         name: newCategoryName.trim(),
@@ -253,7 +258,7 @@ export function Sidebar({
       setNewCategoryName("");
       setNewCategoryDescription("");
       setShowAddForm(false);
-      
+
       // Add new category to the end of the list and update localStorage order
       const savedOrder = localStorage.getItem("categoryOrder");
       if (savedOrder) {
@@ -266,12 +271,17 @@ export function Sidebar({
         }
       } else {
         // No saved order, create one with the new category
-        localStorage.setItem("categoryOrder", JSON.stringify([newCategory._id]));
+        localStorage.setItem(
+          "categoryOrder",
+          JSON.stringify([newCategory._id])
+        );
       }
-      
+
       await loadCategories();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create category");
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -288,8 +298,9 @@ export function Sidebar({
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!editCategoryName.trim()) return;
+    if (!editCategoryName.trim() || updatingCategory === categoryId) return;
 
+    setUpdatingCategory(categoryId);
     try {
       await categoryAPI.update(categoryId, {
         name: editCategoryName.trim(),
@@ -299,6 +310,8 @@ export function Sidebar({
       await loadCategories();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update category");
+    } finally {
+      setUpdatingCategory(null);
     }
   };
 
@@ -308,6 +321,8 @@ export function Sidebar({
     e: React.MouseEvent
   ) => {
     e.stopPropagation();
+    if (deletingCategory === categoryId) return;
+    
     if (
       !confirm(
         `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
@@ -316,6 +331,7 @@ export function Sidebar({
       return;
     }
 
+    setDeletingCategory(categoryId);
     try {
       await categoryAPI.delete(categoryId);
       if (selectedCategoryId === categoryId) {
@@ -324,6 +340,8 @@ export function Sidebar({
       await loadCategories();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to delete category");
+    } finally {
+      setDeletingCategory(null);
     }
   };
 
@@ -445,8 +463,21 @@ export function Sidebar({
             />
 
             <div className="form-actions">
-              <button type="submit">Add</button>
-              <button type="button" onClick={() => setShowAddForm(false)}>
+              <button type="submit" disabled={creatingCategory}>
+                {creatingCategory ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Adding...</span>
+                  </>
+                ) : (
+                  "Add"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddForm(false)}
+                disabled={creatingCategory}
+              >
                 Cancel
               </button>
             </div>
@@ -454,7 +485,10 @@ export function Sidebar({
         )}
 
         {loading ? (
-          <div className="sidebar-loading">Loading...</div>
+          <div className="sidebar-loading">
+            <Spinner size="md" />
+            <span>Loading categories...</span>
+          </div>
         ) : (
           <>
             {filteredCategories.length === 0 && searchQuery ? (
@@ -494,13 +528,25 @@ export function Sidebar({
                           onClick={(e) => e.stopPropagation()}
                         />
                         <div className="edit-form-actions">
-                          <button type="submit" className="save-button">
-                            Save
+                          <button
+                            type="submit"
+                            className="save-button"
+                            disabled={updatingCategory === category._id}
+                          >
+                            {updatingCategory === category._id ? (
+                              <>
+                                <Spinner size="sm" />
+                                <span>Saving...</span>
+                              </>
+                            ) : (
+                              "Save"
+                            )}
                           </button>
                           <button
                             type="button"
                             className="cancel-button"
                             onClick={() => setEditingCategoryId(null)}
+                            disabled={updatingCategory === category._id}
                           >
                             Cancel
                           </button>
@@ -514,6 +560,10 @@ export function Sidebar({
                             className="edit-button"
                             onClick={(e) => handleEditCategory(category, e)}
                             title="Edit category"
+                            disabled={
+                              deletingCategory === category._id ||
+                              updatingCategory === category._id
+                            }
                           >
                             ✎
                           </button>
@@ -527,8 +577,16 @@ export function Sidebar({
                               )
                             }
                             title="Delete category"
+                            disabled={
+                              deletingCategory === category._id ||
+                              updatingCategory === category._id
+                            }
                           >
-                            ×
+                            {deletingCategory === category._id ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              "×"
+                            )}
                           </button>
                         </div>
                       </>
