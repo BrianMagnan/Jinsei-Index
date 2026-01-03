@@ -42,10 +42,28 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [detailMenuOpen, setDetailMenuOpen] = useState(false);
   const [menuCloseTimeout, setMenuCloseTimeout] = useState<number | null>(null);
+  const [challengeDescription, setChallengeDescription] = useState("");
+  const [savingChallengeDescription, setSavingChallengeDescription] =
+    useState(false);
+  const [editingChallengeDescription, setEditingChallengeDescription] =
+    useState(false);
 
   useEffect(() => {
     loadSkill();
   }, [skillId]);
+
+  useEffect(() => {
+    // Sync challenge description state when selected challenge changes
+    if (selectedChallengeId && skill?.challenges) {
+      const challenge = skill.challenges.find(
+        (c) => c._id === selectedChallengeId
+      );
+      if (challenge) {
+        setChallengeDescription(challenge.description || "");
+        setEditingChallengeDescription(false); // Reset edit mode when challenge changes
+      }
+    }
+  }, [selectedChallengeId, skill]);
 
   useEffect(() => {
     // Auto-select first challenge if available
@@ -127,6 +145,63 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveChallengeDescription = async () => {
+    if (
+      !selectedChallengeId ||
+      !skill?.challenges ||
+      savingChallengeDescription
+    )
+      return;
+
+    const challenge = skill.challenges.find(
+      (c) => c._id === selectedChallengeId
+    );
+    if (!challenge) return;
+
+    const trimmedDescription = challengeDescription.trim();
+    // Only save if description actually changed
+    if (trimmedDescription === (challenge.description || "")) {
+      setEditingChallengeDescription(false);
+      return;
+    }
+
+    setSavingChallengeDescription(true);
+    try {
+      await challengeAPI.update(selectedChallengeId, {
+        description: trimmedDescription || undefined,
+      });
+      // Update local skill state to reflect the change
+      const updatedChallenges = skill.challenges.map((c) =>
+        c._id === selectedChallengeId
+          ? { ...c, description: trimmedDescription || undefined }
+          : c
+      );
+      setSkill({ ...skill, challenges: updatedChallenges });
+      setEditingChallengeDescription(false);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to save description");
+      // Revert to original description on error
+      setChallengeDescription(challenge.description || "");
+    } finally {
+      setSavingChallengeDescription(false);
+    }
+  };
+
+  const handleCancelEditDescription = () => {
+    if (!selectedChallengeId || !skill?.challenges) return;
+    const challenge = skill.challenges.find(
+      (c) => c._id === selectedChallengeId
+    );
+    if (challenge) {
+      setChallengeDescription(challenge.description || "");
+    }
+    setEditingChallengeDescription(false);
+  };
+
+  const handleEditDescription = () => {
+    setEditingChallengeDescription(true);
   };
 
   const saveChallengeOrder = (newOrder: Challenge[]) => {
@@ -707,15 +782,62 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
               )}
             </div>
           </div>
-          {selectedChallenge.description ? (
-            <p className="challenge-detail-description">
-              {selectedChallenge.description}
-            </p>
-          ) : (
-            <p className="challenge-detail-description no-description">
-              No description provided.
-            </p>
-          )}
+          <div className="challenge-detail-description-container">
+            {editingChallengeDescription ? (
+              <div className="challenge-detail-description-editor">
+                <textarea
+                  className="challenge-detail-description-textarea"
+                  value={challengeDescription}
+                  onChange={(e) => setChallengeDescription(e.target.value)}
+                  placeholder="Add a description for this challenge..."
+                  disabled={savingChallengeDescription}
+                  rows={8}
+                  autoFocus
+                />
+                <div className="challenge-detail-description-actions">
+                  <button
+                    className="save-button"
+                    onClick={handleSaveChallengeDescription}
+                    disabled={savingChallengeDescription}
+                  >
+                    {savingChallengeDescription ? (
+                      <>
+                        <Spinner size="sm" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      "Save"
+                    )}
+                  </button>
+                  <button
+                    className="cancel-button"
+                    onClick={handleCancelEditDescription}
+                    disabled={savingChallengeDescription}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="challenge-detail-description-readonly">
+                {challengeDescription ? (
+                  <p className="challenge-detail-description">
+                    {challengeDescription}
+                  </p>
+                ) : (
+                  <p className="challenge-detail-description no-description">
+                    No description provided.
+                  </p>
+                )}
+                <button
+                  className="edit-description-button"
+                  onClick={handleEditDescription}
+                >
+                  Edit
+                </button>
+              </div>
+            )}
+          </div>
           <div className="challenge-detail-actions">
             <div className="challenge-detail-xp">
               <span className="xp-label">XP Reward</span>

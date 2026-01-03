@@ -395,79 +395,94 @@ export function SkillsList({
                 }}
               >
                 <h2>{localCategory?.name || category?.name || "Skills"}</h2>
-                <div
-                  className="skill-menu-container"
-                  ref={categoryMenuRef}
-                  onMouseEnter={() => {
-                    if (menuCloseTimeout) {
-                      clearTimeout(menuCloseTimeout);
-                      setMenuCloseTimeout(null);
-                    }
-                  }}
-                  onMouseLeave={() => {
-                    if (categoryMenuOpen) {
-                      const timeout = setTimeout(() => {
-                        setCategoryMenuOpen(false);
-                      }, 150);
-                      setMenuCloseTimeout(timeout);
-                    }
-                  }}
-                >
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
                   <button
-                    className="skill-menu-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCategoryMenuOpen(!categoryMenuOpen);
-                    }}
-                    title="More options"
+                    className="add-button"
+                    onClick={() => setShowAddForm(!showAddForm)}
+                    title="Add skill"
                     disabled={
-                      deletingCategory || updatingCategory || editingCategory
+                      creatingSkill ||
+                      !!updatingSkill ||
+                      !!deletingSkill ||
+                      editingCategory
                     }
                   >
-                    ⋯
+                    +
                   </button>
-                  {categoryMenuOpen && (
-                    <div className="skill-menu">
-                      <button
-                        className="skill-menu-item"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowAddForm(!showAddForm);
+                  <div
+                    className="skill-menu-container"
+                    ref={categoryMenuRef}
+                    onMouseEnter={() => {
+                      if (menuCloseTimeout) {
+                        clearTimeout(menuCloseTimeout);
+                        setMenuCloseTimeout(null);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (categoryMenuOpen) {
+                        const timeout = setTimeout(() => {
                           setCategoryMenuOpen(false);
+                        }, 300);
+                        setMenuCloseTimeout(timeout);
+                      }
+                    }}
+                  >
+                    <button
+                      className="skill-menu-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCategoryMenuOpen(!categoryMenuOpen);
+                      }}
+                      title="More options"
+                      disabled={
+                        deletingCategory || updatingCategory || editingCategory
+                      }
+                    >
+                      ⋯
+                    </button>
+                    {categoryMenuOpen && (
+                      <div
+                        className="skill-menu"
+                        onMouseEnter={() => {
+                          if (menuCloseTimeout) {
+                            clearTimeout(menuCloseTimeout);
+                            setMenuCloseTimeout(null);
+                          }
                         }}
-                        disabled={
-                          creatingSkill ||
-                          !!updatingSkill ||
-                          !!deletingSkill ||
-                          editingCategory
-                        }
+                        onMouseLeave={() => {
+                          if (categoryMenuOpen) {
+                            const timeout = setTimeout(() => {
+                              setCategoryMenuOpen(false);
+                            }, 300);
+                            setMenuCloseTimeout(timeout);
+                          }
+                        }}
                       >
-                        Add Skill
-                      </button>
-                      <button
-                        className="skill-menu-item"
-                        onClick={handleEditCategory}
-                        disabled={
-                          deletingCategory ||
-                          updatingCategory ||
-                          editingCategory
-                        }
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="skill-menu-item delete"
-                        onClick={handleDeleteCategory}
-                        disabled={
-                          deletingCategory ||
-                          updatingCategory ||
-                          editingCategory
-                        }
-                      >
-                        {deletingCategory ? <Spinner size="sm" /> : "Delete"}
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          className="skill-menu-item"
+                          onClick={handleEditCategory}
+                          disabled={
+                            deletingCategory ||
+                            updatingCategory ||
+                            editingCategory
+                          }
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="skill-menu-item delete"
+                          onClick={handleDeleteCategory}
+                          disabled={
+                            deletingCategory ||
+                            updatingCategory ||
+                            editingCategory
+                          }
+                        >
+                          {deletingCategory ? <Spinner size="sm" /> : "Delete"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </>
