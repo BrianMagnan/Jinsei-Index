@@ -1,4 +1,5 @@
 import Achievement from "../models/Achievement.js";
+import Challenge from "../models/Challenge.js";
 
 // Get all achievements (optionally filtered by challenge) for the authenticated profile
 export const getAchievements = async (req, res) => {

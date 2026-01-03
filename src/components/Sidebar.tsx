@@ -322,7 +322,7 @@ export function Sidebar({
   ) => {
     e.stopPropagation();
     if (deletingCategory === categoryId) return;
-    
+
     if (
       !confirm(
         `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
@@ -375,11 +375,6 @@ export function Sidebar({
             {currentUser && (
               <div className="sidebar-user-info">
                 <span className="sidebar-user-name">{currentUser.name}</span>
-                {currentUser.totalLevel && (
-                  <span className="sidebar-user-level">
-                    LV {currentUser.totalLevel}
-                  </span>
-                )}
               </div>
             )}
             <div className="sidebar-header-actions">

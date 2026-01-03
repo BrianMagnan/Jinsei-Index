@@ -19,7 +19,8 @@ app.use(
       }
 
       // Get allowed origins from environment variable
-      const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()) || [];
+      const allowedOrigins =
+        process.env.ALLOWED_ORIGINS?.split(",").map((o) => o.trim()) || [];
 
       // Always allow Vercel preview URLs (for preview deployments)
       if (origin.includes(".vercel.app")) {
@@ -27,7 +28,10 @@ app.use(
       }
 
       // Always allow localhost for local development
-      if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) {
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:")
+      ) {
         return callback(null, true);
       }
 

@@ -11,8 +11,15 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingChallenge, setCreatingChallenge] = useState(false);
-  const [updatingChallenge, setUpdatingChallenge] = useState<string | null>(null);
-  const [deletingChallenge, setDeletingChallenge] = useState<string | null>(null);
+  const [updatingChallenge, setUpdatingChallenge] = useState<string | null>(
+    null
+  );
+  const [deletingChallenge, setDeletingChallenge] = useState<string | null>(
+    null
+  );
+  const [completingChallenge, setCompletingChallenge] = useState<string | null>(
+    null
+  );
   const [showAddForm, setShowAddForm] = useState(false);
   const [newChallengeName, setNewChallengeName] = useState("");
   const [newChallengeDescription, setNewChallengeDescription] = useState("");
@@ -209,10 +216,20 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     }
   };
 
-  const handleCompleteChallenge = async (challenge: Challenge) => {
+  const handleCompleteChallenge = async (
+    challenge: Challenge,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (completingChallenge === challenge._id) return;
+
+    setCompletingChallenge(challenge._id);
     try {
       await achievementAPI.create({ challenge: challenge._id });
-      await loadSkill(); // Reload to refresh skill data
+      alert(
+        `Challenge "${challenge.name}" completed! +${challenge.xpReward} XP`
+      );
+      await loadSkill(); // Reload to refresh skill data and update XP/level
       // Auto-select next challenge or first if none selected
       if (skill?.challenges && skill.challenges.length > 1) {
         const currentIndex = skill.challenges.findIndex(
@@ -225,6 +242,8 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       alert(
         err instanceof Error ? err.message : "Failed to complete challenge"
       );
+    } finally {
+      setCompletingChallenge(null);
     }
   };
 
@@ -268,7 +287,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   ) => {
     e.stopPropagation();
     if (deletingChallenge === challengeId) return;
-    
+
     if (!confirm(`Are you sure you want to delete "${challengeName}"?`)) {
       return;
     }
@@ -324,7 +343,6 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
         <div className="section-header">
           <div className="header-title-section">
             <h2>{skill.name}</h2>
-            {/* <span className="skill-level">Level {skill.level}</span> */}
           </div>
           <button
             className="add-button"
@@ -558,7 +576,8 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                                 }}
                                 disabled={
                                   deletingChallenge === challenge._id ||
-                                  updatingChallenge === challenge._id
+                                  updatingChallenge === challenge._id ||
+                                  completingChallenge === challenge._id
                                 }
                               >
                                 {deletingChallenge === challenge._id ? (
@@ -568,6 +587,28 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                                   </>
                                 ) : (
                                   "Delete"
+                                )}
+                              </button>
+                              <button
+                                className="challenge-menu-item complete"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCompleteChallenge(challenge, e);
+                                  setOpenMenuId(null);
+                                }}
+                                disabled={
+                                  completingChallenge === challenge._id ||
+                                  deletingChallenge === challenge._id ||
+                                  updatingChallenge === challenge._id
+                                }
+                              >
+                                {completingChallenge === challenge._id ? (
+                                  <>
+                                    <Spinner size="sm" />
+                                    <span>Completing...</span>
+                                  </>
+                                ) : (
+                                  "Complete"
                                 )}
                               </button>
                             </div>
@@ -627,7 +668,8 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                     }}
                     disabled={
                       deletingChallenge === selectedChallenge._id ||
-                      updatingChallenge === selectedChallenge._id
+                      updatingChallenge === selectedChallenge._id ||
+                      completingChallenge === selectedChallenge._id
                     }
                   >
                     {deletingChallenge === selectedChallenge._id ? (
@@ -637,6 +679,28 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                       </>
                     ) : (
                       "Delete"
+                    )}
+                  </button>
+                  <button
+                    className="challenge-detail-menu-item complete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCompleteChallenge(selectedChallenge, e);
+                      setDetailMenuOpen(false);
+                    }}
+                    disabled={
+                      completingChallenge === selectedChallenge._id ||
+                      deletingChallenge === selectedChallenge._id ||
+                      updatingChallenge === selectedChallenge._id
+                    }
+                  >
+                    {completingChallenge === selectedChallenge._id ? (
+                      <>
+                        <Spinner size="sm" />
+                        <span>Completing...</span>
+                      </>
+                    ) : (
+                      "Complete"
                     )}
                   </button>
                 </div>
@@ -659,12 +723,21 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
             </div>
             <button
               className="complete-button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCompleteChallenge(selectedChallenge);
-              }}
+              onClick={(e) => handleCompleteChallenge(selectedChallenge, e)}
+              disabled={
+                completingChallenge === selectedChallenge._id ||
+                deletingChallenge === selectedChallenge._id ||
+                updatingChallenge === selectedChallenge._id
+              }
             >
-              Submit
+              {completingChallenge === selectedChallenge._id ? (
+                <>
+                  <Spinner size="sm" />
+                  <span>Completing...</span>
+                </>
+              ) : (
+                "Complete"
+              )}
             </button>
           </div>
         </div>

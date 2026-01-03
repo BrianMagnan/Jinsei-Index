@@ -661,8 +661,8 @@ body {
 
 .section-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
   margin-bottom: var(--spacing-xl);
   padding-bottom: var(--spacing-md);
   border-bottom: 2px solid var(--color-border-primary);
@@ -670,6 +670,13 @@ body {
   margin-top: 0;
   min-height: fit-content;
   height: auto;
+  gap: var(--spacing-xs);
+}
+
+.section-header .header-title-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .section-header h2 {
@@ -687,6 +694,25 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex: 1;
+  justify-content: space-between;
+  padding: 0 var(--spacing-sm);
+}
+
+.header-title-section .skill-stats {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* Align header stats with list item stats - match skill-header padding */
+.section-header .header-title-section {
+  padding: 0 var(--spacing-sm);
+}
+
+/* Ensure h2 in header aligns with skill-name positioning */
+.section-header .header-title-section h2 {
+  margin: 0;
+  margin-bottom: 0;
 }
 
 .skill-level {
@@ -776,6 +802,13 @@ body {
 }
 
 .skill-item:hover .skill-menu-container {
+  width: 32px;
+  opacity: 1;
+  margin-left: var(--spacing-sm);
+}
+
+/* Make menu visible in header context */
+.header-title-section .skill-menu-container {
   width: 32px;
   opacity: 1;
   margin-left: var(--spacing-sm);
@@ -1122,7 +1155,7 @@ body {
   text-shadow: 0 0 5px var(--color-accent-green),
     0 0 10px var(--color-accent-green), 0 0 15px var(--color-accent-green-glow),
     0 0 20px var(--color-accent-green-glow);
-  /* transform: scale(1.05); */
+  transform: none;
 }
 
 .loading,

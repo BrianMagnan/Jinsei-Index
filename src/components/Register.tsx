@@ -66,7 +66,7 @@ export function Register({
         {error && <div className="auth-error">{error}</div>}
         <form onSubmit={handleSubmit}>
           <div className="auth-field">
-            <label htmlFor="name">Name *</label>
+            <label htmlFor="name">Username *</label>
             <input
               id="name"
               type="text"
@@ -74,7 +74,7 @@ export function Register({
               onChange={(e) => setName(e.target.value)}
               required
               autoFocus
-              placeholder="Enter your name"
+              placeholder="Enter your username"
             />
           </div>
           <div className="auth-field">

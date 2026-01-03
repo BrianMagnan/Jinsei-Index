@@ -58,7 +58,7 @@ export function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
                 className={`toggle-button ${!useEmail ? "active" : ""}`}
                 onClick={() => setUseEmail(false)}
               >
-                Name
+                Username
               </button>
             </div>
           </div>
@@ -77,7 +77,7 @@ export function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
             </div>
           ) : (
             <div className="auth-field">
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name">Username</label>
               <input
                 id="name"
                 type="text"
@@ -85,7 +85,7 @@ export function Login({ onLoginSuccess, onSwitchToRegister }: LoginProps) {
                 onChange={(e) => setName(e.target.value)}
                 required
                 autoFocus
-                placeholder="Enter your name"
+                placeholder="Enter your username"
               />
             </div>
           )}

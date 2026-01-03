@@ -1,18 +1,22 @@
-import { useState, useEffect } from "react";
-import { skillAPI } from "../services/api";
-import type { Skill } from "../types";
+import { useState, useEffect, useRef } from "react";
+import { skillAPI, categoryAPI } from "../services/api";
+import type { Skill, Category } from "../types";
 import { Spinner } from "./Spinner";
 
 interface SkillsListProps {
   categoryId: string;
-  categoryName: string;
+  category: Category | null;
   onSkillSelect: (skillId: string) => void;
+  onCategoryUpdate?: () => void;
+  onCategoryDelete?: () => void;
 }
 
 export function SkillsList({
   categoryId,
-  categoryName,
+  category,
   onSkillSelect,
+  onCategoryUpdate,
+  onCategoryDelete,
 }: SkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,10 +33,22 @@ export function SkillsList({
   const [dragOverSkillId, setDragOverSkillId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [menuCloseTimeout, setMenuCloseTimeout] = useState<number | null>(null);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(false);
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryDescription, setEditCategoryDescription] = useState("");
+  const [updatingCategory, setUpdatingCategory] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState(false);
+  const [localCategory, setLocalCategory] = useState<Category | null>(category);
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSkills();
   }, [categoryId]);
+
+  useEffect(() => {
+    setLocalCategory(category);
+  }, [category]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -41,16 +57,23 @@ export function SkillsList({
       if (openMenuId && !target.closest(".skill-menu-container")) {
         setOpenMenuId(null);
       }
+      if (
+        categoryMenuOpen &&
+        categoryMenuRef.current &&
+        !categoryMenuRef.current.contains(target)
+      ) {
+        setCategoryMenuOpen(false);
+      }
     };
 
-    if (openMenuId) {
+    if (openMenuId || categoryMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [openMenuId]);
+  }, [openMenuId, categoryMenuOpen]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -200,7 +223,7 @@ export function SkillsList({
   ) => {
     e.stopPropagation();
     if (deletingSkill === skillId) return;
-    
+
     if (
       !confirm(
         `Are you sure you want to delete "${skillName}"? This will also delete all associated challenges.`
@@ -272,17 +295,184 @@ export function SkillsList({
     setDragOverSkillId(null);
   };
 
+  const handleEditCategory = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const cat = localCategory || category;
+    if (!cat) return;
+    setEditingCategory(true);
+    setEditCategoryName(cat.name);
+    setEditCategoryDescription(cat.description || "");
+    setCategoryMenuOpen(false);
+  };
+
+  const handleUpdateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cat = localCategory || category;
+    if (!cat || !editCategoryName.trim() || updatingCategory) return;
+
+    setUpdatingCategory(true);
+    try {
+      await categoryAPI.update(cat._id, {
+        name: editCategoryName.trim(),
+        description: editCategoryDescription.trim() || undefined,
+      });
+      setEditingCategory(false);
+      if (onCategoryUpdate) {
+        onCategoryUpdate();
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to update category");
+    } finally {
+      setUpdatingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const cat = localCategory || category;
+    if (!cat || deletingCategory) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete "${cat.name}"? This will also delete all associated skills and challenges.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingCategory(true);
+    try {
+      await categoryAPI.delete(cat._id);
+      if (onCategoryDelete) {
+        onCategoryDelete();
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete category");
+    } finally {
+      setDeletingCategory(false);
+    }
+  };
+
   return (
     <div className="skills-list">
       <div className="section-header">
-        <h2>{categoryName || "Skills"}</h2>
-        <button
-          className="add-button"
-          onClick={() => setShowAddForm(!showAddForm)}
-          title="Add skill"
-        >
-          +
-        </button>
+        <div className="header-title-section">
+          {editingCategory ? (
+            <form className="edit-form" onSubmit={handleUpdateCategory}>
+              <input
+                type="text"
+                value={editCategoryName}
+                onChange={(e) => setEditCategoryName(e.target.value)}
+                required
+                autoFocus
+              />
+              <div className="edit-form-actions">
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={updatingCategory}
+                >
+                  {updatingCategory ? <Spinner size="sm" /> : "Save"}
+                </button>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => setEditingCategory(false)}
+                  disabled={updatingCategory}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
+              >
+                <h2>{localCategory?.name || category?.name || "Skills"}</h2>
+                <div
+                  className="skill-menu-container"
+                  ref={categoryMenuRef}
+                  onMouseEnter={() => {
+                    if (menuCloseTimeout) {
+                      clearTimeout(menuCloseTimeout);
+                      setMenuCloseTimeout(null);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (categoryMenuOpen) {
+                      const timeout = setTimeout(() => {
+                        setCategoryMenuOpen(false);
+                      }, 150);
+                      setMenuCloseTimeout(timeout);
+                    }
+                  }}
+                >
+                  <button
+                    className="skill-menu-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCategoryMenuOpen(!categoryMenuOpen);
+                    }}
+                    title="More options"
+                    disabled={
+                      deletingCategory || updatingCategory || editingCategory
+                    }
+                  >
+                    ⋯
+                  </button>
+                  {categoryMenuOpen && (
+                    <div className="skill-menu">
+                      <button
+                        className="skill-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowAddForm(!showAddForm);
+                          setCategoryMenuOpen(false);
+                        }}
+                        disabled={
+                          creatingSkill ||
+                          !!updatingSkill ||
+                          !!deletingSkill ||
+                          editingCategory
+                        }
+                      >
+                        Add Skill
+                      </button>
+                      <button
+                        className="skill-menu-item"
+                        onClick={handleEditCategory}
+                        disabled={
+                          deletingCategory ||
+                          updatingCategory ||
+                          editingCategory
+                        }
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="skill-menu-item delete"
+                        onClick={handleDeleteCategory}
+                        disabled={
+                          deletingCategory ||
+                          updatingCategory ||
+                          editingCategory
+                        }
+                      >
+                        {deletingCategory ? <Spinner size="sm" /> : "Delete"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {showAddForm && (

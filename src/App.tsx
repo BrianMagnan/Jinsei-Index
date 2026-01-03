@@ -145,8 +145,13 @@ function App() {
             {selectedCategoryId && !selectedSkillId && (
               <SkillsList
                 categoryId={selectedCategoryId}
-                categoryName={selectedCategory?.name || ""}
+                category={selectedCategory}
                 onSkillSelect={handleSkillSelect}
+                onCategoryUpdate={() => loadCategory()}
+                onCategoryDelete={() => {
+                  setSelectedCategoryId(null);
+                  setSelectedCategory(null);
+                }}
               />
             )}
             {selectedSkillId && <ChallengesList skillId={selectedSkillId} />}
