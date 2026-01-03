@@ -16,6 +16,9 @@ export function SkillsList({
 }: SkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatingSkill, setCreatingSkill] = useState(false);
+  const [updatingSkill, setUpdatingSkill] = useState<string | null>(null);
+  const [deletingSkill, setDeletingSkill] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillDescription, setNewSkillDescription] = useState("");
