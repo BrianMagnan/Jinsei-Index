@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { authAPI, setCurrentUser, profileAPI } from "../services/api";
 import type { Profile } from "../types";
+import { Spinner } from "./Spinner";
 
 export function ProfilesList() {
   const [profile, setProfile] = useState<Profile | null>(null);
