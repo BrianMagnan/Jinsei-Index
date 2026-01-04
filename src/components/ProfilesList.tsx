@@ -99,7 +99,7 @@ export function ProfilesList() {
         <div className="profile-card">
           <form className="edit-form" onSubmit={handleUpdateProfile}>
             <div className="auth-field">
-              <label htmlFor="edit-name">Name *</label>
+              <label htmlFor="edit-name">Username *</label>
               <input
                 id="edit-name"
                 type="text"
@@ -187,7 +187,7 @@ export function ProfilesList() {
           <h3>Profile Details</h3>
           <div className="profile-detail-content">
             <div className="detail-row">
-              <strong>Name:</strong> {profile.name}
+              <strong>Username:</strong> {profile.name}
             </div>
             {profile.email && (
               <div className="detail-row">

@@ -1,0 +1,52 @@
+import { hapticFeedback } from "../utils/haptic";
+import "../App.css";
+
+interface BottomNavProps {
+  viewMode: "main" | "profiles";
+  onViewModeChange: (mode: "main" | "profiles") => void;
+  onSearchClick: () => void;
+}
+
+export function BottomNav({
+  viewMode,
+  onViewModeChange,
+  onSearchClick,
+}: BottomNavProps) {
+  return (
+    <nav className="bottom-nav" aria-label="Bottom navigation">
+      <button
+        className={`bottom-nav-item ${viewMode === "main" ? "active" : ""}`}
+        onClick={() => {
+          hapticFeedback.navigation();
+          onViewModeChange("main");
+        }}
+        aria-label="Home"
+      >
+        <span className="bottom-nav-icon">🏠</span>
+        <span className="bottom-nav-label">Home</span>
+      </button>
+      <button
+        className="bottom-nav-item"
+        onClick={() => {
+          hapticFeedback.navigation();
+          onSearchClick();
+        }}
+        aria-label="Search"
+      >
+        <span className="bottom-nav-icon">🔍</span>
+        <span className="bottom-nav-label">Search</span>
+      </button>
+      <button
+        className={`bottom-nav-item ${viewMode === "profiles" ? "active" : ""}`}
+        onClick={() => {
+          hapticFeedback.navigation();
+          onViewModeChange("profiles");
+        }}
+        aria-label="Profile"
+      >
+        <span className="bottom-nav-icon">👤</span>
+        <span className="bottom-nav-label">Profile</span>
+      </button>
+    </nav>
+  );
+}

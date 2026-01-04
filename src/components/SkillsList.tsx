@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { skillAPI, categoryAPI } from "../services/api";
 import type { Skill, Category } from "../types";
 import { Spinner } from "./Spinner";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { SkillSkeletonList } from "./SkillSkeleton";
+import { EmptyState } from "./EmptyState";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
 
 interface SkillsListProps {
   categoryId: string;
@@ -9,6 +13,7 @@ interface SkillsListProps {
   onSkillSelect: (skillId: string) => void;
   onCategoryUpdate?: () => void;
   onCategoryDelete?: () => void;
+  onBackToCategories?: () => void;
 }
 
 export function SkillsList({
@@ -17,6 +22,7 @@ export function SkillsList({
   onSkillSelect,
   onCategoryUpdate,
   onCategoryDelete,
+  onBackToCategories,
 }: SkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,48 +47,6 @@ export function SkillsList({
   const [deletingCategory, setDeletingCategory] = useState(false);
   const [localCategory, setLocalCategory] = useState<Category | null>(category);
   const categoryMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    loadSkills();
-  }, [categoryId]);
-
-  useEffect(() => {
-    setLocalCategory(category);
-  }, [category]);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (openMenuId && !target.closest(".skill-menu-container")) {
-        setOpenMenuId(null);
-      }
-      if (
-        categoryMenuOpen &&
-        categoryMenuRef.current &&
-        !categoryMenuRef.current.contains(target)
-      ) {
-        setCategoryMenuOpen(false);
-      }
-    };
-
-    if (openMenuId || categoryMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [openMenuId, categoryMenuOpen]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (menuCloseTimeout) {
-        clearTimeout(menuCloseTimeout);
-      }
-    };
-  }, [menuCloseTimeout]);
 
   const loadSkills = async () => {
     try {
@@ -136,6 +100,53 @@ export function SkillsList({
       setLoading(false);
     }
   };
+
+  const { pullDistance, isPulling, containerProps } = usePullToRefresh({
+    onRefresh: loadSkills,
+    enabled: !loading && !creatingSkill,
+  });
+
+  useEffect(() => {
+    loadSkills();
+  }, [categoryId]);
+
+  useEffect(() => {
+    setLocalCategory(category);
+  }, [category]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openMenuId && !target.closest(".skill-menu-container")) {
+        setOpenMenuId(null);
+      }
+      if (
+        categoryMenuOpen &&
+        categoryMenuRef.current &&
+        !categoryMenuRef.current.contains(target)
+      ) {
+        setCategoryMenuOpen(false);
+      }
+    };
+
+    if (openMenuId || categoryMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId, categoryMenuOpen]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimeout) {
+        clearTimeout(menuCloseTimeout);
+      }
+    };
+  }, [menuCloseTimeout]);
 
   const handleCreateSkill = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -354,7 +365,34 @@ export function SkillsList({
   };
 
   return (
-    <div className="skills-list">
+    <div
+      className="skills-list"
+      {...containerProps}
+      style={{ ...containerProps.style, position: "relative" }}
+    >
+      {isPulling && (
+        <div
+          className="pull-to-refresh-indicator"
+          style={{
+            position: "absolute",
+            top: Math.max(0, pullDistance - 40),
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1000,
+          }}
+        >
+          {pullDistance >= 80 ? (
+            <Spinner size="sm" />
+          ) : (
+            <span style={{ fontSize: "24px" }}>↓</span>
+          )}
+        </div>
+      )}
+      <Breadcrumbs
+        category={localCategory || category}
+        skill={null}
+        onCategoryClick={onBackToCategories}
+      />
       <div className="section-header">
         <div className="header-title-section">
           {editingCategory ? (
@@ -395,7 +433,13 @@ export function SkillsList({
                 }}
               >
                 <h2>{localCategory?.name || category?.name || "Skills"}</h2>
-                <div style={{ display: "flex", alignItems: "center", gap: "var(--spacing-sm)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--spacing-sm)",
+                  }}
+                >
                   <button
                     className="add-button"
                     onClick={() => setShowAddForm(!showAddForm)}
@@ -529,14 +573,17 @@ export function SkillsList({
       )}
 
       {loading ? (
-        <div className="loading">
-          <Spinner size="md" />
-          <span>Loading skills...</span>
-        </div>
+        <ul className="skill-list">
+          <SkillSkeletonList count={5} />
+        </ul>
       ) : skills.length === 0 ? (
-        <div className="empty-state">
-          No skills yet. Create your first skill!
-        </div>
+        <EmptyState
+          icon="🎯"
+          title="No Skills Yet"
+          message="Skills help you track your progress in different areas. Add your first skill to start building your journey!"
+          actionLabel="Add Skill"
+          onAction={() => setShowAddForm(true)}
+        />
       ) : (
         <ul className="skill-list">
           {skills.map((skill) => (

@@ -12,6 +12,10 @@ interface SidebarProps {
   onViewModeChange: (mode: "main" | "profiles") => void;
   currentUser: Profile | null;
   onLogout: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  searchOpen?: boolean;
+  onSearchToggle?: () => void;
 }
 
 export function Sidebar({
@@ -22,6 +26,10 @@ export function Sidebar({
   onViewModeChange,
   currentUser,
   onLogout,
+  isOpen = true,
+  onClose,
+  searchOpen: externalSearchOpen,
+  onSearchToggle,
 }: SidebarProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
@@ -43,7 +51,27 @@ export function Sidebar({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [internalSearchOpen, setInternalSearchOpen] = useState(false);
+  const searchOpen =
+    externalSearchOpen !== undefined ? externalSearchOpen : internalSearchOpen;
+
+  const handleSearchToggle = () => {
+    if (onSearchToggle) {
+      onSearchToggle();
+    } else {
+      setInternalSearchOpen(!internalSearchOpen);
+    }
+  };
+
+  const handleSearchClose = () => {
+    if (onSearchToggle) {
+      onSearchToggle(); // Toggle to close
+    } else {
+      setInternalSearchOpen(false);
+    }
+    setSearchQuery("");
+  };
+
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
@@ -354,7 +382,9 @@ export function Sidebar({
         !target.closest(".sidebar-menu-container")
       ) {
         setMenuOpen(false);
-        setSearchOpen(false);
+        if (searchOpen) {
+          handleSearchClose();
+        }
       }
     };
 
@@ -368,280 +398,301 @@ export function Sidebar({
   }, [menuOpen, searchOpen]);
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-title-section">
-          <div className="sidebar-menu-container">
-            {currentUser && (
-              <div className="sidebar-user-info">
-                <span className="sidebar-user-name">{currentUser.name}</span>
-              </div>
-            )}
-            <div className="sidebar-header-actions">
-              <button
-                className="search-icon-button"
-                onClick={() => {
-                  setSearchOpen(!searchOpen);
-                  if (!searchOpen) {
-                    setMenuOpen(false);
-                  }
-                }}
-                aria-label="Toggle search"
-                title="Search categories"
-              >
-                🔍
-              </button>
-              <button
-                className={`hamburger-menu ${menuOpen ? "active" : ""}`}
-                onClick={() => {
-                  setMenuOpen(!menuOpen);
-                  if (menuOpen) {
-                    setSearchOpen(false);
-                  }
-                }}
-                aria-label="Toggle menu"
-              >
-                <span></span>
-                <span></span>
-                <span></span>
-              </button>
-            </div>
-            {menuOpen && (
-              <div className="sidebar-menu">
-                <button
-                  className={`sidebar-menu-item ${
-                    viewMode === "main" ? "active" : ""
-                  }`}
-                  onClick={() => {
-                    onViewModeChange("main");
-                    setMenuOpen(false);
-                  }}
-                >
-                  Home
-                </button>
-                <button
-                  className={`sidebar-menu-item ${
-                    viewMode === "profiles" ? "active" : ""
-                  }`}
-                  onClick={() => {
-                    onViewModeChange("profiles");
-                    setMenuOpen(false);
-                  }}
-                >
-                  My Profile
-                </button>
-                <button
-                  className="sidebar-menu-item logout"
-                  onClick={() => {
-                    onLogout();
-                    setMenuOpen(false);
-                  }}
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="sidebar-content">
-        {showAddForm && (
-          <form className="add-form" onSubmit={handleCreateCategory}>
-            <input
-              type="text"
-              placeholder="Category name"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              required
-              autoFocus
-            />
-
-            <div className="form-actions">
-              <button type="submit" disabled={creatingCategory}>
-                {creatingCategory ? (
-                  <>
-                    <Spinner size="sm" />
-                    <span>Adding...</span>
-                  </>
-                ) : (
-                  "Add"
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                disabled={creatingCategory}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-
-        {loading ? (
-          <div className="sidebar-loading">
-            <Spinner size="md" />
-            <span>Loading categories...</span>
-          </div>
-        ) : (
-          <>
-            {filteredCategories.length === 0 && searchQuery ? (
-              <div className="sidebar-empty">
-                No categories match "{searchQuery}"
-              </div>
-            ) : (
-              <ul className="category-list">
-                {filteredCategories.map((category) => (
-                  <li
-                    key={category._id}
-                    className={`category-item ${
-                      selectedCategoryId === category._id ? "active" : ""
-                    } ${draggedCategoryId === category._id ? "dragging" : ""} ${
-                      dragOverCategoryId === category._id ? "drag-over" : ""
-                    }`}
-                    draggable={editingCategoryId !== category._id}
-                    onDragStart={() => handleDragStart(category._id)}
-                    onDragOver={(e) => handleDragOver(e, category._id)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, category._id)}
-                    onDragEnd={handleDragEnd}
-                    onClick={() => onCategorySelect(category._id)}
-                  >
-                    {editingCategoryId === category._id ? (
-                      <form
-                        className="edit-form"
-                        onSubmit={(e) => handleUpdateCategory(category._id, e)}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <input
-                          type="text"
-                          value={editCategoryName}
-                          onChange={(e) => setEditCategoryName(e.target.value)}
-                          required
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <div className="edit-form-actions">
-                          <button
-                            type="submit"
-                            className="save-button"
-                            disabled={updatingCategory === category._id}
-                          >
-                            {updatingCategory === category._id ? (
-                              <>
-                                <Spinner size="sm" />
-                                <span>Saving...</span>
-                              </>
-                            ) : (
-                              "Save"
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            className="cancel-button"
-                            onClick={() => setEditingCategoryId(null)}
-                            disabled={updatingCategory === category._id}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <>
-                        <span className="category-name">{category.name}</span>
-                        <div className="category-actions">
-                          <button
-                            className="edit-button"
-                            onClick={(e) => handleEditCategory(category, e)}
-                            title="Edit category"
-                            disabled={
-                              deletingCategory === category._id ||
-                              updatingCategory === category._id
-                            }
-                          >
-                            ✎
-                          </button>
-                          <button
-                            className="delete-button"
-                            onClick={(e) =>
-                              handleDeleteCategory(
-                                category._id,
-                                category.name,
-                                e
-                              )
-                            }
-                            title="Delete category"
-                            disabled={
-                              deletingCategory === category._id ||
-                              updatingCategory === category._id
-                            }
-                          >
-                            {deletingCategory === category._id ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              "×"
-                            )}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </div>
-      {viewMode === "main" && (
-        <div className="sidebar-footer">
-          <button
-            className="add-button"
-            onClick={() => setShowAddForm(!showAddForm)}
-            title="Add category"
-          >
-            +
-          </button>
-        </div>
+    <>
+      {onClose && (
+        <div
+          className={`sidebar-overlay ${isOpen ? "open" : ""}`}
+          onClick={onClose}
+          aria-hidden="true"
+        />
       )}
-      <Search
-        isOpen={searchOpen}
-        onClose={() => {
-          setSearchOpen(false);
-          setSearchQuery("");
-        }}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        results={getSearchResults()}
-        onSelect={(result) => {
-          if (result.type === "category") {
-            onCategorySelect(result._id);
-          } else if (result.type === "skill" && result.categoryId) {
-            onCategorySelect(result.categoryId);
-            if (onSkillSelect) {
-              // Use setTimeout to ensure category is selected first
-              setTimeout(() => {
-                onSkillSelect(result._id, result.categoryId!);
-              }, 100);
+      <aside className={`sidebar ${isOpen ? "open" : ""}`}>
+        {onClose && (
+          <button
+            className="sidebar-close-button"
+            onClick={onClose}
+            aria-label="Close menu"
+          >
+            ×
+          </button>
+        )}
+        <div className="sidebar-header">
+          <div className="sidebar-title-section">
+            <div className="sidebar-menu-container">
+              {currentUser && (
+                <div className="sidebar-user-info">
+                  <span className="sidebar-user-name">{currentUser.name}</span>
+                </div>
+              )}
+              <div className="sidebar-header-actions">
+                <button
+                  className="search-icon-button"
+                  onClick={() => {
+                    handleSearchToggle();
+                    if (searchOpen) {
+                      setMenuOpen(false);
+                    }
+                  }}
+                  aria-label="Toggle search"
+                  title="Search categories"
+                >
+                  🔍
+                </button>
+                <button
+                  className={`hamburger-menu ${menuOpen ? "active" : ""}`}
+                  onClick={() => {
+                    setMenuOpen(!menuOpen);
+                    if (menuOpen && searchOpen) {
+                      handleSearchClose();
+                    }
+                  }}
+                  aria-label="Toggle menu"
+                >
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </button>
+              </div>
+              {menuOpen && (
+                <div className="sidebar-menu">
+                  <button
+                    className={`sidebar-menu-item ${
+                      viewMode === "main" ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      onViewModeChange("main");
+                      setMenuOpen(false);
+                    }}
+                  >
+                    Home
+                  </button>
+                  <button
+                    className={`sidebar-menu-item ${
+                      viewMode === "profiles" ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      onViewModeChange("profiles");
+                      setMenuOpen(false);
+                    }}
+                  >
+                    My Profile
+                  </button>
+                  <button
+                    className="sidebar-menu-item logout"
+                    onClick={() => {
+                      onLogout();
+                      setMenuOpen(false);
+                    }}
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="sidebar-content">
+          {showAddForm && (
+            <form className="add-form" onSubmit={handleCreateCategory}>
+              <input
+                type="text"
+                placeholder="Category name"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                required
+                autoFocus
+              />
+
+              <div className="form-actions">
+                <button type="submit" disabled={creatingCategory}>
+                  {creatingCategory ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add"
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  disabled={creatingCategory}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+
+          {loading ? (
+            <div className="sidebar-loading">
+              <Spinner size="md" />
+              <span>Loading categories...</span>
+            </div>
+          ) : (
+            <>
+              {filteredCategories.length === 0 && searchQuery ? (
+                <div className="sidebar-empty">
+                  No categories match "{searchQuery}"
+                </div>
+              ) : (
+                <ul className="category-list">
+                  {filteredCategories.map((category) => (
+                    <li
+                      key={category._id}
+                      className={`category-item ${
+                        selectedCategoryId === category._id ? "active" : ""
+                      } ${
+                        draggedCategoryId === category._id ? "dragging" : ""
+                      } ${
+                        dragOverCategoryId === category._id ? "drag-over" : ""
+                      }`}
+                      draggable={editingCategoryId !== category._id}
+                      onDragStart={() => handleDragStart(category._id)}
+                      onDragOver={(e) => handleDragOver(e, category._id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, category._id)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => onCategorySelect(category._id)}
+                    >
+                      {editingCategoryId === category._id ? (
+                        <form
+                          className="edit-form"
+                          onSubmit={(e) =>
+                            handleUpdateCategory(category._id, e)
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="text"
+                            value={editCategoryName}
+                            onChange={(e) =>
+                              setEditCategoryName(e.target.value)
+                            }
+                            required
+                            autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          <div className="edit-form-actions">
+                            <button
+                              type="submit"
+                              className="save-button"
+                              disabled={updatingCategory === category._id}
+                            >
+                              {updatingCategory === category._id ? (
+                                <>
+                                  <Spinner size="sm" />
+                                  <span>Saving...</span>
+                                </>
+                              ) : (
+                                "Save"
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              className="cancel-button"
+                              onClick={() => setEditingCategoryId(null)}
+                              disabled={updatingCategory === category._id}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <span className="category-name">{category.name}</span>
+                          <div className="category-actions">
+                            <button
+                              className="edit-button"
+                              onClick={(e) => handleEditCategory(category, e)}
+                              title="Edit category"
+                              disabled={
+                                deletingCategory === category._id ||
+                                updatingCategory === category._id
+                              }
+                            >
+                              ✎
+                            </button>
+                            <button
+                              className="delete-button"
+                              onClick={(e) =>
+                                handleDeleteCategory(
+                                  category._id,
+                                  category.name,
+                                  e
+                                )
+                              }
+                              title="Delete category"
+                              disabled={
+                                deletingCategory === category._id ||
+                                updatingCategory === category._id
+                              }
+                            >
+                              {deletingCategory === category._id ? (
+                                <Spinner size="sm" />
+                              ) : (
+                                "×"
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
+        {viewMode === "main" && (
+          <div className="sidebar-footer">
+            <button
+              className="add-button"
+              onClick={() => setShowAddForm(!showAddForm)}
+              title="Add category"
+            >
+              +
+            </button>
+          </div>
+        )}
+        <Search
+          isOpen={searchOpen}
+          onClose={handleSearchClose}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          results={getSearchResults()}
+          onSelect={(result) => {
+            if (result.type === "category") {
+              onCategorySelect(result._id);
+            } else if (result.type === "skill" && result.categoryId) {
+              onCategorySelect(result.categoryId);
+              if (onSkillSelect) {
+                // Use setTimeout to ensure category is selected first
+                setTimeout(() => {
+                  onSkillSelect(result._id, result.categoryId!);
+                }, 100);
+              }
+            } else if (
+              result.type === "challenge" &&
+              result.categoryId &&
+              result.skillId
+            ) {
+              onCategorySelect(result.categoryId);
+              if (onSkillSelect) {
+                // Use setTimeout to ensure category is selected first
+                setTimeout(() => {
+                  onSkillSelect(result.skillId!, result.categoryId!);
+                }, 100);
+              }
             }
-          } else if (
-            result.type === "challenge" &&
-            result.categoryId &&
-            result.skillId
-          ) {
-            onCategorySelect(result.categoryId);
-            if (onSkillSelect) {
-              // Use setTimeout to ensure category is selected first
-              setTimeout(() => {
-                onSkillSelect(result.skillId!, result.categoryId!);
-              }, 100);
-            }
-          }
-          // Modal will be closed by the Search component's handleSelect
-        }}
-        placeholder="Search categories, skills, and challenges..."
-        emptyMessage={`No results match "${searchQuery}"`}
-      />
-    </aside>
+            // Modal will be closed by the Search component's handleSelect
+          }}
+          placeholder="Search categories, skills, and challenges..."
+          emptyMessage={`No results match "${searchQuery}"`}
+        />
+      </aside>
+    </>
   );
 }

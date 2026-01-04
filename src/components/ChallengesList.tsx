@@ -1,13 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { challengeAPI, achievementAPI, skillAPI } from "../services/api";
 import type { SkillWithHierarchy, Challenge } from "../types";
 import { Spinner } from "./Spinner";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { ChallengeSkeletonList } from "./ChallengeSkeleton";
+import { EmptyState } from "./EmptyState";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { hapticFeedback } from "../utils/haptic";
 
 interface ChallengesListProps {
   skillId: string;
+  onBackToSkills?: () => void;
+  onBackToCategory?: () => void;
 }
 
-export function ChallengesList({ skillId }: ChallengesListProps) {
+export function ChallengesList({
+  skillId,
+  onBackToSkills,
+  onBackToCategory,
+}: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
   const [creatingChallenge, setCreatingChallenge] = useState(false);
@@ -48,66 +59,16 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   const [editingChallengeDescription, setEditingChallengeDescription] =
     useState(false);
 
-  useEffect(() => {
-    loadSkill();
-  }, [skillId]);
+  // Swipe gesture state for challenge navigation
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
-  useEffect(() => {
-    // Sync challenge description state when selected challenge changes
-    if (selectedChallengeId && skill?.challenges) {
-      const challenge = skill.challenges.find(
-        (c) => c._id === selectedChallengeId
-      );
-      if (challenge) {
-        setChallengeDescription(challenge.description || "");
-        setEditingChallengeDescription(false); // Reset edit mode when challenge changes
-      }
-    }
-  }, [selectedChallengeId, skill]);
-
-  useEffect(() => {
-    // Auto-select first challenge if available
-    if (
-      skill?.challenges &&
-      skill.challenges.length > 0 &&
-      !selectedChallengeId
-    ) {
-      setSelectedChallengeId(skill.challenges[0]._id);
-    }
-  }, [skill, selectedChallengeId]);
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (openMenuId && !target.closest(".challenge-menu-container")) {
-        setOpenMenuId(null);
-      }
-      if (
-        detailMenuOpen &&
-        !target.closest(".challenge-detail-menu-container")
-      ) {
-        setDetailMenuOpen(false);
-      }
-    };
-
-    if (openMenuId || detailMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [openMenuId, detailMenuOpen]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (menuCloseTimeout) {
-        clearTimeout(menuCloseTimeout);
-      }
-    };
-  }, [menuCloseTimeout]);
+  // Ref for textarea to handle keyboard scrolling
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const loadSkill = async () => {
     try {
@@ -147,6 +108,63 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     }
   };
 
+  const { pullDistance, isPulling, containerProps } = usePullToRefresh({
+    onRefresh: loadSkill,
+    enabled: !loading && !creatingChallenge,
+  });
+
+  useEffect(() => {
+    loadSkill();
+  }, [skillId]);
+
+  useEffect(() => {
+    // Sync challenge description state when selected challenge changes
+    if (selectedChallengeId && skill?.challenges) {
+      const challenge = skill.challenges.find(
+        (c) => c._id === selectedChallengeId
+      );
+      if (challenge) {
+        setChallengeDescription(challenge.description || "");
+        setEditingChallengeDescription(false); // Reset edit mode when challenge changes
+      }
+    }
+  }, [selectedChallengeId, skill]);
+
+  // Removed auto-select - user must click to view challenge details
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (openMenuId && !target.closest(".challenge-menu-container")) {
+        setOpenMenuId(null);
+      }
+      if (
+        detailMenuOpen &&
+        !target.closest(".challenge-detail-menu-container")
+      ) {
+        setDetailMenuOpen(false);
+      }
+    };
+
+    if (openMenuId || detailMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId, detailMenuOpen]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (menuCloseTimeout) {
+        clearTimeout(menuCloseTimeout);
+      }
+    };
+  }, [menuCloseTimeout]);
+
   const handleSaveChallengeDescription = async () => {
     if (
       !selectedChallengeId ||
@@ -167,6 +185,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       return;
     }
 
+    hapticFeedback.medium();
     setSavingChallengeDescription(true);
     try {
       await challengeAPI.update(selectedChallengeId, {
@@ -180,7 +199,9 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       );
       setSkill({ ...skill, challenges: updatedChallenges });
       setEditingChallengeDescription(false);
+      hapticFeedback.success();
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to save description");
       // Revert to original description on error
       setChallengeDescription(challenge.description || "");
@@ -201,7 +222,23 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
   };
 
   const handleEditDescription = () => {
-    setEditingChallengeDescription(true);
+    hapticFeedback.light();
+    if (editingChallengeDescription) {
+      // If already editing, cancel edit
+      setEditingChallengeDescription(false);
+      // Reset description to saved value
+      if (selectedChallengeId && skill?.challenges) {
+        const challenge = skill.challenges.find(
+          (c) => c._id === selectedChallengeId
+        );
+        if (challenge) {
+          setChallengeDescription(challenge.description || "");
+        }
+      }
+    } else {
+      // Start editing
+      setEditingChallengeDescription(true);
+    }
   };
 
   const saveChallengeOrder = (newOrder: Challenge[]) => {
@@ -264,6 +301,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     e.preventDefault();
     if (!newChallengeName.trim() || creatingChallenge) return;
 
+    hapticFeedback.medium();
     setCreatingChallenge(true);
     try {
       await challengeAPI.create({
@@ -277,6 +315,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       setNewChallengeXPReward(5);
       setShowAddForm(false);
       await loadSkill();
+      hapticFeedback.success();
       // Auto-select the newly created challenge
       const updatedSkill = await skillAPI.getById(skillId);
       if (updatedSkill.challenges && updatedSkill.challenges.length > 0) {
@@ -285,6 +324,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
         setSelectedChallengeId(newChallenge._id);
       }
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to create challenge");
     } finally {
       setCreatingChallenge(false);
@@ -298,9 +338,11 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     e.stopPropagation();
     if (completingChallenge === challenge._id) return;
 
+    hapticFeedback.medium();
     setCompletingChallenge(challenge._id);
     try {
       await achievementAPI.create({ challenge: challenge._id });
+      hapticFeedback.success();
       alert(
         `Challenge "${challenge.name}" completed! +${challenge.xpReward} XP`
       );
@@ -314,6 +356,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
         setSelectedChallengeId(skill.challenges[nextIndex]._id);
       }
     } catch (err) {
+      hapticFeedback.error();
       alert(
         err instanceof Error ? err.message : "Failed to complete challenge"
       );
@@ -324,6 +367,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
 
   const handleEditChallenge = (challenge: Challenge, e: React.MouseEvent) => {
     e.stopPropagation();
+    hapticFeedback.light();
     setEditingChallengeId(challenge._id);
     setEditChallengeName(challenge.name);
     setEditChallengeDescription(challenge.description || "");
@@ -338,6 +382,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     e.stopPropagation();
     if (!editChallengeName.trim() || updatingChallenge === challengeId) return;
 
+    hapticFeedback.medium();
     setUpdatingChallenge(challengeId);
     try {
       await challengeAPI.update(challengeId, {
@@ -348,7 +393,9 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       setEditingChallengeId(null);
       await loadSkill();
       setSelectedChallengeId(challengeId); // Keep same challenge selected
+      hapticFeedback.success();
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to update challenge");
     } finally {
       setUpdatingChallenge(null);
@@ -363,6 +410,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     e.stopPropagation();
     if (deletingChallenge === challengeId) return;
 
+    hapticFeedback.medium();
     if (!confirm(`Are you sure you want to delete "${challengeName}"?`)) {
       return;
     }
@@ -371,6 +419,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     try {
       await challengeAPI.delete(challengeId);
       await loadSkill();
+      hapticFeedback.success();
       // Auto-select first challenge if available
       if (skill?.challenges && skill.challenges.length > 1) {
         const remainingChallenges = skill.challenges.filter(
@@ -385,21 +434,101 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
         setSelectedChallengeId(null);
       }
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to delete challenge");
     } finally {
       setDeletingChallenge(null);
     }
   };
 
-  const selectedChallenge = skill?.challenges?.find(
-    (c) => c._id === selectedChallengeId
-  );
+  const selectedChallenge =
+    skill?.challenges?.find((c) => c._id === selectedChallengeId) || null;
+
+  // Navigation functions for challenge arrows
+  const navigateToPreviousChallenge = () => {
+    if (!skill?.challenges || !selectedChallengeId) return;
+    const currentIndex = skill.challenges.findIndex(
+      (c) => c._id === selectedChallengeId
+    );
+    if (currentIndex > 0) {
+      hapticFeedback.navigation();
+      setSelectedChallengeId(skill.challenges[currentIndex - 1]._id);
+      setDetailMenuOpen(false);
+    }
+  };
+
+  const navigateToNextChallenge = () => {
+    if (!skill?.challenges || !selectedChallengeId) return;
+    const currentIndex = skill.challenges.findIndex(
+      (c) => c._id === selectedChallengeId
+    );
+    if (currentIndex < skill.challenges.length - 1) {
+      hapticFeedback.navigation();
+      setSelectedChallengeId(skill.challenges[currentIndex + 1]._id);
+      setDetailMenuOpen(false);
+    }
+  };
+
+  const canNavigatePrevious =
+    skill?.challenges &&
+    selectedChallengeId &&
+    skill.challenges.findIndex((c) => c._id === selectedChallengeId) > 0;
+
+  const canNavigateNext =
+    skill?.challenges &&
+    selectedChallengeId &&
+    skill.challenges.findIndex((c) => c._id === selectedChallengeId) <
+      skill.challenges.length - 1;
+
+  // Swipe gesture handlers for challenge navigation
+  const minSwipeDistance = 50; // Minimum distance in pixels to trigger swipe
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    const isLeftSwipe = distanceX > minSwipeDistance;
+    const isRightSwipe = distanceX < -minSwipeDistance;
+    const isVerticalSwipe = Math.abs(distanceY) > Math.abs(distanceX);
+
+    // Only handle horizontal swipes (ignore vertical scrolling)
+    if (isVerticalSwipe) {
+      return;
+    }
+
+    if (isLeftSwipe && canNavigateNext) {
+      navigateToNextChallenge();
+    }
+    if (isRightSwipe && canNavigatePrevious) {
+      navigateToPreviousChallenge();
+    }
+  };
 
   if (loading) {
     return (
-      <div className="loading">
-        <Spinner size="md" />
-        <span>Loading challenges...</span>
+      <div className="challenges-container">
+        <div className="challenges-header">
+          <h2>Challenges</h2>
+        </div>
+        <ul className="challenge-list">
+          <ChallengeSkeletonList count={4} />
+        </ul>
       </div>
     );
   }
@@ -408,14 +537,48 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
     return <div className="empty-state">Skill not found</div>;
   }
 
+  // Get category from skill for breadcrumbs
+  const category =
+    skill && typeof skill.category === "object" ? skill.category : null;
+  const skillForBreadcrumb =
+    skill && typeof skill.category === "object" ? skill : null;
+
   return (
     <div
       className={`challenges-container ${
-        !selectedChallengeId ? "full-width" : ""
+        selectedChallengeId ? "detail-view" : "list-view"
       }`}
     >
-      <div className="challenges-list">
-        <div className="section-header">
+      <div
+        className="challenges-list"
+        {...containerProps}
+        style={{ ...containerProps.style, position: "relative" }}
+      >
+        {isPulling && (
+          <div
+            className="pull-to-refresh-indicator"
+            style={{
+              position: "absolute",
+              top: Math.max(0, pullDistance - 40),
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 1000,
+            }}
+          >
+            {pullDistance >= 80 ? (
+              <Spinner size="sm" />
+            ) : (
+              <span style={{ fontSize: "24px" }}>↓</span>
+            )}
+          </div>
+        )}
+        <Breadcrumbs
+          category={category}
+          skill={skillForBreadcrumb}
+          onCategoryClick={onBackToCategory}
+          onSkillClick={onBackToSkills}
+        />
+        <div className="section-header challenges-header">
           <div className="header-title-section">
             <h2>{skill.name}</h2>
           </div>
@@ -481,9 +644,13 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
         )}
 
         {skill.challenges && skill.challenges.length === 0 ? (
-          <div className="empty-state">
-            No challenges yet. Create your first challenge!
-          </div>
+          <EmptyState
+            icon="⚡"
+            title="No Challenges Yet"
+            message="Challenges are the building blocks of your skills. Create your first challenge to start earning XP and leveling up!"
+            actionLabel="Add Challenge"
+            onAction={() => setShowAddForm(true)}
+          />
         ) : (
           <ul className="challenge-list">
             {skill.challenges?.map((challenge) => (
@@ -500,7 +667,10 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, challenge._id)}
                 onDragEnd={handleDragEnd}
-                onClick={() => setSelectedChallengeId(challenge._id)}
+                onClick={() => {
+                  hapticFeedback.selection();
+                  setSelectedChallengeId(challenge._id);
+                }}
                 onMouseLeave={(e) => {
                   if (openMenuId === challenge._id) {
                     // Check if mouse is moving to the menu
@@ -700,9 +870,39 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
       </div>
 
       {selectedChallenge && (
-        <div className="challenge-detail">
+        <div
+          className="challenge-detail"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <Breadcrumbs
+            category={category}
+            skill={skillForBreadcrumb}
+            challenge={selectedChallenge}
+            onCategoryClick={onBackToCategory}
+            onSkillClick={() => setSelectedChallengeId(null)}
+          />
           <div className="challenge-detail-header">
+            <button
+              className="challenge-nav-arrow challenge-nav-arrow-left"
+              onClick={navigateToPreviousChallenge}
+              disabled={!canNavigatePrevious}
+              title="Previous challenge"
+              aria-label="Previous challenge"
+            >
+              ‹
+            </button>
             <h2 className="challenge-detail-title">{selectedChallenge.name}</h2>
+            <button
+              className="challenge-nav-arrow challenge-nav-arrow-right"
+              onClick={navigateToNextChallenge}
+              disabled={!canNavigateNext}
+              title="Next challenge"
+              aria-label="Next challenge"
+            >
+              ›
+            </button>
             <div className="challenge-detail-menu-container">
               <button
                 className="challenge-detail-menu-button"
@@ -786,6 +986,7 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
             {editingChallengeDescription ? (
               <div className="challenge-detail-description-editor">
                 <textarea
+                  ref={textareaRef}
                   className="challenge-detail-description-textarea"
                   value={challengeDescription}
                   onChange={(e) => setChallengeDescription(e.target.value)}
@@ -829,38 +1030,91 @@ export function ChallengesList({ skillId }: ChallengesListProps) {
                     No description provided.
                   </p>
                 )}
-                <button
-                  className="edit-description-button"
-                  onClick={handleEditDescription}
-                >
-                  Edit
-                </button>
               </div>
             )}
           </div>
+          <div className="challenge-detail-xp">
+            <span className="xp-label">XP Reward</span>
+            <span className="xp-value">+{selectedChallenge.xpReward}</span>
+          </div>
           <div className="challenge-detail-actions">
-            <div className="challenge-detail-xp">
-              <span className="xp-label">XP Reward</span>
-              <span className="xp-value">+{selectedChallenge.xpReward}</span>
+            <div className="challenge-detail-action-buttons">
+              <button
+                className="challenge-detail-action-button edit"
+                onClick={handleEditDescription}
+                disabled={
+                  deletingChallenge === selectedChallenge._id ||
+                  editingChallengeDescription ||
+                  savingChallengeDescription ||
+                  completingChallenge === selectedChallenge._id
+                }
+              >
+                {savingChallengeDescription ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Saving...</span>
+                  </>
+                ) : editingChallengeDescription ? (
+                  <>
+                    <span className="button-icon">✕</span>
+                    <span>Cancel</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="button-icon">✏️</span>
+                    <span>Edit</span>
+                  </>
+                )}
+              </button>
+              <button
+                className="challenge-detail-action-button delete"
+                onClick={(e) =>
+                  handleDeleteChallenge(
+                    selectedChallenge._id,
+                    selectedChallenge.name,
+                    e
+                  )
+                }
+                disabled={
+                  deletingChallenge === selectedChallenge._id ||
+                  updatingChallenge === selectedChallenge._id ||
+                  completingChallenge === selectedChallenge._id
+                }
+              >
+                {deletingChallenge === selectedChallenge._id ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="button-icon">🗑️</span>
+                    <span>Delete</span>
+                  </>
+                )}
+              </button>
+              <button
+                className="challenge-detail-action-button complete"
+                onClick={(e) => handleCompleteChallenge(selectedChallenge, e)}
+                disabled={
+                  completingChallenge === selectedChallenge._id ||
+                  deletingChallenge === selectedChallenge._id ||
+                  updatingChallenge === selectedChallenge._id
+                }
+              >
+                {completingChallenge === selectedChallenge._id ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Completing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="button-icon">✓</span>
+                    <span>Complete</span>
+                  </>
+                )}
+              </button>
             </div>
-            <button
-              className="complete-button"
-              onClick={(e) => handleCompleteChallenge(selectedChallenge, e)}
-              disabled={
-                completingChallenge === selectedChallenge._id ||
-                deletingChallenge === selectedChallenge._id ||
-                updatingChallenge === selectedChallenge._id
-              }
-            >
-              {completingChallenge === selectedChallenge._id ? (
-                <>
-                  <Spinner size="sm" />
-                  <span>Completing...</span>
-                </>
-              ) : (
-                "Complete"
-              )}
-            </button>
           </div>
         </div>
       )}
