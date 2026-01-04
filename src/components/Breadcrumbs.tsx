@@ -5,6 +5,7 @@ interface BreadcrumbsProps {
   category: Category | null;
   skill: Skill | null;
   challenge?: Challenge | null;
+  onCategoriesClick?: () => void;
   onCategoryClick?: () => void;
   onSkillClick?: () => void;
   onChallengeClick?: () => void;
@@ -14,6 +15,7 @@ export function Breadcrumbs({
   category,
   skill,
   challenge,
+  onCategoriesClick,
   onCategoryClick,
   onSkillClick,
   onChallengeClick,
@@ -25,15 +27,37 @@ export function Breadcrumbs({
   return (
     <nav className="breadcrumbs" aria-label="Breadcrumb">
       <ol className="breadcrumbs-list">
+        {onCategoriesClick && (
+          <>
+            <li className="breadcrumb-item">
+              <button
+                className="breadcrumb-link"
+                onClick={onCategoriesClick}
+                type="button"
+              >
+                Categories
+              </button>
+            </li>
+            {(category || skill || challenge) && (
+              <li className="breadcrumb-separator" aria-hidden="true">
+                ›
+              </li>
+            )}
+          </>
+        )}
         {category && (
           <li className="breadcrumb-item">
-            <button
-              className="breadcrumb-link"
-              onClick={onCategoryClick}
-              type="button"
-            >
-              {category.name}
-            </button>
+            {onCategoryClick ? (
+              <button
+                className="breadcrumb-link"
+                onClick={onCategoryClick}
+                type="button"
+              >
+                {category.name}
+              </button>
+            ) : (
+              <span className="breadcrumb-current">{category.name}</span>
+            )}
           </li>
         )}
         {skill && (

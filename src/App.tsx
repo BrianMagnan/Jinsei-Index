@@ -110,6 +110,17 @@ function App() {
     }
   };
 
+  const handleHomeClick = () => {
+    // Always navigate to categories (home) and reset all selections
+    setViewMode("main");
+    setSelectedCategoryId(null);
+    setSelectedSkillId(null);
+    setSelectedCategory(null);
+    setSidebarOpen(false);
+    setSearchModalOpen(false);
+    setCategoriesModalOpen(false);
+  };
+
   const handleLoginSuccess = (profile: Profile) => {
     setCurrentUserState(profile);
     setIsAuthenticated(true);
@@ -178,23 +189,17 @@ function App() {
                   setSelectedCategoryId(null);
                   setSelectedCategory(null);
                 }}
-                onBackToCategories={() => {
-                  setSelectedCategoryId(null);
-                  setSelectedCategory(null);
-                }}
+                onBackToCategories={handleHomeClick}
               />
             )}
             {selectedSkillId && (
               <ChallengesList
                 skillId={selectedSkillId}
-                onBackToSkills={() => {
-                  setSelectedSkillId(null);
-                }}
                 onBackToCategory={() => {
+                  // Go back to the category's skills page (keep category selected, clear skill)
                   setSelectedSkillId(null);
-                  setSelectedCategoryId(null);
-                  setSelectedCategory(null);
                 }}
+                onBackToCategories={handleHomeClick}
               />
             )}
             {!selectedCategoryId && (
@@ -208,6 +213,7 @@ function App() {
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
             onSearchClick={() => setSearchModalOpen(true)}
+            onHomeClick={handleHomeClick}
           />
           <CategoriesModal
             isOpen={categoriesModalOpen}
@@ -244,6 +250,7 @@ function App() {
             viewMode={viewMode}
             onViewModeChange={handleViewModeChange}
             onSearchClick={() => setSearchModalOpen(true)}
+            onHomeClick={handleHomeClick}
           />
           <CategoriesModal
             isOpen={categoriesModalOpen}

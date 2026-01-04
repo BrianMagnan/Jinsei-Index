@@ -391,7 +391,8 @@ export function SkillsList({
       <Breadcrumbs
         category={localCategory || category}
         skill={null}
-        onCategoryClick={onBackToCategories}
+        onCategoriesClick={onBackToCategories}
+        onCategoryClick={undefined}
       />
       <div className="section-header">
         <div className="header-title-section">

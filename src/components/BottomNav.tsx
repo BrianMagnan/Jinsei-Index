@@ -5,21 +5,30 @@ interface BottomNavProps {
   viewMode: "main" | "profiles";
   onViewModeChange: (mode: "main" | "profiles") => void;
   onSearchClick: () => void;
+  onHomeClick?: () => void;
 }
 
 export function BottomNav({
   viewMode,
   onViewModeChange,
   onSearchClick,
+  onHomeClick,
 }: BottomNavProps) {
+  const handleHomeClick = () => {
+    hapticFeedback.navigation();
+    if (onHomeClick) {
+      onHomeClick();
+    } else {
+      // Fallback to default behavior
+      onViewModeChange("main");
+    }
+  };
+
   return (
     <nav className="bottom-nav" aria-label="Bottom navigation">
       <button
         className={`bottom-nav-item ${viewMode === "main" ? "active" : ""}`}
-        onClick={() => {
-          hapticFeedback.navigation();
-          onViewModeChange("main");
-        }}
+        onClick={handleHomeClick}
         aria-label="Home"
       >
         <span className="bottom-nav-icon">🏠</span>

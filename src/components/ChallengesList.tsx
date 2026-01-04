@@ -10,14 +10,14 @@ import { hapticFeedback } from "../utils/haptic";
 
 interface ChallengesListProps {
   skillId: string;
-  onBackToSkills?: () => void;
   onBackToCategory?: () => void;
+  onBackToCategories?: () => void;
 }
 
 export function ChallengesList({
   skillId,
-  onBackToSkills,
   onBackToCategory,
+  onBackToCategories,
 }: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
@@ -575,8 +575,9 @@ export function ChallengesList({
         <Breadcrumbs
           category={category}
           skill={skillForBreadcrumb}
+          onCategoriesClick={onBackToCategories}
           onCategoryClick={onBackToCategory}
-          onSkillClick={onBackToSkills}
+          onSkillClick={undefined}
         />
         <div className="section-header challenges-header">
           <div className="header-title-section">
@@ -880,8 +881,10 @@ export function ChallengesList({
             category={category}
             skill={skillForBreadcrumb}
             challenge={selectedChallenge}
+            onCategoriesClick={onBackToCategories}
             onCategoryClick={onBackToCategory}
             onSkillClick={() => setSelectedChallengeId(null)}
+            onChallengeClick={undefined}
           />
           <div className="challenge-detail-header">
             <button
