@@ -84,3 +84,15 @@ export interface TodoItem {
   completedAt?: string;
 }
 
+export interface DailyItem {
+  challengeId: string;
+  challengeName: string;
+  skillId: string;
+  skillName: string;
+  categoryId: string;
+  categoryName: string;
+  addedAt: string;
+  completed?: boolean;
+  completedAt?: string;
+}
+

@@ -2,8 +2,8 @@ import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
 interface BottomNavProps {
-  viewMode: "main" | "profiles" | "todo";
-  onViewModeChange: (mode: "main" | "profiles" | "todo") => void;
+  viewMode: "main" | "profiles" | "todo" | "daily";
+  onViewModeChange: (mode: "main" | "profiles" | "todo" | "daily") => void;
   onSearchClick: () => void;
   onHomeClick?: () => void;
 }
@@ -55,6 +55,17 @@ export function BottomNav({
       >
         <span className="bottom-nav-icon">📝</span>
         <span className="bottom-nav-label">To-Do</span>
+      </button>
+      <button
+        className={`bottom-nav-item ${viewMode === "daily" ? "active" : ""}`}
+        onClick={() => {
+          hapticFeedback.navigation();
+          onViewModeChange("daily");
+        }}
+        aria-label="Daily List"
+      >
+        <span className="bottom-nav-icon">📅</span>
+        <span className="bottom-nav-label">Daily</span>
       </button>
       <button
         className={`bottom-nav-item ${viewMode === "profiles" ? "active" : ""}`}

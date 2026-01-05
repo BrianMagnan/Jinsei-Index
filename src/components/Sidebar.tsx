@@ -8,8 +8,8 @@ interface SidebarProps {
   selectedCategoryId: string | null;
   onCategorySelect: (categoryId: string | null) => void;
   onSkillSelect?: (skillId: string, categoryId: string) => void;
-  viewMode: "main" | "profiles" | "todo";
-  onViewModeChange: (mode: "main" | "profiles" | "todo") => void;
+  viewMode: "main" | "profiles" | "todo" | "daily";
+  onViewModeChange: (mode: "main" | "profiles" | "todo" | "daily") => void;
   currentUser: Profile | null;
   onLogout: () => void;
   isOpen?: boolean;

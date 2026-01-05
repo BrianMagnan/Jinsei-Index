@@ -17,10 +17,11 @@ import { CategoriesModal } from "./components/CategoriesModal";
 import { SearchModal } from "./components/SearchModal";
 import { CategoriesList } from "./components/CategoriesList";
 import { TodoList } from "./components/TodoList";
+import { DailyList } from "./components/DailyList";
 import type { Category, Profile } from "./types";
 import "./App.css";
 
-type ViewMode = "main" | "profiles" | "todo";
+type ViewMode = "main" | "profiles" | "todo" | "daily";
 type AuthView = "login" | "register";
 
 function App() {
@@ -35,7 +36,9 @@ function App() {
     null
   );
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
-  const [initialChallengeId, setInitialChallengeId] = useState<string | undefined>(undefined);
+  const [initialChallengeId, setInitialChallengeId] = useState<
+    string | undefined
+  >(undefined);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
@@ -106,7 +109,7 @@ function App() {
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     // Reset selections when switching views
-    if (mode === "profiles" || mode === "todo") {
+    if (mode === "profiles" || mode === "todo" || mode === "daily") {
       setSelectedCategoryId(null);
       setSelectedSkillId(null);
       setInitialChallengeId(undefined);
@@ -265,6 +268,43 @@ function App() {
           />
           <main className="app-main todo-main">
             <TodoList onNavigateToChallenge={handleNavigateToChallenge} />
+          </main>
+          <BottomNav
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            onSearchClick={() => setSearchModalOpen(true)}
+            onHomeClick={handleHomeClick}
+          />
+          <CategoriesModal
+            isOpen={categoriesModalOpen}
+            onClose={() => setCategoriesModalOpen(false)}
+            selectedCategoryId={selectedCategoryId}
+            onCategorySelect={handleCategorySelect}
+          />
+          <SearchModal
+            isOpen={searchModalOpen}
+            onClose={() => setSearchModalOpen(false)}
+            onCategorySelect={handleCategorySelect}
+            onSkillSelect={handleSkillSelect}
+          />
+        </>
+      ) : viewMode === "daily" ? (
+        <>
+          <Sidebar
+            selectedCategoryId={null}
+            onCategorySelect={() => {}}
+            onSkillSelect={handleSkillSelect}
+            viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            searchOpen={searchOpen}
+            onSearchToggle={() => setSearchOpen(!searchOpen)}
+          />
+          <main className="app-main daily-main">
+            <DailyList onNavigateToChallenge={handleNavigateToChallenge} />
           </main>
           <BottomNav
             viewMode={viewMode}

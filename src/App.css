@@ -2686,6 +2686,38 @@ body {
   border-color: var(--color-primary-hover);
 }
 
+/* Daily List Styles */
+.daily-list-container {
+  /* Reuse todo list container styles */
+}
+
+.daily-main {
+  padding: var(--spacing-lg);
+}
+
+/* Daily Button in Challenge Detail */
+.challenge-detail-action-button.daily {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-primary);
+  color: var(--color-text-primary);
+}
+
+.challenge-detail-action-button.daily:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent-blue);
+}
+
+.challenge-detail-action-button.daily.in-daily {
+  background: var(--color-accent-blue);
+  border-color: var(--color-accent-blue);
+  color: white;
+}
+
+.challenge-detail-action-button.daily.in-daily:hover:not(:disabled) {
+  background: var(--color-accent-blue-dark);
+  border-color: var(--color-accent-blue-dark);
+}
+
 /* Mobile styles for todo list */
 @media (max-width: 768px) {
   .todo-main {
@@ -2731,6 +2763,10 @@ body {
   .todo-clear-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .daily-main {
+    padding: var(--spacing-md);
   }
 }
 

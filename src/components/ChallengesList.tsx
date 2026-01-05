@@ -13,6 +13,11 @@ import {
   removeTodoItem,
   getTodoItems,
 } from "../utils/todoStorage";
+import {
+  addDailyItem,
+  removeDailyItem,
+  getDailyItems,
+} from "../utils/dailyStorage";
 
 interface ChallengesListProps {
   skillId: string;
@@ -67,6 +72,9 @@ export function ChallengesList({
   const [editingChallengeDescription, setEditingChallengeDescription] =
     useState(false);
   const [todoChallengeIds, setTodoChallengeIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [dailyChallengeIds, setDailyChallengeIds] = useState<Set<string>>(
     new Set()
   );
 
@@ -135,6 +143,13 @@ export function ChallengesList({
       items.filter((item) => !item.completed).map((item) => item.challengeId)
     );
     setTodoChallengeIds(activeTodoIds);
+  }, [skillId, selectedChallengeId]);
+
+  // Sync daily list state from localStorage
+  useEffect(() => {
+    const items = getDailyItems();
+    const dailyIds = new Set(items.map((item) => item.challengeId));
+    setDailyChallengeIds(dailyIds);
   }, [skillId, selectedChallengeId]);
 
   useEffect(() => {
@@ -302,6 +317,47 @@ export function ChallengesList({
       });
       // Update state immediately
       setTodoChallengeIds((prev) => {
+        const next = new Set(prev);
+        next.add(challenge._id);
+        return next;
+      });
+    }
+  };
+
+  const handleToggleDaily = (challenge: Challenge) => {
+    if (!skill) return;
+
+    const category = typeof skill.category === "object" ? skill.category : null;
+    if (!category) return;
+
+    const inDaily = dailyChallengeIds.has(challenge._id);
+
+    if (inDaily) {
+      // Only allow removal of non-completed items
+      const dailyItems = getDailyItems();
+      const item = dailyItems.find((i) => i.challengeId === challenge._id);
+      if (item && !item.completed) {
+        hapticFeedback.light();
+        removeDailyItem(challenge._id);
+        // Update state immediately
+        setDailyChallengeIds((prev) => {
+          const next = new Set(prev);
+          next.delete(challenge._id);
+          return next;
+        });
+      }
+    } else {
+      hapticFeedback.success();
+      addDailyItem({
+        challengeId: challenge._id,
+        challengeName: challenge.name,
+        skillId: skill._id,
+        skillName: skill.name,
+        categoryId: category._id,
+        categoryName: category.name,
+      });
+      // Update state immediately
+      setDailyChallengeIds((prev) => {
         const next = new Set(prev);
         next.add(challenge._id);
         return next;
@@ -1181,6 +1237,25 @@ export function ChallengesList({
                   {todoChallengeIds.has(selectedChallenge._id)
                     ? "In To-Do"
                     : "+ To-Do"}
+                </span>
+              </button>
+              <button
+                className={`challenge-detail-action-button daily ${
+                  dailyChallengeIds.has(selectedChallenge._id) ? "in-daily" : ""
+                }`}
+                onClick={() => handleToggleDaily(selectedChallenge)}
+                disabled={
+                  deletingChallenge === selectedChallenge._id ||
+                  completingChallenge === selectedChallenge._id
+                }
+              >
+                <span className="button-icon">
+                  {dailyChallengeIds.has(selectedChallenge._id) ? "✓" : "📅"}
+                </span>
+                <span>
+                  {dailyChallengeIds.has(selectedChallenge._id)
+                    ? "In Daily"
+                    : "+ Daily"}
                 </span>
               </button>
               <button
