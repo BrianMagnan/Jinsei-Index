@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { skillAPI, categoryAPI } from "../services/api";
 import type { Skill, Category } from "../types";
 import { Spinner } from "./Spinner";
@@ -21,32 +21,23 @@ export function SkillsList({
   category,
   onSkillSelect,
   onCategoryUpdate,
-  onCategoryDelete,
   onBackToCategories,
 }: SkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingSkill, setCreatingSkill] = useState(false);
   const [updatingSkill, setUpdatingSkill] = useState<string | null>(null);
-  const [deletingSkill, setDeletingSkill] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillDescription, setNewSkillDescription] = useState("");
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editSkillName, setEditSkillName] = useState("");
-  const [editSkillDescription, setEditSkillDescription] = useState("");
   const [draggedSkillId, setDraggedSkillId] = useState<string | null>(null);
   const [dragOverSkillId, setDragOverSkillId] = useState<string | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [menuCloseTimeout, setMenuCloseTimeout] = useState<number | null>(null);
-  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(false);
   const [editCategoryName, setEditCategoryName] = useState("");
-  const [editCategoryDescription, setEditCategoryDescription] = useState("");
   const [updatingCategory, setUpdatingCategory] = useState(false);
-  const [deletingCategory, setDeletingCategory] = useState(false);
   const [localCategory, setLocalCategory] = useState<Category | null>(category);
-  const categoryMenuRef = useRef<HTMLDivElement>(null);
 
   const loadSkills = async () => {
     try {
@@ -114,40 +105,6 @@ export function SkillsList({
     setLocalCategory(category);
   }, [category]);
 
-  // Close menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (openMenuId && !target.closest(".skill-menu-container")) {
-        setOpenMenuId(null);
-      }
-      if (
-        categoryMenuOpen &&
-        categoryMenuRef.current &&
-        !categoryMenuRef.current.contains(target)
-      ) {
-        setCategoryMenuOpen(false);
-      }
-    };
-
-    if (openMenuId || categoryMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [openMenuId, categoryMenuOpen]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (menuCloseTimeout) {
-        clearTimeout(menuCloseTimeout);
-      }
-    };
-  }, [menuCloseTimeout]);
-
   const handleCreateSkill = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSkillName.trim() || creatingSkill) return;
@@ -200,13 +157,6 @@ export function SkillsList({
     }
   };
 
-  const handleEditSkill = (skill: Skill, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingSkillId(skill._id);
-    setEditSkillName(skill.name);
-    setEditSkillDescription(skill.description || "");
-  };
-
   const handleUpdateSkill = async (skillId: string, e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -216,7 +166,6 @@ export function SkillsList({
     try {
       await skillAPI.update(skillId, {
         name: editSkillName.trim(),
-        description: editSkillDescription.trim() || undefined,
       });
       setEditingSkillId(null);
       await loadSkills();
@@ -224,33 +173,6 @@ export function SkillsList({
       alert(err instanceof Error ? err.message : "Failed to update skill");
     } finally {
       setUpdatingSkill(null);
-    }
-  };
-
-  const handleDeleteSkill = async (
-    skillId: string,
-    skillName: string,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    if (deletingSkill === skillId) return;
-
-    if (
-      !confirm(
-        `Are you sure you want to delete "${skillName}"? This will also delete all associated challenges.`
-      )
-    ) {
-      return;
-    }
-
-    setDeletingSkill(skillId);
-    try {
-      await skillAPI.delete(skillId);
-      await loadSkills();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete skill");
-    } finally {
-      setDeletingSkill(null);
     }
   };
 
@@ -306,16 +228,6 @@ export function SkillsList({
     setDragOverSkillId(null);
   };
 
-  const handleEditCategory = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const cat = localCategory || category;
-    if (!cat) return;
-    setEditingCategory(true);
-    setEditCategoryName(cat.name);
-    setEditCategoryDescription(cat.description || "");
-    setCategoryMenuOpen(false);
-  };
-
   const handleUpdateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     const cat = localCategory || category;
@@ -325,7 +237,6 @@ export function SkillsList({
     try {
       await categoryAPI.update(cat._id, {
         name: editCategoryName.trim(),
-        description: editCategoryDescription.trim() || undefined,
       });
       setEditingCategory(false);
       if (onCategoryUpdate) {
@@ -335,32 +246,6 @@ export function SkillsList({
       alert(err instanceof Error ? err.message : "Failed to update category");
     } finally {
       setUpdatingCategory(false);
-    }
-  };
-
-  const handleDeleteCategory = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const cat = localCategory || category;
-    if (!cat || deletingCategory) return;
-
-    if (
-      !confirm(
-        `Are you sure you want to delete "${cat.name}"? This will also delete all associated skills and challenges.`
-      )
-    ) {
-      return;
-    }
-
-    setDeletingCategory(true);
-    try {
-      await categoryAPI.delete(cat._id);
-      if (onCategoryDelete) {
-        onCategoryDelete();
-      }
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete category");
-    } finally {
-      setDeletingCategory(false);
     }
   };
 
@@ -424,113 +309,7 @@ export function SkillsList({
               </div>
             </form>
           ) : (
-            <>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  width: "100%",
-                }}
-              >
-                <h2>{localCategory?.name || category?.name || "Skills"}</h2>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "var(--spacing-sm)",
-                  }}
-                >
-                  <button
-                    className="add-button"
-                    onClick={() => setShowAddForm(!showAddForm)}
-                    title="Add skill"
-                    disabled={
-                      creatingSkill ||
-                      !!updatingSkill ||
-                      !!deletingSkill ||
-                      editingCategory
-                    }
-                  >
-                    +
-                  </button>
-                  <div
-                    className="skill-menu-container"
-                    ref={categoryMenuRef}
-                    onMouseEnter={() => {
-                      if (menuCloseTimeout) {
-                        clearTimeout(menuCloseTimeout);
-                        setMenuCloseTimeout(null);
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      if (categoryMenuOpen) {
-                        const timeout = setTimeout(() => {
-                          setCategoryMenuOpen(false);
-                        }, 300);
-                        setMenuCloseTimeout(timeout);
-                      }
-                    }}
-                  >
-                    <button
-                      className="skill-menu-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCategoryMenuOpen(!categoryMenuOpen);
-                      }}
-                      title="More options"
-                      disabled={
-                        deletingCategory || updatingCategory || editingCategory
-                      }
-                    >
-                      ⋯
-                    </button>
-                    {categoryMenuOpen && (
-                      <div
-                        className="skill-menu"
-                        onMouseEnter={() => {
-                          if (menuCloseTimeout) {
-                            clearTimeout(menuCloseTimeout);
-                            setMenuCloseTimeout(null);
-                          }
-                        }}
-                        onMouseLeave={() => {
-                          if (categoryMenuOpen) {
-                            const timeout = setTimeout(() => {
-                              setCategoryMenuOpen(false);
-                            }, 300);
-                            setMenuCloseTimeout(timeout);
-                          }
-                        }}
-                      >
-                        <button
-                          className="skill-menu-item"
-                          onClick={handleEditCategory}
-                          disabled={
-                            deletingCategory ||
-                            updatingCategory ||
-                            editingCategory
-                          }
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="skill-menu-item delete"
-                          onClick={handleDeleteCategory}
-                          disabled={
-                            deletingCategory ||
-                            updatingCategory ||
-                            editingCategory
-                          }
-                        >
-                          {deletingCategory ? <Spinner size="sm" /> : "Delete"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
+            <h2>{localCategory?.name || category?.name || "Skills"}</h2>
           )}
         </div>
       </div>
@@ -599,29 +378,8 @@ export function SkillsList({
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, skill._id)}
               onDragEnd={handleDragEnd}
-              onClick={() => onSkillSelect(skill._id)}
-              onMouseLeave={(e) => {
-                if (openMenuId === skill._id) {
-                  // Check if mouse is moving to the menu
-                  const relatedTarget = e.relatedTarget as HTMLElement;
-                  if (
-                    !relatedTarget ||
-                    !relatedTarget.closest(".skill-menu-container")
-                  ) {
-                    // Add a small delay to allow moving to the menu
-                    const timeout = setTimeout(() => {
-                      setOpenMenuId(null);
-                    }, 150);
-                    setMenuCloseTimeout(timeout);
-                  }
-                }
-              }}
-              onMouseEnter={() => {
-                // Clear any pending close timeout when hovering back
-                if (menuCloseTimeout) {
-                  clearTimeout(menuCloseTimeout);
-                  setMenuCloseTimeout(null);
-                }
+              onClick={() => {
+                onSkillSelect(skill._id);
               }}
             >
               {editingSkillId === skill._id ? (
@@ -668,84 +426,6 @@ export function SkillsList({
                   <div className="skill-content">
                     <div className="skill-header">
                       <div className="skill-name">{skill.name}</div>
-                      <div className="skill-stats">
-                        <span className="skill-stat">
-                          <span className="stat-label">XP:</span>
-                          <span className="stat-value">{skill.xp || 0}</span>
-                        </span>
-                        <span className="skill-stat">
-                          <span className="stat-label">LV:</span>
-                          <span className="stat-value">{skill.level || 1}</span>
-                        </span>
-                        <div
-                          className="skill-menu-container"
-                          onMouseEnter={() => {
-                            // Clear any pending close timeout when hovering over menu
-                            if (menuCloseTimeout) {
-                              clearTimeout(menuCloseTimeout);
-                              setMenuCloseTimeout(null);
-                            }
-                          }}
-                          onMouseLeave={() => {
-                            // Close menu when leaving the menu container
-                            if (openMenuId === skill._id) {
-                              setOpenMenuId(null);
-                            }
-                          }}
-                        >
-                          <button
-                            className="skill-menu-button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(
-                                openMenuId === skill._id ? null : skill._id
-                              );
-                            }}
-                            title="More options"
-                          >
-                            ⋯
-                          </button>
-                          {openMenuId === skill._id && (
-                            <div className="skill-menu">
-                              <button
-                                className="skill-menu-item"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditSkill(skill, e);
-                                  setOpenMenuId(null);
-                                }}
-                                disabled={
-                                  deletingSkill === skill._id ||
-                                  updatingSkill === skill._id
-                                }
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="skill-menu-item delete"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteSkill(skill._id, skill.name, e);
-                                  setOpenMenuId(null);
-                                }}
-                                disabled={
-                                  deletingSkill === skill._id ||
-                                  updatingSkill === skill._id
-                                }
-                              >
-                                {deletingSkill === skill._id ? (
-                                  <>
-                                    <Spinner size="sm" />
-                                    <span>Deleting...</span>
-                                  </>
-                                ) : (
-                                  "Delete"
-                                )}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
                     </div>
                     {skill.description && (
                       <div className="skill-description">
@@ -759,6 +439,16 @@ export function SkillsList({
           ))}
         </ul>
       )}
+
+      <div className="categories-list-footer">
+        <button
+          className="add-button"
+          onClick={() => setShowAddForm(!showAddForm)}
+          title="Add skill"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

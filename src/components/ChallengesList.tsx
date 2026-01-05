@@ -77,6 +77,23 @@ export function ChallengesList({
   const [actionModalChallengeId, setActionModalChallengeId] = useState<
     string | null
   >(null);
+  const [listSelectionModalOpen, setListSelectionModalOpen] = useState(false);
+  const [selectedLists, setSelectedLists] = useState<{
+    todo: boolean;
+    daily: boolean;
+  }>({ todo: false, daily: false });
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedChallengeIds, setSelectedChallengeIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [deletingChallenges, setDeletingChallenges] = useState(false);
+  const [bulkListSelectionModalOpen, setBulkListSelectionModalOpen] =
+    useState(false);
+  const [bulkSelectedLists, setBulkSelectedLists] = useState({
+    todo: false,
+    daily: false,
+  });
+  const [addingBulkToList, setAddingBulkToList] = useState(false);
 
   // Swipe gesture state for challenge navigation (detail view)
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(
@@ -216,23 +233,40 @@ export function ChallengesList({
       if (!target.closest(".challenge-action-modal")) {
         setActionModalChallengeId(null);
       }
+      // Close list selection modals if clicking outside
+      if (!target.closest(".list-selection-modal")) {
+        if (listSelectionModalOpen) {
+          setListSelectionModalOpen(false);
+        }
+        if (bulkListSelectionModalOpen) {
+          setBulkListSelectionModalOpen(false);
+        }
+      }
     };
 
-    if (actionModalChallengeId) {
-      document.addEventListener("mousedown", handleClickOutside);
-      // Also close on escape key
-      const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === "Escape") {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (actionModalChallengeId) {
           setActionModalChallengeId(null);
         }
-      };
+        if (listSelectionModalOpen) {
+          handleCloseListSelection();
+        }
+        if (bulkListSelectionModalOpen) {
+          handleCloseBulkListSelection();
+        }
+      }
+    };
+
+    if (actionModalChallengeId || listSelectionModalOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscape);
       return () => {
         document.removeEventListener("mousedown", handleClickOutside);
         document.removeEventListener("keydown", handleEscape);
       };
     }
-  }, [actionModalChallengeId]);
+  }, [actionModalChallengeId, listSelectionModalOpen]);
 
   const handleSaveChallengeDescription = async () => {
     if (
@@ -310,80 +344,233 @@ export function ChallengesList({
     }
   };
 
-  const handleToggleTodo = (challenge: Challenge) => {
-    if (!skill) return;
+  const handleOpenListSelection = () => {
+    if (!selectedChallenge || !skill) return;
 
     const category = typeof skill.category === "object" ? skill.category : null;
     if (!category) return;
 
-    const inTodo = todoChallengeIds.has(challenge._id);
-
-    if (inTodo) {
-      hapticFeedback.light();
-      removeTodoItem(challenge._id);
-      // Update state immediately
-      setTodoChallengeIds((prev) => {
-        const next = new Set(prev);
-        next.delete(challenge._id);
-        return next;
-      });
-    } else {
-      hapticFeedback.success();
-      addTodoItem({
-        challengeId: challenge._id,
-        challengeName: challenge.name,
-        skillId: skill._id,
-        skillName: skill.name,
-        categoryId: category._id,
-        categoryName: category.name,
-      });
-      // Update state immediately
-      setTodoChallengeIds((prev) => {
-        const next = new Set(prev);
-        next.add(challenge._id);
-        return next;
-      });
-    }
+    // Pre-select lists that the challenge is already in
+    setSelectedLists({
+      todo: todoChallengeIds.has(selectedChallenge._id),
+      daily: dailyChallengeIds.has(selectedChallenge._id),
+    });
+    setListSelectionModalOpen(true);
+    hapticFeedback.light();
   };
 
-  const handleToggleDaily = (challenge: Challenge) => {
-    if (!skill) return;
+  const handleCloseListSelection = () => {
+    setListSelectionModalOpen(false);
+    setSelectedLists({ todo: false, daily: false });
+  };
+
+  const handleConfirmListSelection = () => {
+    if (!selectedChallenge || !skill) return;
 
     const category = typeof skill.category === "object" ? skill.category : null;
     if (!category) return;
 
-    const inDaily = dailyChallengeIds.has(challenge._id);
+    hapticFeedback.medium();
 
-    if (inDaily) {
-      // Only allow removal of non-completed items
-      const dailyItems = getDailyItems();
-      const item = dailyItems.find((i) => i.challengeId === challenge._id);
-      if (item && !item.completed) {
-        hapticFeedback.light();
-        removeDailyItem(challenge._id);
-        // Update state immediately
-        setDailyChallengeIds((prev) => {
+    // Handle To-Do list
+    if (selectedLists.todo) {
+      if (!todoChallengeIds.has(selectedChallenge._id)) {
+        addTodoItem({
+          challengeId: selectedChallenge._id,
+          challengeName: selectedChallenge.name,
+          skillId: skill._id,
+          skillName: skill.name,
+          categoryId: category._id,
+          categoryName: category.name,
+        });
+        setTodoChallengeIds((prev) => {
           const next = new Set(prev);
-          next.delete(challenge._id);
+          next.add(selectedChallenge._id);
           return next;
         });
       }
     } else {
+      if (todoChallengeIds.has(selectedChallenge._id)) {
+        removeTodoItem(selectedChallenge._id);
+        setTodoChallengeIds((prev) => {
+          const next = new Set(prev);
+          next.delete(selectedChallenge._id);
+          return next;
+        });
+      }
+    }
+
+    // Handle Daily list
+    if (selectedLists.daily) {
+      if (!dailyChallengeIds.has(selectedChallenge._id)) {
+        addDailyItem({
+          challengeId: selectedChallenge._id,
+          challengeName: selectedChallenge.name,
+          skillId: skill._id,
+          skillName: skill.name,
+          categoryId: category._id,
+          categoryName: category.name,
+        });
+        setDailyChallengeIds((prev) => {
+          const next = new Set(prev);
+          next.add(selectedChallenge._id);
+          return next;
+        });
+      }
+    } else {
+      if (dailyChallengeIds.has(selectedChallenge._id)) {
+        const dailyItems = getDailyItems();
+        const item = dailyItems.find(
+          (i) => i.challengeId === selectedChallenge._id
+        );
+        if (item && !item.completed) {
+          removeDailyItem(selectedChallenge._id);
+          setDailyChallengeIds((prev) => {
+            const next = new Set(prev);
+            next.delete(selectedChallenge._id);
+            return next;
+          });
+        }
+      }
+    }
+
+    hapticFeedback.success();
+    handleCloseListSelection();
+  };
+
+  const handleDeleteSelectedChallenges = async () => {
+    if (selectedChallengeIds.size === 0) return;
+
+    const selectedChallenges =
+      skill?.challenges?.filter((challenge) =>
+        selectedChallengeIds.has(challenge._id)
+      ) || [];
+    const challengeNames = selectedChallenges
+      .map((challenge) => challenge.name)
+      .join(", ");
+
+    if (
+      !confirm(
+        `Are you sure you want to delete ${
+          selectedChallengeIds.size
+        } challenge${
+          selectedChallengeIds.size === 1 ? "" : "s"
+        }?\n\n${challengeNames}`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingChallenges(true);
+    hapticFeedback.medium();
+
+    try {
+      // Delete all selected challenges
+      await Promise.all(
+        Array.from(selectedChallengeIds).map((id) => challengeAPI.delete(id))
+      );
+
+      // Clear selection and exit selection mode
+      setSelectedChallengeIds(new Set());
+      setSelectionMode(false);
+      await loadSkill();
       hapticFeedback.success();
-      addDailyItem({
-        challengeId: challenge._id,
-        challengeName: challenge.name,
-        skillId: skill._id,
-        skillName: skill.name,
-        categoryId: category._id,
-        categoryName: category.name,
-      });
-      // Update state immediately
-      setDailyChallengeIds((prev) => {
-        const next = new Set(prev);
-        next.add(challenge._id);
-        return next;
-      });
+    } catch (err) {
+      hapticFeedback.error();
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Failed to delete one or more challenges"
+      );
+    } finally {
+      setDeletingChallenges(false);
+    }
+  };
+
+  const handleOpenBulkListSelection = () => {
+    if (selectedChallengeIds.size === 0) return;
+    setBulkListSelectionModalOpen(true);
+    hapticFeedback.light();
+  };
+
+  const handleCloseBulkListSelection = () => {
+    setBulkListSelectionModalOpen(false);
+    setBulkSelectedLists({ todo: false, daily: false });
+  };
+
+  const handleConfirmBulkListSelection = () => {
+    if (selectedChallengeIds.size === 0 || !skill) return;
+
+    const selectedChallenges =
+      skill.challenges?.filter((challenge) =>
+        selectedChallengeIds.has(challenge._id)
+      ) || [];
+    const category = typeof skill.category === "object" ? skill.category : null;
+    if (!category) return;
+
+    setAddingBulkToList(true);
+    hapticFeedback.medium();
+
+    try {
+      // Add challenges to selected lists
+      if (bulkSelectedLists.todo) {
+        selectedChallenges.forEach((challenge) => {
+          if (!todoChallengeIds.has(challenge._id)) {
+            addTodoItem({
+              challengeId: challenge._id,
+              challengeName: challenge.name,
+              skillId: skill._id,
+              skillName: skill.name,
+              categoryId: category._id,
+              categoryName: category.name,
+            });
+            setTodoChallengeIds((prev) => {
+              const next = new Set(prev);
+              next.add(challenge._id);
+              return next;
+            });
+          }
+        });
+      }
+
+      if (bulkSelectedLists.daily) {
+        selectedChallenges.forEach((challenge) => {
+          if (!dailyChallengeIds.has(challenge._id)) {
+            addDailyItem({
+              challengeId: challenge._id,
+              challengeName: challenge.name,
+              skillId: skill._id,
+              skillName: skill.name,
+              categoryId: category._id,
+              categoryName: category.name,
+            });
+            setDailyChallengeIds((prev) => {
+              const next = new Set(prev);
+              next.add(challenge._id);
+              return next;
+            });
+          }
+        });
+      }
+
+      hapticFeedback.success();
+      alert(
+        `Added ${selectedChallengeIds.size} challenge${
+          selectedChallengeIds.size === 1 ? "" : "s"
+        } to the selected list${
+          bulkSelectedLists.todo && bulkSelectedLists.daily ? "s" : ""
+        }.`
+      );
+      handleCloseBulkListSelection();
+      setSelectedChallengeIds(new Set());
+      setSelectionMode(false);
+    } catch (err) {
+      hapticFeedback.error();
+      alert(
+        err instanceof Error ? err.message : "Failed to add challenges to list"
+      );
+    } finally {
+      setAddingBulkToList(false);
     }
   };
 
@@ -763,17 +950,8 @@ export function ChallengesList({
           onCategoryClick={onBackToCategory}
           onSkillClick={undefined}
         />
-        <div className="section-header challenges-header">
-          <div className="header-title-section">
-            <h2>{skill.name}</h2>
-          </div>
-          <button
-            className="add-button"
-            onClick={() => setShowAddForm(!showAddForm)}
-            title="Add challenge"
-          >
-            +
-          </button>
+        <div className="section-header">
+          <h2>{skill.name}</h2>
         </div>
 
         {skill.description && (
@@ -843,10 +1021,16 @@ export function ChallengesList({
                 key={challenge._id}
                 className={`challenge-item ${
                   selectedChallengeId === challenge._id ? "selected" : ""
+                } ${
+                  selectionMode && selectedChallengeIds.has(challenge._id)
+                    ? "selected"
+                    : ""
                 } ${draggedChallengeId === challenge._id ? "dragging" : ""} ${
                   dragOverChallengeId === challenge._id ? "drag-over" : ""
                 } ${swipedChallengeId === challenge._id ? "swiping" : ""}`}
-                draggable={editingChallengeId !== challenge._id}
+                draggable={
+                  !selectionMode && editingChallengeId !== challenge._id
+                }
                 onDragStart={() => handleDragStart(challenge._id)}
                 onDragOver={(e) => handleDragOver(e, challenge._id)}
                 onDragLeave={handleDragLeave}
@@ -861,7 +1045,17 @@ export function ChallengesList({
                     return;
                   }
 
-                  if (editingChallengeId !== challenge._id) {
+                  if (selectionMode) {
+                    setSelectedChallengeIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(challenge._id)) {
+                        next.delete(challenge._id);
+                      } else {
+                        next.add(challenge._id);
+                      }
+                      return next;
+                    });
+                  } else if (editingChallengeId !== challenge._id) {
                     hapticFeedback.selection();
                     setSelectedChallengeId(challenge._id);
                   }
@@ -1035,41 +1229,6 @@ export function ChallengesList({
                   <>
                     <div className="challenge-info">
                       <div className="challenge-name">{challenge.name}</div>
-                      <div className="challenge-stats">
-                        <span className="challenge-xp">
-                          +{challenge.xpReward} XP
-                        </span>
-                        <button
-                          className="challenge-complete-button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCompleteChallenge(challenge, e);
-                          }}
-                          disabled={
-                            completingChallenge === challenge._id ||
-                            deletingChallenge === challenge._id ||
-                            updatingChallenge === challenge._id ||
-                            editingChallengeId === challenge._id
-                          }
-                          title="Complete challenge"
-                        >
-                          {completingChallenge === challenge._id ? (
-                            <>
-                              <Spinner size="sm" />
-                              <span className="complete-button-text">
-                                Completing...
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="button-icon">✓</span>
-                              <span className="complete-button-text">
-                                Complete
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      </div>
                       {/* Swipe action indicators */}
                       {swipedChallengeId === challenge._id && (
                         <>
@@ -1191,10 +1350,6 @@ export function ChallengesList({
               </div>
             )}
           </div>
-          <div className="challenge-detail-xp">
-            <span className="xp-label">XP Reward</span>
-            <span className="xp-value">+{selectedChallenge.xpReward}</span>
-          </div>
           <div className="challenge-detail-actions">
             <div className="challenge-detail-action-buttons">
               <button
@@ -1252,41 +1407,29 @@ export function ChallengesList({
                 )}
               </button>
               <button
-                className={`challenge-detail-action-button todo ${
-                  todoChallengeIds.has(selectedChallenge._id) ? "in-todo" : ""
+                className={`challenge-detail-action-button list ${
+                  todoChallengeIds.has(selectedChallenge._id) ||
+                  dailyChallengeIds.has(selectedChallenge._id)
+                    ? "in-list"
+                    : ""
                 }`}
-                onClick={() => handleToggleTodo(selectedChallenge)}
+                onClick={handleOpenListSelection}
                 disabled={
                   deletingChallenge === selectedChallenge._id ||
                   completingChallenge === selectedChallenge._id
                 }
               >
                 <span className="button-icon">
-                  {todoChallengeIds.has(selectedChallenge._id) ? "✓" : "➕"}
+                  {todoChallengeIds.has(selectedChallenge._id) ||
+                  dailyChallengeIds.has(selectedChallenge._id)
+                    ? "✓"
+                    : "➕"}
                 </span>
                 <span>
-                  {todoChallengeIds.has(selectedChallenge._id)
-                    ? "In To-Do"
-                    : "+ To-Do"}
-                </span>
-              </button>
-              <button
-                className={`challenge-detail-action-button daily ${
-                  dailyChallengeIds.has(selectedChallenge._id) ? "in-daily" : ""
-                }`}
-                onClick={() => handleToggleDaily(selectedChallenge)}
-                disabled={
-                  deletingChallenge === selectedChallenge._id ||
-                  completingChallenge === selectedChallenge._id
-                }
-              >
-                <span className="button-icon">
-                  {dailyChallengeIds.has(selectedChallenge._id) ? "✓" : "📅"}
-                </span>
-                <span>
-                  {dailyChallengeIds.has(selectedChallenge._id)
-                    ? "In Daily"
-                    : "+ Daily"}
+                  {todoChallengeIds.has(selectedChallenge._id) ||
+                  dailyChallengeIds.has(selectedChallenge._id)
+                    ? "In List"
+                    : "+ To List"}
                 </span>
               </button>
               <button
@@ -1412,6 +1555,261 @@ export function ChallengesList({
                 </>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* List Selection Modal */}
+      {listSelectionModalOpen && selectedChallenge && (
+        <div className="list-selection-modal-overlay">
+          <div className="list-selection-modal">
+            <div className="list-selection-modal-header">
+              <h3>Add to Lists</h3>
+              <button
+                className="list-selection-modal-close"
+                onClick={handleCloseListSelection}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="list-selection-modal-content">
+              <p className="list-selection-modal-description">
+                Select which lists to add "{selectedChallenge.name}" to:
+              </p>
+              <div className="list-selection-options">
+                <label className="list-selection-option">
+                  <input
+                    type="checkbox"
+                    checked={selectedLists.todo}
+                    onChange={(e) =>
+                      setSelectedLists((prev) => ({
+                        ...prev,
+                        todo: e.target.checked,
+                      }))
+                    }
+                  />
+                  <div className="list-selection-option-content">
+                    <span className="list-selection-option-icon">📝</span>
+                    <div className="list-selection-option-text">
+                      <span className="list-selection-option-name">
+                        To-Do List
+                      </span>
+                      <span className="list-selection-option-description">
+                        Tasks are removed when completed
+                      </span>
+                    </div>
+                    {todoChallengeIds.has(selectedChallenge._id) && (
+                      <span className="list-selection-option-status">
+                        (Already added)
+                      </span>
+                    )}
+                  </div>
+                </label>
+                <label className="list-selection-option">
+                  <input
+                    type="checkbox"
+                    checked={selectedLists.daily}
+                    onChange={(e) =>
+                      setSelectedLists((prev) => ({
+                        ...prev,
+                        daily: e.target.checked,
+                      }))
+                    }
+                  />
+                  <div className="list-selection-option-content">
+                    <span className="list-selection-option-icon">📅</span>
+                    <div className="list-selection-option-text">
+                      <span className="list-selection-option-name">
+                        Daily List
+                      </span>
+                      <span className="list-selection-option-description">
+                        Tasks persist after completion
+                      </span>
+                    </div>
+                    {dailyChallengeIds.has(selectedChallenge._id) && (
+                      <span className="list-selection-option-status">
+                        (Already added)
+                      </span>
+                    )}
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div className="list-selection-modal-actions">
+              <button
+                className="list-selection-button cancel"
+                onClick={handleCloseListSelection}
+              >
+                Cancel
+              </button>
+              <button
+                className="list-selection-button confirm"
+                onClick={handleConfirmListSelection}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!selectedChallengeId && (
+        <div className="categories-list-footer">
+          {selectionMode ? (
+            <>
+              <button
+                className="delete-button"
+                onClick={handleDeleteSelectedChallenges}
+                disabled={selectedChallengeIds.size === 0 || deletingChallenges}
+                title="Delete selected challenges"
+              >
+                {deletingChallenges ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🗑️</span>
+                    <span>Delete</span>
+                  </>
+                )}
+              </button>
+              <button
+                className="add-to-list-button"
+                onClick={handleOpenBulkListSelection}
+                disabled={selectedChallengeIds.size === 0}
+                title="Add challenges to list"
+              >
+                <span>+</span>
+                <span>To List</span>
+              </button>
+              <button
+                className="select-button active"
+                onClick={() => {
+                  setSelectionMode(false);
+                  setSelectedChallengeIds(new Set());
+                }}
+                title="Exit selection"
+              >
+                Done
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className="select-button"
+                onClick={() => setSelectionMode(true)}
+                title="Select challenges"
+              >
+                Select
+              </button>
+              <button
+                className="add-button"
+                onClick={() => setShowAddForm(!showAddForm)}
+                title="Add challenge"
+              >
+                +
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {bulkListSelectionModalOpen && (
+        <div className="list-selection-modal-overlay">
+          <div className="list-selection-modal">
+            <div className="list-selection-modal-header">
+              <h3>Add to Lists</h3>
+              <button
+                className="list-selection-modal-close"
+                onClick={handleCloseBulkListSelection}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="list-selection-modal-content">
+              <p className="list-selection-modal-description">
+                Select which lists to add {selectedChallengeIds.size} challenge
+                {selectedChallengeIds.size === 1 ? "" : "s"} to:
+              </p>
+              <div className="list-selection-options">
+                <label className="list-selection-option">
+                  <input
+                    type="checkbox"
+                    checked={bulkSelectedLists.todo}
+                    onChange={(e) =>
+                      setBulkSelectedLists((prev) => ({
+                        ...prev,
+                        todo: e.target.checked,
+                      }))
+                    }
+                  />
+                  <div className="list-selection-option-content">
+                    <span className="list-selection-option-icon">📝</span>
+                    <div className="list-selection-option-text">
+                      <span className="list-selection-option-name">
+                        To-Do List
+                      </span>
+                      <span className="list-selection-option-description">
+                        Tasks are removed when completed
+                      </span>
+                    </div>
+                  </div>
+                </label>
+                <label className="list-selection-option">
+                  <input
+                    type="checkbox"
+                    checked={bulkSelectedLists.daily}
+                    onChange={(e) =>
+                      setBulkSelectedLists((prev) => ({
+                        ...prev,
+                        daily: e.target.checked,
+                      }))
+                    }
+                  />
+                  <div className="list-selection-option-content">
+                    <span className="list-selection-option-icon">📅</span>
+                    <div className="list-selection-option-text">
+                      <span className="list-selection-option-name">
+                        Daily List
+                      </span>
+                      <span className="list-selection-option-description">
+                        Tasks persist after being checked off
+                      </span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div className="list-selection-modal-actions">
+              <button
+                className="list-selection-button cancel"
+                onClick={handleCloseBulkListSelection}
+                disabled={addingBulkToList}
+              >
+                Cancel
+              </button>
+              <button
+                className="list-selection-button confirm"
+                onClick={handleConfirmBulkListSelection}
+                disabled={
+                  addingBulkToList ||
+                  (!bulkSelectedLists.todo && !bulkSelectedLists.daily)
+                }
+              >
+                {addingBulkToList ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span>Adding...</span>
+                  </>
+                ) : (
+                  "Confirm"
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

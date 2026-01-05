@@ -374,11 +374,6 @@ export function CategoriesModal({
                             <span className="category-name">
                               {category.name}
                             </span>
-                            {category.xp > 0 && (
-                              <span className="category-stats">
-                                XP: {category.xp} | LV: {category.level}
-                              </span>
-                            )}
                           </div>
                           <div className="category-actions">
                             <button

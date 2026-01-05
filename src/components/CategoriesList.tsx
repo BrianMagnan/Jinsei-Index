@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { Breadcrumbs } from "./Breadcrumbs";
 import "../App.css";
 
 interface CategoriesListProps {
@@ -26,9 +27,7 @@ export function CategoriesList({
     null
   );
   const [editCategoryName, setEditCategoryName] = useState("");
-  const [editCategoryDescription, setEditCategoryDescription] = useState("");
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
-  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
   const loadCategories = async () => {
     try {
@@ -107,13 +106,6 @@ export function CategoriesList({
     }
   };
 
-  const handleEditCategory = (category: Category, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingCategoryId(category._id);
-    setEditCategoryName(category.name);
-    setEditCategoryDescription(category.description || "");
-  };
-
   const handleUpdateCategory = async (
     categoryId: string,
     e: React.FormEvent
@@ -125,7 +117,6 @@ export function CategoriesList({
     try {
       await categoryAPI.update(categoryId, {
         name: editCategoryName.trim(),
-        description: editCategoryDescription.trim() || undefined,
       });
       setEditingCategoryId(null);
       await loadCategories();
@@ -133,36 +124,6 @@ export function CategoriesList({
       alert(err instanceof Error ? err.message : "Failed to update category");
     } finally {
       setUpdatingCategory(null);
-    }
-  };
-
-  const handleDeleteCategory = async (
-    categoryId: string,
-    categoryName: string,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation();
-    if (deletingCategory === categoryId) return;
-
-    if (
-      !confirm(
-        `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
-      )
-    ) {
-      return;
-    }
-
-    setDeletingCategory(categoryId);
-    try {
-      await categoryAPI.delete(categoryId);
-      if (selectedCategoryId === categoryId) {
-        onCategorySelect(null);
-      }
-      await loadCategories();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete category");
-    } finally {
-      setDeletingCategory(null);
     }
   };
 
@@ -216,10 +177,9 @@ export function CategoriesList({
           )}
         </div>
       )}
+      <Breadcrumbs category={null} skill={null} onCategoriesClick={undefined} />
       <div className="section-header">
-        <div className="header-title-section">
-          <h2>Categories</h2>
-        </div>
+        <h2>Categories</h2>
       </div>
 
       {showAddForm && (
@@ -254,7 +214,7 @@ export function CategoriesList({
         </form>
       )}
 
-      <div className="categories-list-content">
+      <div className="categories-list-content categories-list-scrollable">
         {categories.length === 0 ? (
           <EmptyState
             icon="📁"
@@ -271,7 +231,9 @@ export function CategoriesList({
                 className={`categories-list-item ${
                   selectedCategoryId === category._id ? "active" : ""
                 }`}
-                onClick={() => onCategorySelect(category._id)}
+                onClick={() => {
+                  onCategorySelect(category._id);
+                }}
               >
                 {editingCategoryId === category._id ? (
                   <form
@@ -316,41 +278,6 @@ export function CategoriesList({
                   <>
                     <div className="categories-list-item-content">
                       <span className="category-name">{category.name}</span>
-                      {category.xp > 0 && (
-                        <span className="category-stats">
-                          XP: {category.xp} | LV: {category.level}
-                        </span>
-                      )}
-                    </div>
-                    <div className="category-actions">
-                      <button
-                        className="edit-button"
-                        onClick={(e) => handleEditCategory(category, e)}
-                        title="Edit category"
-                        disabled={
-                          deletingCategory === category._id ||
-                          updatingCategory === category._id
-                        }
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={(e) =>
-                          handleDeleteCategory(category._id, category.name, e)
-                        }
-                        title="Delete category"
-                        disabled={
-                          deletingCategory === category._id ||
-                          updatingCategory === category._id
-                        }
-                      >
-                        {deletingCategory === category._id ? (
-                          <Spinner size="sm" />
-                        ) : (
-                          "×"
-                        )}
-                      </button>
                     </div>
                   </>
                 )}
