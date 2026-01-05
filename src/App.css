@@ -107,11 +107,12 @@ body {
     var(--color-bg-darker) 100%
   );
   color: var(--color-text-primary);
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: row;
   background: linear-gradient(
@@ -119,6 +120,7 @@ body {
     var(--color-bg-dark) 0%,
     var(--color-bg-darker) 100%
   );
+  overflow: hidden;
 }
 
 /* Sidebar */
@@ -345,65 +347,7 @@ body {
   padding: 0.5rem 0;
 }
 
-.category-item {
-  padding: var(--spacing-sm) var(--spacing-md);
-  cursor: grab;
-  transition: all var(--transition-normal);
-  border-left: 4px solid transparent;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-sm);
-}
-
-.category-item:active {
-  cursor: grabbing;
-}
-
-.category-item::before {
-  position: absolute;
-  left: var(--spacing-sm);
-  opacity: 0;
-  transition: all var(--transition-normal);
-  color: var(--color-primary);
-}
-
-.category-item:hover {
-  background: rgba(14, 165, 233, 0.15);
-  border-left-color: var(--color-border-primary);
-  color: var(--color-primary);
-  text-shadow: 0 0 8px var(--color-primary-glow);
-}
-
-.category-item:hover::before {
-  opacity: 1;
-}
-
-.category-item.active {
-  background: rgba(14, 165, 233, 0.25);
-  border-left-color: var(--color-border-primary);
-  color: var(--color-primary);
-  font-weight: 700;
-  text-shadow: 0 0 10px var(--color-primary-glow);
-  box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.2);
-}
-
-.category-item.active::before {
-  opacity: 1;
-}
-
-.category-item.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-}
-
-.category-item.drag-over {
-  border-left-color: var(--color-primary);
-  background: rgba(14, 165, 233, 0.2);
-}
+/* Old category-item styles removed - now using unified styles above */
 
 .category-name {
   flex: 1;
@@ -457,6 +401,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+}
+
+.add-form {
+  flex-shrink: 0;
 }
 
 .edit-form input {
@@ -604,12 +552,15 @@ body {
 .app-main {
   flex: 1;
   padding: var(--spacing-md);
-  overflow-y: auto;
+  overflow: hidden;
   background: linear-gradient(
     135deg,
     var(--color-bg-dark) 0%,
     var(--color-bg-darker) 100%
   );
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-main::-webkit-scrollbar {
@@ -839,75 +790,115 @@ body {
   text-align: center;
 }
 
-.categories-list-grid {
+/* Unified list container - used by all three lists */
+.category-list,
+.skill-list,
+.challenge-list {
   list-style: none;
-  padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
   margin: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: var(--spacing-md);
-  height: 100px;
+  padding-bottom: calc(
+    80px + var(--spacing-lg) * 2 + env(safe-area-inset-bottom)
+  );
 }
 
-.categories-list-item {
+/* Unified list item styles - used by all three lists */
+.category-item,
+.skill-item,
+.challenge-item {
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   cursor: pointer;
   transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  min-height: 80px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 80px;
+  gap: var(--spacing-md);
+  z-index: 1;
 }
 
-.categories-list-item:hover {
+/* Unified hover and active states */
+.category-item:hover,
+.skill-item:hover,
+.challenge-item:hover {
   background: var(--color-primary-light);
   border-color: var(--color-border-primary);
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
 
-.categories-list-item.active {
+.category-item.active,
+.skill-item.active,
+.challenge-item.active {
   background: var(--color-primary-light);
   border-color: var(--color-border-primary);
   box-shadow: var(--shadow-primary);
 }
 
-.categories-list-item.selected {
+.category-item.selected,
+.skill-item.selected,
+.challenge-item.selected {
   background: var(--color-primary-light);
   border-color: var(--color-border-primary);
   box-shadow: var(--shadow-lg);
 }
 
-.categories-list-item.selected .category-name {
+.category-item.selected .category-name,
+.skill-item.selected .skill-name,
+.challenge-item.selected .challenge-name {
   color: var(--color-primary);
 }
 
-.categories-list-item-content {
+/* Unified dragging states */
+.category-item.dragging,
+.skill-item.dragging,
+.challenge-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.category-item.drag-over,
+.skill-item.drag-over,
+.challenge-item.drag-over {
+  border-color: var(--color-border-primary);
+  background: var(--color-primary-light);
+}
+
+/* Unified item content containers */
+.categories-list-item-content,
+.skill-content,
+.challenge-info {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
-  flex: 1;
 }
 
-.categories-list-item .category-name {
+.category-name,
+.skill-name,
+.challenge-name {
   font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
-  margin-bottom: var(--spacing-xs);
 }
 
-.categories-list-item.active .category-name {
+.category-item.active .category-name,
+.skill-item.active .skill-name,
+.challenge-item.active .challenge-name {
+  color: var(--color-primary);
   text-shadow: 0 0 10px var(--color-primary-glow);
-}
-
-.categories-list-item .category-stats {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin-top: var(--spacing-xs);
-  display: block;
 }
 
 .categories-list-footer {
@@ -1125,6 +1116,8 @@ body {
   flex-direction: column;
   height: 100%;
   position: relative;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .section-header {
@@ -1133,13 +1126,14 @@ body {
   align-items: center;
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 2px solid var(--color-border-primary);
-  background: var(--color-bg-dark);
   position: relative;
   margin-top: 0;
   margin-bottom: var(--spacing-xl);
   min-height: fit-content;
   height: auto;
+  flex-shrink: 0;
   gap: var(--spacing-md);
+  flex-shrink: 0;
 }
 
 .challenges-header-stats {
@@ -1189,77 +1183,11 @@ body {
   letter-spacing: 0.5px;
 }
 
-.skill-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-}
+/* Skill list now uses unified styles above */
 
-.skill-item {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-  position: relative;
-  overflow: visible;
-  min-height: 80px;
-  display: flex;
-  align-items: center;
-}
+/* Skill item styles now use unified styles above */
 
-.skill-item:hover {
-  background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-
-.skill-item.active {
-  background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
-  box-shadow: var(--shadow-primary);
-}
-
-.skill-item.selected {
-  background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
-  box-shadow: var(--shadow-lg);
-}
-
-.skill-item.selected .skill-name {
-  color: var(--color-primary);
-}
-
-.skill-item::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(14, 165, 233, 0.2),
-    transparent
-  );
-  transition: left 0.5s;
-}
-
-/* .skill-item:hover::before {
-  left: 100%;
-} */
-
-.skill-item:hover {
-  /* border-color: var(--color-border-primary); */
-  /* box-shadow: var(--shadow-xl), var(--shadow-md); */
-  /* border-radius: var(--radius-sm); */
-  /* transform: translateX(8px); */
-  background: var(--color-bg-card-alt);
-}
+/* Skill item hover now uses unified styles above */
 
 .skill-item.dragging {
   opacity: 0.5;
@@ -1338,9 +1266,13 @@ body {
 .challenges-container {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xl);
+  gap: 0;
   max-width: 100%;
   position: relative;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
 }
 
 .challenges-container.list-view {
@@ -1363,6 +1295,9 @@ body {
   flex-direction: column;
   height: 100%;
   position: relative;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
 }
 
 .challenges-list.hidden {
@@ -1373,58 +1308,26 @@ body {
   list-style: none;
   display: flex;
   flex-direction: column;
-  /* gap: var(--spacing-sm); */
-  /* height: fit-content; */
-  /* border: 2px solid var(--color-border-primary); */
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  padding-bottom: calc(
+    80px + var(--spacing-lg) * 2 + env(safe-area-inset-bottom)
+  );
 }
 
-.challenge-item {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  transition: all var(--transition-normal);
-  cursor: grab;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-md);
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-  min-height: 80px;
-}
+/* Challenge item styles now use unified styles above */
 
-.challenge-item:hover {
-  background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-
+/* Challenge item swiping state - specific to challenges */
 .challenge-item.swiping {
   z-index: 10;
 }
 
 .challenge-item:active {
   cursor: grabbing;
-}
-
-.challenge-item.selected {
-  border: 2px solid var(--color-border-primary);
-  background: var(--color-primary-light);
-  box-shadow: var(--shadow-primary);
-}
-
-.challenge-item.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-}
-
-.challenge-item.drag-over {
-  border-color: var(--color-border-primary);
-  box-shadow: var(--shadow-xl), var(--shadow-md);
 }
 
 .challenge-info {
@@ -1437,18 +1340,7 @@ body {
   background: inherit;
 }
 
-.challenge-name {
-  font-weight: 600;
-  font-size: var(--font-size-lg);
-  color: var(--color-text-primary);
-  align-items: center;
-}
-
-.challenge-item:hover .challenge-name,
-.challenge-item.selected .challenge-name {
-  color: var(--color-primary);
-  text-shadow: 0 0 10px var(--color-primary-glow);
-}
+/* Challenge name now uses unified styles above */
 
 .challenge-stats {
   display: flex;
@@ -2025,6 +1917,7 @@ body {
   padding: var(--spacing-2xl);
   text-align: center;
   min-height: 300px;
+  flex-shrink: 0;
 }
 
 .empty-state-icon {
@@ -2095,6 +1988,7 @@ body {
   margin-bottom: var(--spacing-lg);
   font-size: var(--font-size-lg);
   line-height: 1.6;
+  flex-shrink: 0;
 }
 
 .skill-description-editor {
@@ -3987,6 +3881,7 @@ button:disabled .spinner,
 /* Breadcrumbs */
 .breadcrumbs {
   margin-bottom: var(--spacing-md);
+  flex-shrink: 0;
 }
 
 .breadcrumbs-list {

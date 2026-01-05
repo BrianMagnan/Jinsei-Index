@@ -228,7 +228,7 @@ export function CategoriesList({
             {categories.map((category) => (
               <li
                 key={category._id}
-                className={`categories-list-item ${
+                className={`category-item ${
                   selectedCategoryId === category._id ? "active" : ""
                 }`}
                 onClick={() => {
