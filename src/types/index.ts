@@ -72,3 +72,15 @@ export interface Profile {
   updatedAt?: string;
 }
 
+export interface TodoItem {
+  challengeId: string;
+  challengeName: string;
+  skillId: string;
+  skillName: string;
+  categoryId: string;
+  categoryName: string;
+  addedAt: string;
+  completed?: boolean;
+  completedAt?: string;
+}
+

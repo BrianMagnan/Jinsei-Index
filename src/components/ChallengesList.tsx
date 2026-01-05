@@ -7,17 +7,25 @@ import { ChallengeSkeletonList } from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
+import { linkifyText } from "../utils/linkifyText";
+import {
+  addTodoItem,
+  removeTodoItem,
+  getTodoItems,
+} from "../utils/todoStorage";
 
 interface ChallengesListProps {
   skillId: string;
   onBackToCategory?: () => void;
   onBackToCategories?: () => void;
+  initialChallengeId?: string;
 }
 
 export function ChallengesList({
   skillId,
   onBackToCategory,
   onBackToCategories,
+  initialChallengeId,
 }: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +66,9 @@ export function ChallengesList({
     useState(false);
   const [editingChallengeDescription, setEditingChallengeDescription] =
     useState(false);
+  const [todoChallengeIds, setTodoChallengeIds] = useState<Set<string>>(
+    new Set()
+  );
 
   // Swipe gesture state for challenge navigation
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(
@@ -116,6 +127,27 @@ export function ChallengesList({
   useEffect(() => {
     loadSkill();
   }, [skillId]);
+
+  // Sync todo list state from localStorage
+  useEffect(() => {
+    const items = getTodoItems();
+    const activeTodoIds = new Set(
+      items.filter((item) => !item.completed).map((item) => item.challengeId)
+    );
+    setTodoChallengeIds(activeTodoIds);
+  }, [skillId, selectedChallengeId]);
+
+  useEffect(() => {
+    // Set initial challenge if provided
+    if (initialChallengeId && skill?.challenges) {
+      const challengeExists = skill.challenges.some(
+        (c) => c._id === initialChallengeId
+      );
+      if (challengeExists && selectedChallengeId !== initialChallengeId) {
+        setSelectedChallengeId(initialChallengeId);
+      }
+    }
+  }, [initialChallengeId, skill, selectedChallengeId]);
 
   useEffect(() => {
     // Sync challenge description state when selected challenge changes
@@ -238,6 +270,42 @@ export function ChallengesList({
     } else {
       // Start editing
       setEditingChallengeDescription(true);
+    }
+  };
+
+  const handleToggleTodo = (challenge: Challenge) => {
+    if (!skill) return;
+
+    const category = typeof skill.category === "object" ? skill.category : null;
+    if (!category) return;
+
+    const inTodo = todoChallengeIds.has(challenge._id);
+
+    if (inTodo) {
+      hapticFeedback.light();
+      removeTodoItem(challenge._id);
+      // Update state immediately
+      setTodoChallengeIds((prev) => {
+        const next = new Set(prev);
+        next.delete(challenge._id);
+        return next;
+      });
+    } else {
+      hapticFeedback.success();
+      addTodoItem({
+        challengeId: challenge._id,
+        challengeName: challenge.name,
+        skillId: skill._id,
+        skillName: skill.name,
+        categoryId: category._id,
+        categoryName: category.name,
+      });
+      // Update state immediately
+      setTodoChallengeIds((prev) => {
+        const next = new Set(prev);
+        next.add(challenge._id);
+        return next;
+      });
     }
   };
 
@@ -1026,7 +1094,7 @@ export function ChallengesList({
               <div className="challenge-detail-description-readonly">
                 {challengeDescription ? (
                   <p className="challenge-detail-description">
-                    {challengeDescription}
+                    {linkifyText(challengeDescription)}
                   </p>
                 ) : (
                   <p className="challenge-detail-description no-description">
@@ -1095,6 +1163,25 @@ export function ChallengesList({
                     <span>Delete</span>
                   </>
                 )}
+              </button>
+              <button
+                className={`challenge-detail-action-button todo ${
+                  todoChallengeIds.has(selectedChallenge._id) ? "in-todo" : ""
+                }`}
+                onClick={() => handleToggleTodo(selectedChallenge)}
+                disabled={
+                  deletingChallenge === selectedChallenge._id ||
+                  completingChallenge === selectedChallenge._id
+                }
+              >
+                <span className="button-icon">
+                  {todoChallengeIds.has(selectedChallenge._id) ? "✓" : "➕"}
+                </span>
+                <span>
+                  {todoChallengeIds.has(selectedChallenge._id)
+                    ? "In To-Do"
+                    : "+ To-Do"}
+                </span>
               </button>
               <button
                 className="challenge-detail-action-button complete"
