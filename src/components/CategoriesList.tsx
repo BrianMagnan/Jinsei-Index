@@ -138,17 +138,22 @@ export function CategoriesList({
 
   if (loading) {
     return (
-      <div className="categories-list">
+      <div
+        className="categories-list"
+        {...containerProps}
+        style={{ ...containerProps.style, position: "relative" }}
+      >
+        <Breadcrumbs
+          category={null}
+          skill={null}
+          onCategoriesClick={undefined}
+        />
         <div className="section-header">
-          <div className="header-title-section">
-            <h2>Categories</h2>
-          </div>
+          <h2>Categories</h2>
         </div>
-        <div className="categories-list-content">
-          <ul className="categories-list-grid">
-            <CategorySkeletonList count={6} />
-          </ul>
-        </div>
+        <ul className="category-list">
+          <CategorySkeletonList count={6} />
+        </ul>
       </div>
     );
   }
@@ -214,78 +219,76 @@ export function CategoriesList({
         </form>
       )}
 
-      <div className="categories-list-content categories-list-scrollable">
-        {categories.length === 0 ? (
-          <EmptyState
-            icon="📁"
-            title="No Categories Yet"
-            message="Organize your skills and challenges by creating categories. Start your journey by adding your first category!"
-            actionLabel="Create Category"
-            onAction={() => setShowAddForm(true)}
-          />
-        ) : (
-          <ul className="categories-list-grid">
-            {categories.map((category) => (
-              <li
-                key={category._id}
-                className={`category-item ${
-                  selectedCategoryId === category._id ? "active" : ""
-                }`}
-                onClick={() => {
-                  onCategorySelect(category._id);
-                }}
-              >
-                {editingCategoryId === category._id ? (
-                  <form
-                    className="edit-form"
-                    onSubmit={(e) => handleUpdateCategory(category._id, e)}
+      {categories.length === 0 ? (
+        <EmptyState
+          icon="📁"
+          title="No Categories Yet"
+          message="Organize your skills and challenges by creating categories. Start your journey by adding your first category!"
+          actionLabel="Create Category"
+          onAction={() => setShowAddForm(true)}
+        />
+      ) : (
+        <ul className="category-list">
+          {categories.map((category) => (
+            <li
+              key={category._id}
+              className={`category-item ${
+                selectedCategoryId === category._id ? "active" : ""
+              }`}
+              onClick={() => {
+                onCategorySelect(category._id);
+              }}
+            >
+              {editingCategoryId === category._id ? (
+                <form
+                  className="edit-form"
+                  onSubmit={(e) => handleUpdateCategory(category._id, e)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="text"
+                    value={editCategoryName}
+                    onChange={(e) => setEditCategoryName(e.target.value)}
+                    required
+                    autoFocus
                     onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="text"
-                      value={editCategoryName}
-                      onChange={(e) => setEditCategoryName(e.target.value)}
-                      required
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="edit-form-actions">
-                      <button
-                        type="submit"
-                        className="save-button"
-                        disabled={updatingCategory === category._id}
-                      >
-                        {updatingCategory === category._id ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Saving...</span>
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className="cancel-button"
-                        onClick={() => setEditingCategoryId(null)}
-                        disabled={updatingCategory === category._id}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div className="categories-list-item-content">
-                      <span className="category-name">{category.name}</span>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                  />
+                  <div className="edit-form-actions">
+                    <button
+                      type="submit"
+                      className="save-button"
+                      disabled={updatingCategory === category._id}
+                    >
+                      {updatingCategory === category._id ? (
+                        <>
+                          <Spinner size="sm" />
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        "Save"
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={() => setEditingCategoryId(null)}
+                      disabled={updatingCategory === category._id}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <div className="categories-list-item-content">
+                    <span className="category-name">{category.name}</span>
+                  </div>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="categories-list-footer">
         <button

@@ -314,12 +314,6 @@ body {
   font-style: italic;
 }
 
-/* .sidebar-header h2 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-} */
-
 .add-button {
   width: 32px;
   height: 32px;
@@ -340,28 +334,6 @@ body {
     0 0 15px var(--color-primary-glow), 0 0 20px var(--color-primary-glow);
   /* filter: drop-shadow(0 0 8px var(--color-primary-glow)); */
   transform: scale(1.1);
-}
-
-.category-list {
-  list-style: none;
-  padding: 0.5rem 0;
-}
-
-/* Old category-item styles removed - now using unified styles above */
-
-.category-name {
-  flex: 1;
-}
-
-.category-actions {
-  display: flex;
-  gap: var(--spacing-xs);
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.category-item:hover .category-actions {
-  opacity: 1;
 }
 
 .edit-button,
@@ -396,15 +368,12 @@ body {
   transform: scale(1.1);
 }
 
+/* Unified form styles - used by all three lists */
 .edit-form {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-}
-
-.add-form {
-  flex-shrink: 0;
 }
 
 .edit-form input {
@@ -465,8 +434,9 @@ body {
   text-align: center;
 }
 
-/* Add Form */
+/* Unified add form - used by all three lists */
 .add-form {
+  flex-shrink: 0;
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 2px solid var(--color-border-primary);
   background: rgba(15, 23, 42, 0.8);
@@ -727,16 +697,9 @@ body {
    CATEGORIES PAGE
    ============================================ */
 
-.categories-list {
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  height: 100%;
-  position: relative;
-}
-
-.categories-header-stats {
+/* Unified header stats - used by all three lists */
+.categories-header-stats,
+.challenges-header-stats {
   display: flex;
   gap: var(--spacing-md);
   margin-top: var(--spacing-sm);
@@ -745,56 +708,16 @@ body {
   color: var(--color-text-muted);
 }
 
-.categories-header-stats .header-stat {
+.categories-header-stats .header-stat,
+.challenges-header-stats .header-stat {
   display: flex;
   align-items: center;
-}
-
-.categories-list-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2xl);
-  gap: var(--spacing-md);
-  color: var(--color-text-muted);
-}
-
-.categories-list-search {
-  padding: 0 var(--spacing-sm);
-}
-
-.categories-list-content {
-  flex: 1;
-  overflow: hidden;
-}
-
-.categories-list-scrollable {
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex: 1;
-  min-height: 0;
-  max-height: 500px;
-  padding: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.categories-list-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-2xl);
-  color: var(--color-text-muted);
-  text-align: center;
 }
 
 /* Unified list container - used by all three lists */
 .category-list,
 .skill-list,
 .challenge-list {
-  list-style: none;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -803,6 +726,7 @@ body {
   min-height: 0;
   padding: 0;
   margin: 0;
+  padding-top: var(--spacing-md);
   padding-bottom: calc(
     80px + var(--spacing-lg) * 2 + env(safe-area-inset-bottom)
   );
@@ -812,8 +736,8 @@ body {
 .category-item,
 .skill-item,
 .challenge-item {
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: none;
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
   margin-bottom: var(--spacing-md);
@@ -834,7 +758,7 @@ body {
 .skill-item:hover,
 .challenge-item:hover {
   background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
+  border: 1px solid var(--color-border-primary);
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
 }
@@ -843,7 +767,7 @@ body {
 .skill-item.active,
 .challenge-item.active {
   background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
+  border: 1px solid var(--color-border-primary);
   box-shadow: var(--shadow-primary);
 }
 
@@ -851,7 +775,7 @@ body {
 .skill-item.selected,
 .challenge-item.selected {
   background: var(--color-primary-light);
-  border-color: var(--color-border-primary);
+  border: 1px solid var(--color-border-primary);
   box-shadow: var(--shadow-lg);
 }
 
@@ -872,11 +796,11 @@ body {
 .category-item.drag-over,
 .skill-item.drag-over,
 .challenge-item.drag-over {
-  border-color: var(--color-border-primary);
+  border: 1px solid var(--color-border-primary);
   background: var(--color-primary-light);
 }
 
-/* Unified item content containers */
+/* Unified item content containers - used by all three lists */
 .categories-list-item-content,
 .skill-content,
 .challenge-info {
@@ -884,6 +808,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  position: relative;
+}
+
+/* Challenge info additional properties for challenge-specific features (swipe indicators, etc.) */
+.challenge-info {
+  z-index: 2;
+  background: transparent;
 }
 
 .category-name,
@@ -933,17 +864,16 @@ body {
   justify-content: center;
   gap: var(--spacing-xs);
   white-space: nowrap;
-  background: var(--color-primary);
-  color: var(--color-text-dark);
-  border-color: var(--color-primary);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
   min-height: 48px;
 }
 
 .categories-list-footer .add-button:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-  box-shadow: 0 0 15px var(--color-primary-glow);
-  transform: scale(1.05);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 .categories-list-footer .select-button {
@@ -1040,48 +970,13 @@ body {
   cursor: not-allowed;
 }
 
-/* Mobile adjustments for categories list */
+/* Mobile adjustments for categories list footer */
 @media (max-width: 768px) {
-  .categories-list {
-    height: 100vh;
-    height: 100dvh; /* Dynamic viewport height for mobile */
-  }
-
-  .categories-header-stats {
-    gap: var(--spacing-sm);
-    font-size: var(--font-size-xs);
-  }
-
-  .categories-list-grid {
-    padding: var(--spacing-md) var(--spacing-sm);
-    padding-bottom: calc(
-      var(--spacing-md) * 2 + 60px + 60px + var(--spacing-sm) * 2 + 1px
-    ); /* Account for fixed footer height + bottom nav on mobile */
-  }
-
-  .categories-list-scrollable {
-    padding: 0;
-  }
-
   .categories-list-footer {
     padding: var(--spacing-md) var(--spacing-sm);
     bottom: calc(
       60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
     ); /* Position above bottom nav on mobile */
-  }
-
-  .categories-list-grid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-sm);
-  }
-
-  .categories-list-item {
-    min-height: 60px;
-    padding: var(--spacing-md);
-  }
-
-  .categories-list-footer {
-    padding: var(--spacing-md) var(--spacing-sm);
     gap: var(--spacing-sm);
   }
 
@@ -1110,16 +1005,9 @@ body {
 }
 
 /* Skills List */
-.skills-list {
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  min-height: 0;
-}
+/* Skills list now uses unified container styles above */
 
+/* Unified section header - used by all three lists */
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -1128,28 +1016,14 @@ body {
   border-bottom: 2px solid var(--color-border-primary);
   position: relative;
   margin-top: 0;
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-sm);
   min-height: fit-content;
   height: auto;
   flex-shrink: 0;
   gap: var(--spacing-md);
-  flex-shrink: 0;
 }
 
-.challenges-header-stats {
-  display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-sm);
-  flex-wrap: wrap;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  justify-content: center;
-}
-
-.challenges-header-stats .header-stat {
-  display: flex;
-  align-items: center;
-}
+/* Challenges header stats now uses unified styles above */
 
 .challenges-header .add-button {
   position: absolute;
@@ -1159,6 +1033,7 @@ body {
   flex-shrink: 0;
 }
 
+/* Unified header title styling - used by all three lists */
 .section-header h2 {
   font-size: var(--font-size-4xl);
   font-weight: 700;
@@ -1169,6 +1044,15 @@ body {
   line-height: 1.2;
   margin: 0;
   flex: 1;
+}
+
+/* Header title section wrapper - used for headers with additional functionality */
+.section-header .header-title-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  gap: var(--spacing-md);
 }
 
 .skill-level {
@@ -1183,83 +1067,13 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* Skill list now uses unified styles above */
+/* Skill item dragging states now use unified styles above */
 
-/* Skill item styles now use unified styles above */
-
-/* Skill item hover now uses unified styles above */
-
-.skill-item.dragging {
-  opacity: 0.5;
-  cursor: grabbing;
-}
-
-.skill-item.drag-over {
-  border-color: var(--color-border-primary);
-  background: var(--color-bg-card-alt);
-}
-
-.skill-content {
-  flex: 1;
-}
-
-.skill-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
-  padding: 0 var(--spacing-sm);
-}
-
-.skill-name {
-  font-weight: 600;
-  font-size: var(--font-size-lg);
-  margin-bottom: 0;
-  color: var(--color-text-primary);
-}
-
-.skill-item:hover .skill-name,
-.skill-item.active .skill-name {
-  color: var(--color-primary);
-  text-shadow: 0 0 10px var(--color-primary-glow);
-}
-
+/* Skill-specific styles - description for list items */
 .skill-description {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
   margin-top: var(--spacing-xs);
-}
-
-.skill-stats {
-  display: flex;
-  gap: var(--spacing-md);
-  align-items: center;
-  transition: margin-right var(--transition-normal);
-}
-
-.skill-item:hover .skill-stats {
-  margin-right: var(--spacing-md);
-}
-
-.skill-stat {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
-}
-
-.skill-stat .stat-label {
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-size: var(--font-size-xs);
-}
-
-.skill-stat .stat-value {
-  color: var(--color-text-primary);
-  font-weight: 600;
 }
 
 /* Challenges Container */
@@ -1287,39 +1101,13 @@ body {
   display: flex;
 }
 
-/* Challenges List */
-.challenges-list {
-  max-width: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  min-height: 0;
-  flex: 1;
-}
+/* Challenges list now uses unified container styles above */
 
 .challenges-list.hidden {
   display: none;
 }
 
-.challenge-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  flex: 1;
-  min-height: 0;
-  padding: 0;
-  margin: 0;
-  padding-bottom: calc(
-    80px + var(--spacing-lg) * 2 + env(safe-area-inset-bottom)
-  );
-}
-
-/* Challenge item styles now use unified styles above */
+/* Challenge list now uses unified list container styles above */
 
 /* Challenge item swiping state - specific to challenges */
 .challenge-item.swiping {
@@ -1329,18 +1117,6 @@ body {
 .challenge-item:active {
   cursor: grabbing;
 }
-
-.challenge-info {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-xs);
-  position: relative;
-  z-index: 2;
-  background: inherit;
-}
-
-/* Challenge name now uses unified styles above */
 
 .challenge-stats {
   display: flex;
@@ -1623,11 +1399,10 @@ body {
 }
 
 .challenge-action-button.complete:hover:not(:disabled) {
-  box-shadow: 0 0 20px var(--color-accent-green-glow);
-  text-shadow: 0 0 5px var(--color-accent-green),
-    0 0 10px var(--color-accent-green), 0 0 15px var(--color-accent-green-glow),
-    0 0 20px var(--color-accent-green-glow);
-  transform: scale(1.02);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 .challenge-action-button.edit {
@@ -1641,7 +1416,6 @@ body {
   border-color: var(--color-primary);
   color: var(--color-primary);
   box-shadow: 0 0 10px var(--color-primary-glow);
-  transform: scale(1.02);
 }
 
 .challenge-action-button.delete {
@@ -1844,10 +1618,10 @@ body {
 }
 
 .list-selection-button.confirm:hover {
-  background: var(--color-primary-hover);
-  border-color: var(--color-primary-hover);
-  box-shadow: 0 0 15px var(--color-primary-glow);
-  transform: scale(1.05);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 /* Challenge detail action button list style */
@@ -1875,8 +1649,10 @@ body {
 }
 
 .challenge-detail-action-button.list.in-list:hover:not(:disabled) {
-  box-shadow: 0 0 15px var(--color-accent-green-glow);
-  transform: scale(1.05);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 .complete-button {
@@ -2086,19 +1862,19 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-md);
   padding: var(--spacing-md) var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
   border-bottom: 2px solid var(--color-border-primary);
-  background: var(--color-bg-dark);
   position: relative;
+  margin-top: 0;
+  margin-bottom: var(--spacing-sm);
   min-height: fit-content;
   height: auto;
+  flex-shrink: 0;
+  gap: var(--spacing-md);
 }
 
+/* Challenge detail title - uses unified header title styles with challenge-specific overrides */
 .challenge-detail-title {
-  margin: 0;
-  flex: 1;
   font-size: var(--font-size-4xl);
   font-weight: 700;
   color: var(--color-primary);
@@ -2106,6 +1882,9 @@ body {
   letter-spacing: 1px;
   text-shadow: 0 0 15px var(--color-primary-glow);
   line-height: 1.2;
+  margin: 0;
+  flex: 1;
+  /* Challenge-specific overrides */
   text-align: center;
   position: relative;
   order: 2;
@@ -2113,21 +1892,26 @@ body {
 
 .challenge-nav-arrow {
   background: transparent;
-  border: 2px solid var(--color-border-primary);
+  border: none;
   color: var(--color-primary);
   cursor: pointer;
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-4xl);
   font-weight: 700;
-  width: 48px;
-  height: 48px;
+  width: auto;
+  min-width: 32px;
+  height: 24.95px;
+  max-height: 24.95px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
   transition: all var(--transition-normal);
   flex-shrink: 0;
   padding: 0;
-  line-height: 1;
+  margin: 0;
+  line-height: 1.2;
+  box-sizing: border-box;
+  opacity: 0.7;
+  align-self: center;
 }
 
 .challenge-nav-arrow-left {
@@ -2139,17 +1923,15 @@ body {
 }
 
 .challenge-nav-arrow:hover:not(:disabled) {
-  background: var(--color-primary-light);
-  border-color: var(--color-primary);
+  opacity: 1;
   color: var(--color-primary);
-  box-shadow: 0 0 15px var(--color-primary-glow);
-  transform: scale(1.1);
+  text-shadow: 0 0 15px var(--color-primary-glow);
+  transform: scale(1.2);
 }
 
 .challenge-nav-arrow:disabled {
-  opacity: 0.3;
+  opacity: 0.2;
   cursor: not-allowed;
-  border-color: var(--color-border);
   color: var(--color-text-muted);
 }
 
@@ -2219,6 +2001,9 @@ body {
 .challenge-detail-description-container {
   margin-bottom: var(--spacing-xl);
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .challenge-detail-description-readonly {
@@ -2404,8 +2189,15 @@ body {
 
 .challenge-detail-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
+  gap: var(--spacing-md);
+  padding: 16.5px var(--spacing-lg);
+  background: var(--color-bg-dark);
+  border-top: 1px solid var(--color-border);
+  border-bottom: none;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
 }
 
 .challenge-detail-action-buttons {
@@ -2426,6 +2218,9 @@ body {
   justify-content: center;
   gap: var(--spacing-xs);
   white-space: nowrap;
+  height: 48px;
+  max-height: 48px;
+  box-sizing: border-box;
 }
 
 .challenge-detail-action-button .button-icon {
@@ -2478,11 +2273,10 @@ body {
 }
 
 .challenge-detail-action-button.complete:hover:not(:disabled) {
-  box-shadow: 0 0 25px var(--color-accent-green-glow);
-  text-shadow: 0 0 5px var(--color-accent-green),
-    0 0 10px var(--color-accent-green), 0 0 15px var(--color-accent-green-glow),
-    0 0 20px var(--color-accent-green-glow);
-  transform: scale(1.05);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
 }
 
 /* Navigation */
@@ -3923,7 +3717,10 @@ button:disabled .spinner,
 .breadcrumb-separator {
   color: var(--color-text-dim);
   font-size: var(--font-size-lg);
-  padding: 0 var(--spacing-xs);
+  padding: 0 var(--spacing-sm);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 .breadcrumb-current {
@@ -3931,6 +3728,9 @@ button:disabled .spinner,
   font-size: var(--font-size-sm);
   font-weight: 600;
   padding: var(--spacing-xs) var(--spacing-sm);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 /* Mobile Media Queries */
@@ -3978,7 +3778,7 @@ button:disabled .spinner,
   }
 
   /* Touch target optimizations - minimum 44x44px */
-  button,
+  button:not(.challenge-nav-arrow),
   .category-item,
   .skill-item,
   .challenge-item,
@@ -4083,16 +3883,6 @@ button:disabled .spinner,
     display: block;
   }
 
-  .challenge-detail-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--spacing-sm);
-    position: relative;
-    padding-left: var(--spacing-md);
-    padding-right: var(--spacing-md);
-  }
-
   .challenge-detail-title {
     font-size: var(--font-size-2xl);
     flex: 1;
@@ -4101,10 +3891,17 @@ button:disabled .spinner,
   }
 
   .challenge-nav-arrow {
-    width: 44px;
-    height: 44px;
-    font-size: var(--font-size-2xl);
+    width: auto;
+    min-width: 32px;
+    min-height: 0;
+    height: 24.95px;
+    max-height: 24.95px;
+    padding: 0;
+    margin: 0;
+    font-size: var(--font-size-4xl);
     flex-shrink: 0;
+    box-sizing: border-box;
+    line-height: 1.2;
   }
 
   .challenge-nav-arrow-left {
@@ -4124,16 +3921,23 @@ button:disabled .spinner,
   }
 
   .challenge-detail-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     gap: var(--spacing-md);
-    padding: var(--spacing-md);
+    padding: 16.5px var(--spacing-lg);
+    position: fixed;
+    bottom: calc(
+      60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
+    ); /* Position above bottom nav */
+    left: 0;
+    right: 0;
     background: var(--color-bg-dark);
-    border-top: 2px solid var(--color-border-primary);
-    position: sticky;
-    bottom: 0;
-    margin-top: auto;
-    margin-left: calc(-1 * var(--spacing-md));
-    margin-right: calc(-1 * var(--spacing-md));
-    margin-bottom: calc(-1 * var(--spacing-md));
+    border-top: 1px solid var(--color-border);
+    border-bottom: none;
+    margin-bottom: 0;
+    z-index: 999; /* Above bottom nav (z-index: 998) */
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .challenge-detail-xp {
@@ -4153,7 +3957,9 @@ button:disabled .spinner,
     justify-content: center;
     padding: var(--spacing-sm) var(--spacing-xs);
     font-size: var(--font-size-xs);
-    min-height: 48px; /* Touch target size */
+    height: 48px;
+    max-height: 48px;
+    box-sizing: border-box;
     flex-direction: column;
     gap: var(--spacing-xs);
     min-width: 0; /* Allow buttons to shrink */
@@ -4172,11 +3978,17 @@ button:disabled .spinner,
     line-height: 1.2;
   }
 
-  /* Description container max height smaller on mobile */
+  /* Description container - matches list scrolling behavior */
   .challenge-detail-description-container {
-    max-height: 415px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     scroll-margin-top: var(--spacing-md);
     scroll-margin-bottom: var(--spacing-md);
+    padding-bottom: calc(
+      80px + var(--spacing-lg) * 2 + env(safe-area-inset-bottom)
+    );
   }
 
   .challenge-detail-description-readonly .challenge-detail-description {
@@ -4206,9 +4018,7 @@ button:disabled .spinner,
   }
 
   /* Challenge list optimizations */
-  .challenge-list {
-    padding: 0;
-  }
+  /* Challenge list padding now uses unified styles above */
 
   .challenge-item {
     padding: var(--spacing-md);
@@ -4324,21 +4134,6 @@ button:disabled .spinner,
     padding: var(--spacing-lg);
   }
 
-  /* Category list adjustments */
-  .category-list {
-    padding: var(--spacing-sm);
-  }
-
-  /* Skills list adjustments */
-  .skills-list {
-    padding: 0;
-  }
-
-  /* Challenges list adjustments */
-  .challenges-list {
-    padding: 0;
-  }
-
   /* Header title section adjustments */
   .header-title-section {
     flex-direction: column;
@@ -4396,7 +4191,6 @@ button:disabled .spinner,
   left: 0;
   right: 0;
   background: var(--color-bg-sidebar);
-  border-top: 2px solid var(--color-border-primary);
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
   z-index: 998;
   padding: var(--spacing-sm) 0;
