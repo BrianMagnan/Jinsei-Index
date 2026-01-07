@@ -20,24 +20,29 @@ interface UsePullToRefreshReturn {
 
 export function usePullToRefresh({
   onRefresh,
-  threshold = 130, // Balanced threshold - requires pull but not excessive
+  threshold = 100,
   enabled = true,
 }: UsePullToRefreshOptions): UsePullToRefreshReturn {
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const touchStartY = useRef<number | null>(null);
-  const scrollTop = useRef<number>(0);
-  const containerRef = useRef<HTMLElement | null>(null);
-  const actualPullDistance = useRef<number>(0); // Track actual distance for threshold check
+  const initialScrollTop = useRef<number>(0);
+  const actualDistance = useRef<number>(0);
+
+  const reset = () => {
+    setPullDistance(0);
+    setIsPulling(false);
+    touchStartY.current = null;
+    actualDistance.current = 0;
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!enabled || isRefreshing) return;
 
     const target = e.currentTarget as HTMLElement;
-    containerRef.current = target;
     touchStartY.current = e.touches[0].clientY;
-    scrollTop.current = target.scrollTop;
+    initialScrollTop.current = target.scrollTop;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -46,45 +51,32 @@ export function usePullToRefresh({
     const target = e.currentTarget as HTMLElement;
     const currentY = e.touches[0].clientY;
     const distance = currentY - touchStartY.current;
-    const currentScrollTop = target.scrollTop;
+    const scrollTop = target.scrollTop;
 
-    // Only allow pull-to-refresh if:
-    // 1. We're at or very close to the top (within 3px buffer for browser rounding)
-    // 2. User is pulling down (distance > 0)
-    // 3. We started at the top (scrollTop.current <= 3)
-    // 4. The scroll position hasn't changed significantly (within 3px of start)
-    // 5. User has pulled down enough (at least 50px) before activating
-    const isAtTop = currentScrollTop <= 3;
-    const startedAtTop = scrollTop.current <= 3;
-    const scrollHasntChanged = Math.abs(currentScrollTop - scrollTop.current) <= 3;
-    const isPullingDown = distance > 50; // Require at least 50px pull before activating
+    // Only allow pull-to-refresh if at top and pulling down
+    const isAtTop = scrollTop <= 5 && initialScrollTop.current <= 5;
+    const isPullingDown = distance > 30;
 
-    if (isAtTop && startedAtTop && scrollHasntChanged && isPullingDown) {
-      e.preventDefault(); // Prevent default scroll behavior
-      actualPullDistance.current = distance; // Store actual distance for threshold check
-      const pullDist = Math.min(distance * 0.4, threshold * 1.5); // Damped value for visual feedback
-      setPullDistance(pullDist);
+    if (isAtTop && isPullingDown) {
+      e.preventDefault();
+      actualDistance.current = distance;
+      // Damped distance for visual feedback (feels smoother)
+      const visualDistance = Math.min(distance * 0.5, threshold * 2);
+      setPullDistance(visualDistance);
       setIsPulling(true);
-    } else if (currentScrollTop > 3 || !isPullingDown) {
-      // Reset if user scrolls down or isn't pulling down
-      setPullDistance(0);
-      actualPullDistance.current = 0;
-      setIsPulling(false);
-      touchStartY.current = null;
+    } else {
+      reset();
     }
   };
 
   const handleTouchEnd = async () => {
     if (!enabled || !isPulling) {
-      setPullDistance(0);
-      actualPullDistance.current = 0;
-      setIsPulling(false);
-      touchStartY.current = null;
+      reset();
       return;
     }
 
     // Use actual distance (not damped) for threshold check
-    if (actualPullDistance.current >= threshold) {
+    if (actualDistance.current >= threshold) {
       setIsRefreshing(true);
       try {
         await onRefresh();
@@ -95,11 +87,7 @@ export function usePullToRefresh({
       }
     }
 
-    // Reset
-    setPullDistance(0);
-    actualPullDistance.current = 0;
-    setIsPulling(false);
-    touchStartY.current = null;
+    reset();
   };
 
   return {
