@@ -723,13 +723,9 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
-  min-height: 0;
-  padding: 0;
-  margin: 0;
-  padding-top: var(--spacing-md);
-  padding-bottom: calc(
-    80px + var(--spacing-lg) * 2 + env(safe-area-inset-bottom)
-  );
+  height: 700px;
+  padding-bottom: 60px;
+  padding-top: 10px;
 }
 
 /* Unified list item styles - used by all three lists */
@@ -1262,13 +1258,13 @@ body {
 }
 
 .challenge-swipe-indicator.swipe-delete {
-  right: -80px;
+  right: -100px;
   width: 80px;
   height: 80px;
   top: 50%;
   bottom: auto;
   transform: translateY(-50%);
-  border-radius: var(--radius-md);
+  /* border-radius: var(--radius-md); */
   background: linear-gradient(
     135deg,
     rgba(239, 68, 68, 0.9) 0%,
@@ -4261,12 +4257,8 @@ button:disabled .spinner,
   text-shadow: 0 0 5px var(--color-primary-glow);
 }
 
-/* Add padding to app-main to account for bottom nav on mobile */
+/* Show bottom nav on mobile */
 @media (max-width: 768px) {
-  .app-main {
-    padding-bottom: calc(80px + var(--spacing-md));
-  }
-
   .bottom-nav {
     display: flex;
   }
@@ -4276,10 +4268,6 @@ button:disabled .spinner,
 @media (min-width: 769px) {
   .bottom-nav {
     display: none;
-  }
-
-  .app-main {
-    padding-bottom: var(--spacing-md);
   }
 }
 
