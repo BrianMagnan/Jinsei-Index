@@ -5,7 +5,6 @@ import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { SkillSkeletonList } from "./SkillSkeleton";
 import { EmptyState } from "./EmptyState";
-import { usePullToRefresh } from "../hooks/usePullToRefresh";
 
 interface SkillsListProps {
   categoryId: string;
@@ -91,11 +90,6 @@ export function SkillsList({
       setLoading(false);
     }
   };
-
-  const { pullDistance, isPulling, containerProps } = usePullToRefresh({
-    onRefresh: loadSkills,
-    enabled: !loading && !creatingSkill,
-  });
 
   useEffect(() => {
     loadSkills();
@@ -250,29 +244,7 @@ export function SkillsList({
   };
 
   return (
-    <div
-      className="skills-list"
-      {...containerProps}
-      style={{ ...containerProps.style, position: "relative" }}
-    >
-      {isPulling && (
-        <div
-          className="pull-to-refresh-indicator"
-          style={{
-            position: "absolute",
-            top: Math.max(0, pullDistance - 40),
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 1000,
-          }}
-        >
-          {pullDistance >= 80 ? (
-            <Spinner size="sm" />
-          ) : (
-            <span style={{ fontSize: "24px" }}>↓</span>
-          )}
-        </div>
-      )}
+    <div className="skills-list">
       <Breadcrumbs
         category={localCategory || category}
         skill={null}

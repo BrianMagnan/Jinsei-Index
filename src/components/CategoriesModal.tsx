@@ -4,7 +4,6 @@ import type { Category } from "../types";
 import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
-import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
@@ -187,11 +186,6 @@ export function CategoriesModal({
     }
   };
 
-  const { pullDistance, isPulling, containerProps } = usePullToRefresh({
-    onRefresh: loadCategories,
-    enabled: isOpen && !loading && !creatingCategory,
-  });
-
   useEffect(() => {
     if (isOpen) {
       loadCategories();
@@ -279,29 +273,7 @@ export function CategoriesModal({
           </form>
         )}
 
-        <div
-          className="categories-modal-content"
-          {...containerProps}
-          style={{ ...containerProps.style, position: "relative" }}
-        >
-          {isPulling && (
-            <div
-              className="pull-to-refresh-indicator"
-              style={{
-                position: "absolute",
-                top: Math.max(0, pullDistance - 40),
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: 1000,
-              }}
-            >
-              {pullDistance >= 80 ? (
-                <Spinner size="sm" />
-              ) : (
-                <span style={{ fontSize: "24px" }}>↓</span>
-              )}
-            </div>
-          )}
+        <div className="categories-modal-content">
           {loading ? (
             <ul className="categories-modal-list">
               <CategorySkeletonList count={6} />

@@ -5,7 +5,6 @@ import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ChallengeSkeletonList } from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
-import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import { linkifyText } from "../utils/linkifyText";
 import {
@@ -163,11 +162,6 @@ export function ChallengesList({
       setLoading(false);
     }
   };
-
-  const { pullDistance, isPulling, containerProps } = usePullToRefresh({
-    onRefresh: loadSkill,
-    enabled: !loading && !creatingChallenge,
-  });
 
   useEffect(() => {
     loadSkill();
@@ -920,29 +914,7 @@ export function ChallengesList({
         selectedChallengeId ? "detail-view" : "list-view"
       }`}
     >
-      <div
-        className="challenges-list"
-        {...containerProps}
-        style={{ ...containerProps.style, position: "relative" }}
-      >
-        {isPulling && (
-          <div
-            className="pull-to-refresh-indicator"
-            style={{
-              position: "absolute",
-              top: Math.max(0, pullDistance - 40),
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 1000,
-            }}
-          >
-            {pullDistance >= 80 ? (
-              <Spinner size="sm" />
-            ) : (
-              <span style={{ fontSize: "24px" }}>↓</span>
-            )}
-          </div>
-        )}
+      <div className="challenges-list">
         <Breadcrumbs
           category={category}
           skill={skillForBreadcrumb}

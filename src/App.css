@@ -4917,27 +4917,3 @@ button:disabled .spinner,
   color: var(--color-text-muted);
 }
 
-/* Pull-to-Refresh Indicator */
-.pull-to-refresh-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: var(--color-bg-secondary);
-  box-shadow: var(--shadow-md);
-}
-
-.pull-to-refresh-indicator span {
-  color: var(--color-text-muted);
-  transition: transform 0.2s ease;
-  display: block;
-}
-
-.pull-to-refresh-indicator .spinner {
-  color: var(--color-primary);
-}
