@@ -315,6 +315,7 @@ export function Sidebar({
 
   const handleEditCategory = (category: Category, e: React.MouseEvent) => {
     e.stopPropagation();
+    hapticFeedback.light();
     setEditingCategoryId(category._id);
     setEditCategoryName(category.name);
     setEditCategoryDescription(category.description || "");
@@ -325,9 +326,9 @@ export function Sidebar({
     e: React.FormEvent
   ) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!editCategoryName.trim() || updatingCategory === categoryId) return;
+    if (updatingCategory === categoryId) return;
 
+    hapticFeedback.medium();
     setUpdatingCategory(categoryId);
     try {
       await categoryAPI.update(categoryId, {
@@ -336,7 +337,9 @@ export function Sidebar({
       });
       setEditingCategoryId(null);
       await loadCategories();
+      hapticFeedback.success();
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to update category");
     } finally {
       setUpdatingCategory(null);
@@ -549,96 +552,55 @@ export function Sidebar({
                       } ${
                         dragOverCategoryId === category._id ? "drag-over" : ""
                       }`}
-                      draggable={editingCategoryId !== category._id}
+                      draggable={true}
                       onDragStart={() => handleDragStart(category._id)}
                       onDragOver={(e) => handleDragOver(e, category._id)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, category._id)}
                       onDragEnd={handleDragEnd}
-                      onClick={() => onCategorySelect(category._id)}
+                      onClick={() => {
+                        if (editingCategoryId !== category._id) {
+                          onCategorySelect(category._id);
+                        }
+                      }}
                     >
-                      {editingCategoryId === category._id ? (
-                        <form
-                          className="edit-form"
-                          onSubmit={(e) =>
-                            handleUpdateCategory(category._id, e)
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="text"
-                            value={editCategoryName}
-                            onChange={(e) =>
-                              setEditCategoryName(e.target.value)
+                      <>
+                        <span className="category-name">{category.name}</span>
+                        <div className="category-actions">
+                          <button
+                            className="edit-button"
+                            onClick={(e) => handleEditCategory(category, e)}
+                            title="Edit category"
+                            disabled={
+                              deletingCategory === category._id ||
+                              updatingCategory === category._id
                             }
-                            required
-                            autoFocus
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div className="edit-form-actions">
-                            <button
-                              type="submit"
-                              className="save-button"
-                              disabled={updatingCategory === category._id}
-                            >
-                              {updatingCategory === category._id ? (
-                                <>
-                                  <Spinner size="sm" />
-                                  <span>Saving...</span>
-                                </>
-                              ) : (
-                                "Save"
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              className="cancel-button"
-                              onClick={() => setEditingCategoryId(null)}
-                              disabled={updatingCategory === category._id}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <>
-                          <span className="category-name">{category.name}</span>
-                          <div className="category-actions">
-                            <button
-                              className="edit-button"
-                              onClick={(e) => handleEditCategory(category, e)}
-                              title="Edit category"
-                              disabled={
-                                deletingCategory === category._id ||
-                                updatingCategory === category._id
-                              }
-                            >
-                              ✎
-                            </button>
-                            <button
-                              className="delete-button"
-                              onClick={(e) =>
-                                handleDeleteCategory(
-                                  category._id,
-                                  category.name,
-                                  e
-                                )
-                              }
-                              title="Delete category"
-                              disabled={
-                                deletingCategory === category._id ||
-                                updatingCategory === category._id
-                              }
-                            >
-                              {deletingCategory === category._id ? (
-                                <Spinner size="sm" />
-                              ) : (
-                                "×"
-                              )}
-                            </button>
-                          </div>
-                        </>
-                      )}
+                          >
+                            ✎
+                          </button>
+                          <button
+                            className="delete-button"
+                            onClick={(e) =>
+                              handleDeleteCategory(
+                                category._id,
+                                category.name,
+                                e
+                              )
+                            }
+                            title="Delete category"
+                            disabled={
+                              deletingCategory === category._id ||
+                              updatingCategory === category._id
+                            }
+                          >
+                            {deletingCategory === category._id ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              "×"
+                            )}
+                          </button>
+                        </div>
+                      </>
                     </li>
                   ))}
                 </ul>
@@ -693,6 +655,103 @@ export function Sidebar({
           emptyMessage={`No results match "${searchQuery}"`}
         />
       </aside>
+
+      {/* Edit Category Modal */}
+      {editingCategoryId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setEditingCategoryId(null);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const category = categories.find(
+                (c) => c._id === editingCategoryId
+              );
+              if (!category) return null;
+
+              return (
+                <>
+                  <div className="challenge-action-modal-header">
+                    <h3>Edit Category</h3>
+                    <button
+                      className="challenge-action-modal-close"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setEditingCategoryId(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    className="edit-form"
+                    onSubmit={(e) => handleUpdateCategory(category._id, e)}
+                  >
+                    <div className="auth-field">
+                      <label htmlFor="edit-category-name-sidebar">Name *</label>
+                      <input
+                        id="edit-category-name-sidebar"
+                        type="text"
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label htmlFor="edit-category-description-sidebar">
+                        Description
+                      </label>
+                      <textarea
+                        id="edit-category-description-sidebar"
+                        value={editCategoryDescription}
+                        onChange={(e) =>
+                          setEditCategoryDescription(e.target.value)
+                        }
+                        rows={3}
+                      />
+                    </div>
+                    <div className="edit-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setEditingCategoryId(null);
+                        }}
+                        disabled={updatingCategory === category._id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingCategory === category._id}
+                      >
+                        {updatingCategory === category._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </>
   );
 }

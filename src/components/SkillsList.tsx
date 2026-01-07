@@ -159,6 +159,7 @@ export function SkillsList({
       setNewSkillDescription("");
       setShowAddForm(false);
       await loadSkills();
+      hapticFeedback.success();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create skill");
     } finally {
@@ -166,11 +167,20 @@ export function SkillsList({
     }
   };
 
+  const handleEditSkill = (skill: Skill, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    hapticFeedback.light();
+    setEditingSkillId(skill._id);
+    setEditSkillName(skill.name);
+  };
+
   const handleUpdateSkill = async (skillId: string, e: React.FormEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!editSkillName.trim() || updatingSkill === skillId) return;
+    if (updatingSkill === skillId) return;
 
+    hapticFeedback.medium();
     setUpdatingSkill(skillId);
     try {
       await skillAPI.update(skillId, {
@@ -178,7 +188,9 @@ export function SkillsList({
       });
       setEditingSkillId(null);
       await loadSkills();
+      hapticFeedback.success();
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to update skill");
     } finally {
       setUpdatingSkill(null);
@@ -331,44 +343,6 @@ export function SkillsList({
         </div>
       </div>
 
-      {showAddForm && (
-        <form className="add-form" onSubmit={handleCreateSkill}>
-          <input
-            type="text"
-            placeholder="Skill name *"
-            value={newSkillName}
-            onChange={(e) => setNewSkillName(e.target.value)}
-            required
-            autoFocus
-          />
-          {/* <input
-            type="text"
-            placeholder="Description (optional)"
-            value={newSkillDescription}
-            onChange={(e) => setNewSkillDescription(e.target.value)}
-          /> */}
-          <div className="form-actions">
-            <button type="submit" disabled={creatingSkill}>
-              {creatingSkill ? (
-                <>
-                  <Spinner size="sm" />
-                  <span>Adding...</span>
-                </>
-              ) : (
-                "Add"
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              disabled={creatingSkill}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
       {loading ? (
         <ul className="skill-list">
           <SkillSkeletonList count={5} />
@@ -391,27 +365,23 @@ export function SkillsList({
               } ${dragOverSkillId === skill._id ? "drag-over" : ""} ${
                 swipedSkillId === skill._id ? "swiping" : ""
               }`}
-              draggable={editingSkillId !== skill._id}
+              draggable={true}
               onDragStart={() => handleDragStart(skill._id)}
               onDragOver={(e) => handleDragOver(e, skill._id)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, skill._id)}
               onDragEnd={handleDragEnd}
               onClick={() => {
-                if (editingSkillId !== skill._id) {
-                  onSkillSelect(skill._id);
-                }
+                onSkillSelect(skill._id);
               }}
               onTouchStart={(e) => {
-                if (editingSkillId !== skill._id) {
-                  setItemSwipeStart({
-                    x: e.touches[0].clientX,
-                    y: e.touches[0].clientY,
-                    skillId: skill._id,
-                  });
-                  setItemSwipeEnd(null);
-                  setSwipeOffset(0);
-                }
+                setItemSwipeStart({
+                  x: e.touches[0].clientX,
+                  y: e.touches[0].clientY,
+                  skillId: skill._id,
+                });
+                setItemSwipeEnd(null);
+                setSwipeOffset(0);
               }}
               onTouchMove={(e) => {
                 if (itemSwipeStart && itemSwipeStart.skillId === skill._id) {
@@ -480,70 +450,40 @@ export function SkillsList({
                     : "transform 0.2s ease-out",
               }}
             >
-              {editingSkillId === skill._id ? (
-                <form
-                  className="edit-form"
-                  onSubmit={(e) => handleUpdateSkill(skill._id, e)}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="text"
-                    value={editSkillName}
-                    onChange={(e) => setEditSkillName(e.target.value)}
-                    required
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="edit-form-actions">
-                    <button
-                      type="submit"
-                      className="save-button"
-                      disabled={updatingSkill === skill._id}
-                    >
-                      {updatingSkill === skill._id ? (
-                        <>
-                          <Spinner size="sm" />
-                          <span>Saving...</span>
-                        </>
-                      ) : (
-                        "Save"
+              <>
+                <div className="skill-content">
+                  <div className="skill-header">
+                    <div className="skill-name">{skill.name}</div>
+                  </div>
+                  {skill.description && (
+                    <div className="skill-description">{skill.description}</div>
+                  )}
+                  {/* Swipe action indicators */}
+                  {swipedSkillId === skill._id && (
+                    <>
+                      {swipeOffset < 0 && (
+                        <div className="challenge-swipe-indicator swipe-delete">
+                          <span className="swipe-icon">🗑️</span>
+                          <span className="swipe-text">Delete</span>
+                        </div>
                       )}
-                    </button>
-                    <button
-                      type="button"
-                      className="cancel-button"
-                      onClick={() => setEditingSkillId(null)}
-                      disabled={updatingSkill === skill._id}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <div className="skill-content">
-                    <div className="skill-header">
-                      <div className="skill-name">{skill.name}</div>
-                    </div>
-                    {skill.description && (
-                      <div className="skill-description">
-                        {skill.description}
-                      </div>
-                    )}
-                    {/* Swipe action indicators */}
-                    {swipedSkillId === skill._id && (
-                      <>
-                        {swipeOffset < 0 && (
-                          <div className="challenge-swipe-indicator swipe-delete">
-                            <span className="swipe-icon">🗑️</span>
-                            <span className="swipe-text">Delete</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
+                    </>
+                  )}
+                </div>
+                <button
+                  className="edit-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditSkill(skill, e);
+                  }}
+                  title="Edit skill"
+                  disabled={
+                    deletingSkill === skill._id || updatingSkill === skill._id
+                  }
+                >
+                  ✎
+                </button>
+              </>
             </li>
           ))}
         </ul>
@@ -552,12 +492,168 @@ export function SkillsList({
       <div className="categories-list-footer">
         <button
           className="add-button"
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            hapticFeedback.light();
+            setShowAddForm(true);
+          }}
           title="Add skill"
         >
           +
         </button>
       </div>
+
+      {/* Add Skill Modal */}
+      {showAddForm && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setShowAddForm(false);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="challenge-action-modal-header">
+              <h3>Add Skill</h3>
+              <button
+                className="challenge-action-modal-close"
+                onClick={() => {
+                  hapticFeedback.light();
+                  setShowAddForm(false);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <form className="edit-form" onSubmit={handleCreateSkill}>
+              <div className="auth-field">
+                <label htmlFor="new-skill-name">Name *</label>
+                <input
+                  id="new-skill-name"
+                  type="text"
+                  placeholder="Skill name"
+                  value={newSkillName}
+                  onChange={(e) => setNewSkillName(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="edit-form-actions">
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => {
+                    hapticFeedback.light();
+                    setShowAddForm(false);
+                  }}
+                  disabled={creatingSkill}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={creatingSkill}
+                >
+                  {creatingSkill ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Skill Modal */}
+      {editingSkillId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setEditingSkillId(null);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const skill = skills.find((s) => s._id === editingSkillId);
+              if (!skill) return null;
+
+              return (
+                <>
+                  <div className="challenge-action-modal-header">
+                    <h3>Edit Skill</h3>
+                    <button
+                      className="challenge-action-modal-close"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setEditingSkillId(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    className="edit-form"
+                    onSubmit={(e) => handleUpdateSkill(skill._id, e)}
+                  >
+                    <div className="auth-field">
+                      <label htmlFor="edit-skill-name">Name *</label>
+                      <input
+                        id="edit-skill-name"
+                        type="text"
+                        value={editSkillName}
+                        onChange={(e) => setEditSkillName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="edit-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setEditingSkillId(null);
+                        }}
+                        disabled={updatingSkill === skill._id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingSkill === skill._id}
+                      >
+                        {updatingSkill === skill._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

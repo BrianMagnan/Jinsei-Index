@@ -297,92 +297,47 @@ export function CategoriesModal({
                       }`}
                       onClick={() => handleCategoryClick(category._id)}
                     >
-                      {editingCategoryId === category._id ? (
-                        <form
-                          className="edit-form"
-                          onSubmit={(e) =>
-                            handleUpdateCategory(category._id, e)
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <input
-                            type="text"
-                            value={editCategoryName}
-                            onChange={(e) =>
-                              setEditCategoryName(e.target.value)
+                      <>
+                        <div className="categories-modal-item-content">
+                          <span className="category-name">
+                            {category.name}
+                          </span>
+                        </div>
+                        <div className="category-actions">
+                          <button
+                            className="edit-button"
+                            onClick={(e) => handleEditCategory(category, e)}
+                            title="Edit category"
+                            disabled={
+                              deletingCategory === category._id ||
+                              updatingCategory === category._id
                             }
-                            required
-                            autoFocus
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div className="edit-form-actions">
-                            <button
-                              type="submit"
-                              className="save-button"
-                              disabled={updatingCategory === category._id}
-                            >
-                              {updatingCategory === category._id ? (
-                                <>
-                                  <Spinner size="sm" />
-                                  <span>Saving...</span>
-                                </>
-                              ) : (
-                                "Save"
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              className="cancel-button"
-                              onClick={() => setEditingCategoryId(null)}
-                              disabled={updatingCategory === category._id}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <>
-                          <div className="categories-modal-item-content">
-                            <span className="category-name">
-                              {category.name}
-                            </span>
-                          </div>
-                          <div className="category-actions">
-                            <button
-                              className="edit-button"
-                              onClick={(e) => handleEditCategory(category, e)}
-                              title="Edit category"
-                              disabled={
-                                deletingCategory === category._id ||
-                                updatingCategory === category._id
-                              }
-                            >
-                              ✎
-                            </button>
-                            <button
-                              className="delete-button"
-                              onClick={(e) =>
-                                handleDeleteCategory(
-                                  category._id,
-                                  category.name,
-                                  e
-                                )
-                              }
-                              title="Delete category"
-                              disabled={
-                                deletingCategory === category._id ||
-                                updatingCategory === category._id
-                              }
-                            >
-                              {deletingCategory === category._id ? (
-                                <Spinner size="sm" />
-                              ) : (
-                                "×"
-                              )}
-                            </button>
-                          </div>
-                        </>
-                      )}
+                          >
+                            ✎
+                          </button>
+                          <button
+                            className="delete-button"
+                            onClick={(e) =>
+                              handleDeleteCategory(
+                                category._id,
+                                category.name,
+                                e
+                              )
+                            }
+                            title="Delete category"
+                            disabled={
+                              deletingCategory === category._id ||
+                              updatingCategory === category._id
+                            }
+                          >
+                            {deletingCategory === category._id ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              "×"
+                            )}
+                          </button>
+                        </div>
+                      </>
                     </li>
                   ))}
                 </ul>
@@ -404,6 +359,103 @@ export function CategoriesModal({
           </button>
         </div>
       </div>
+
+      {/* Edit Category Modal */}
+      {editingCategoryId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setEditingCategoryId(null);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const category = categories.find(
+                (c) => c._id === editingCategoryId
+              );
+              if (!category) return null;
+
+              return (
+                <>
+                  <div className="challenge-action-modal-header">
+                    <h3>Edit Category</h3>
+                    <button
+                      className="challenge-action-modal-close"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setEditingCategoryId(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    className="edit-form"
+                    onSubmit={(e) => handleUpdateCategory(category._id, e)}
+                  >
+                    <div className="auth-field">
+                      <label htmlFor="edit-category-name-modal">Name *</label>
+                      <input
+                        id="edit-category-name-modal"
+                        type="text"
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label htmlFor="edit-category-description-modal">
+                        Description
+                      </label>
+                      <textarea
+                        id="edit-category-description-modal"
+                        value={editCategoryDescription}
+                        onChange={(e) =>
+                          setEditCategoryDescription(e.target.value)
+                        }
+                        rows={3}
+                      />
+                    </div>
+                    <div className="edit-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setEditingCategoryId(null);
+                        }}
+                        disabled={updatingCategory === category._id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingCategory === category._id}
+                      >
+                        {updatingCategory === category._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </>
   );
 }

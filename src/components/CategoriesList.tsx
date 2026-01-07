@@ -62,18 +62,31 @@ export function CategoriesList({
             (cat: Category) => !existingIds.has(cat._id)
           );
 
+          // Sort new categories by creation date (newest last) so they appear at bottom
           newCategories.sort((a: Category, b: Category) => {
             const dateA = new Date(a.createdAt || 0).getTime();
             const dateB = new Date(b.createdAt || 0).getTime();
-            return dateA - dateB;
+            return dateA - dateB; // Oldest first, so newest appear at end
           });
 
           setCategories([...orderedCategories, ...newCategories]);
         } catch {
-          setCategories(data);
+          // If parsing fails, sort by creation date (newest last)
+          const sorted = [...data].sort((a: Category, b: Category) => {
+            const dateA = new Date(a.createdAt || 0).getTime();
+            const dateB = new Date(b.createdAt || 0).getTime();
+            return dateA - dateB;
+          });
+          setCategories(sorted);
         }
       } else {
-        setCategories(data);
+        // No saved order: sort by creation date (newest last) so new categories appear at bottom
+        const sorted = [...data].sort((a: Category, b: Category) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateA - dateB;
+        });
+        setCategories(sorted);
       }
     } catch (err) {
       console.error("Failed to load categories:", err);
@@ -92,10 +105,7 @@ export function CategoriesList({
         name: newCategoryName.trim(),
         description: newCategoryDescription.trim() || undefined,
       });
-      setNewCategoryName("");
-      setNewCategoryDescription("");
-      setShowAddForm(false);
-
+      // Add the new category to the end of the saved order
       const savedOrder = localStorage.getItem("categoryOrder");
       if (savedOrder) {
         try {
@@ -103,21 +113,43 @@ export function CategoriesList({
           orderArray.push(newCategory._id);
           localStorage.setItem("categoryOrder", JSON.stringify(orderArray));
         } catch {
-          // If parsing fails, just reload
+          // If parsing fails, create new order with the new category at the end
+          const currentCategories = categories.map((c) => c._id);
+          currentCategories.push(newCategory._id);
+          localStorage.setItem(
+            "categoryOrder",
+            JSON.stringify(currentCategories)
+          );
         }
       } else {
+        // If no saved order exists, create one with existing categories + new category at the end
+        const currentCategories = categories.map((c) => c._id);
+        currentCategories.push(newCategory._id);
         localStorage.setItem(
           "categoryOrder",
-          JSON.stringify([newCategory._id])
+          JSON.stringify(currentCategories)
         );
       }
 
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setShowAddForm(false);
       await loadCategories();
+      hapticFeedback.success();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to create category");
     } finally {
       setCreatingCategory(false);
     }
+  };
+
+  const handleEditCategory = (category: Category, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    hapticFeedback.light();
+    setEditingCategoryId(category._id);
+    setEditCategoryName(category.name);
   };
 
   const handleUpdateCategory = async (
@@ -127,6 +159,7 @@ export function CategoriesList({
     e.preventDefault();
     if (updatingCategory === categoryId) return;
 
+    hapticFeedback.medium();
     setUpdatingCategory(categoryId);
     try {
       await categoryAPI.update(categoryId, {
@@ -134,7 +167,9 @@ export function CategoriesList({
       });
       setEditingCategoryId(null);
       await loadCategories();
+      hapticFeedback.success();
     } catch (err) {
+      hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to update category");
     } finally {
       setUpdatingCategory(null);
@@ -203,37 +238,6 @@ export function CategoriesList({
         <h2>Categories</h2>
       </div>
 
-      {showAddForm && (
-        <form className="add-form" onSubmit={handleCreateCategory}>
-          <input
-            type="text"
-            placeholder="Category name"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            required
-            autoFocus
-          />
-          <div className="form-actions">
-            <button type="submit" disabled={creatingCategory}>
-              {creatingCategory ? (
-                <>
-                  <Spinner size="sm" />
-                  <span>Adding...</span>
-                </>
-              ) : (
-                "Add"
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowAddForm(false)}
-              disabled={creatingCategory}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
 
       {categories.length === 0 ? (
         <EmptyState
@@ -252,20 +256,16 @@ export function CategoriesList({
                 selectedCategoryId === category._id ? "active" : ""
               } ${swipedCategoryId === category._id ? "swiping" : ""}`}
               onClick={() => {
-                if (editingCategoryId !== category._id) {
-                  onCategorySelect(category._id);
-                }
+                onCategorySelect(category._id);
               }}
               onTouchStart={(e) => {
-                if (editingCategoryId !== category._id) {
-                  setItemSwipeStart({
-                    x: e.touches[0].clientX,
-                    y: e.touches[0].clientY,
-                    categoryId: category._id,
-                  });
-                  setItemSwipeEnd(null);
-                  setSwipeOffset(0);
-                }
+                setItemSwipeStart({
+                  x: e.touches[0].clientX,
+                  y: e.touches[0].clientY,
+                  categoryId: category._id,
+                });
+                setItemSwipeEnd(null);
+                setSwipeOffset(0);
               }}
               onTouchMove={(e) => {
                 if (
@@ -337,63 +337,36 @@ export function CategoriesList({
                     : "transform 0.2s ease-out",
               }}
             >
-              {editingCategoryId === category._id ? (
-                <form
-                  className="edit-form"
-                  onSubmit={(e) => handleUpdateCategory(category._id, e)}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="text"
-                    value={editCategoryName}
-                    onChange={(e) => setEditCategoryName(e.target.value)}
-                    required
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="edit-form-actions">
-                    <button
-                      type="submit"
-                      className="save-button"
-                      disabled={updatingCategory === category._id}
-                    >
-                      {updatingCategory === category._id ? (
-                        <>
-                          <Spinner size="sm" />
-                          <span>Saving...</span>
-                        </>
-                      ) : (
-                        "Save"
+              <>
+                <div className="categories-list-item-content">
+                  <span className="category-name">{category.name}</span>
+                  {/* Swipe action indicators */}
+                  {swipedCategoryId === category._id && (
+                    <>
+                      {swipeOffset < 0 && (
+                        <div className="challenge-swipe-indicator swipe-delete">
+                          <span className="swipe-icon">🗑️</span>
+                          <span className="swipe-text">Delete</span>
+                        </div>
                       )}
-                    </button>
-                    <button
-                      type="button"
-                      className="cancel-button"
-                      onClick={() => setEditingCategoryId(null)}
-                      disabled={updatingCategory === category._id}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <>
-                  <div className="categories-list-item-content">
-                    <span className="category-name">{category.name}</span>
-                    {/* Swipe action indicators */}
-                    {swipedCategoryId === category._id && (
-                      <>
-                        {swipeOffset < 0 && (
-                          <div className="challenge-swipe-indicator swipe-delete">
-                            <span className="swipe-icon">🗑️</span>
-                            <span className="swipe-text">Delete</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </>
-              )}
+                    </>
+                  )}
+                </div>
+                <button
+                  className="edit-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditCategory(category, e);
+                  }}
+                  title="Edit category"
+                  disabled={
+                    deletingCategory === category._id ||
+                    updatingCategory === category._id
+                  }
+                >
+                  ✎
+                </button>
+              </>
             </li>
           ))}
         </ul>
@@ -402,12 +375,173 @@ export function CategoriesList({
       <div className="categories-list-footer">
         <button
           className="add-button"
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            hapticFeedback.light();
+            setShowAddForm(true);
+          }}
           title="Add category"
         >
           +
         </button>
       </div>
+
+      {/* Add Category Modal */}
+      {showAddForm && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setShowAddForm(false);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="challenge-action-modal-header">
+              <h3>Add Category</h3>
+              <button
+                className="challenge-action-modal-close"
+                onClick={() => {
+                  hapticFeedback.light();
+                  setShowAddForm(false);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <form
+              className="edit-form"
+              onSubmit={handleCreateCategory}
+            >
+              <div className="auth-field">
+                <label htmlFor="new-category-name">Name *</label>
+                <input
+                  id="new-category-name"
+                  type="text"
+                  placeholder="Category name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="edit-form-actions">
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => {
+                    hapticFeedback.light();
+                    setShowAddForm(false);
+                  }}
+                  disabled={creatingCategory}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={creatingCategory}
+                >
+                  {creatingCategory ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal */}
+      {editingCategoryId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setEditingCategoryId(null);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const category = categories.find(
+                (c) => c._id === editingCategoryId
+              );
+              if (!category) return null;
+
+              return (
+                <>
+                  <div className="challenge-action-modal-header">
+                    <h3>Edit Category</h3>
+                    <button
+                      className="challenge-action-modal-close"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setEditingCategoryId(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    className="edit-form"
+                    onSubmit={(e) => handleUpdateCategory(category._id, e)}
+                  >
+                    <div className="auth-field">
+                      <label htmlFor="edit-category-name">Name *</label>
+                      <input
+                        id="edit-category-name"
+                        type="text"
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="edit-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setEditingCategoryId(null);
+                        }}
+                        disabled={updatingCategory === category._id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingCategory === category._id}
+                      >
+                        {updatingCategory === category._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
