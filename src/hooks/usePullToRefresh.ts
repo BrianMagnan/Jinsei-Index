@@ -45,15 +45,25 @@ export function usePullToRefresh({
     const target = e.currentTarget as HTMLElement;
     const currentY = e.touches[0].clientY;
     const distance = currentY - touchStartY.current;
+    const currentScrollTop = target.scrollTop;
 
-    // Only allow pull-to-refresh if at the top of the scrollable container
-    if (target.scrollTop <= 0 && distance > 0) {
+    // Only allow pull-to-refresh if:
+    // 1. We're at or very close to the top (within 5px buffer)
+    // 2. User is pulling down (distance > 0)
+    // 3. We started at the top (scrollTop.current <= 5)
+    // 4. The scroll position hasn't changed significantly (within 5px of start)
+    const isAtTop = currentScrollTop <= 5;
+    const startedAtTop = scrollTop.current <= 5;
+    const scrollHasntChanged = Math.abs(currentScrollTop - scrollTop.current) <= 5;
+    const isPullingDown = distance > 10; // Require at least 10px pull before activating
+
+    if (isAtTop && startedAtTop && scrollHasntChanged && isPullingDown) {
       e.preventDefault(); // Prevent default scroll behavior
       const pullDist = Math.min(distance * 0.5, threshold * 1.5); // Damping factor
       setPullDistance(pullDist);
       setIsPulling(true);
-    } else if (target.scrollTop > 0) {
-      // Reset if user scrolls down
+    } else if (currentScrollTop > 5 || !isPullingDown) {
+      // Reset if user scrolls down or isn't pulling down
       setPullDistance(0);
       setIsPulling(false);
       touchStartY.current = null;
