@@ -723,7 +723,7 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
-  height: 700px;
+  height: 80vh;
   padding-bottom: 60px;
   padding-top: 10px;
 }
