@@ -29,6 +29,7 @@ export function usePullToRefresh({
   const touchStartY = useRef<number | null>(null);
   const scrollTop = useRef<number>(0);
   const containerRef = useRef<HTMLElement | null>(null);
+  const actualPullDistance = useRef<number>(0); // Track actual distance for threshold check
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (!enabled || isRefreshing) return;
@@ -60,12 +61,14 @@ export function usePullToRefresh({
 
     if (isAtTop && startedAtTop && scrollHasntChanged && isPullingDown) {
       e.preventDefault(); // Prevent default scroll behavior
-      const pullDist = Math.min(distance * 0.4, threshold * 1.5); // Balanced damping factor
+      actualPullDistance.current = distance; // Store actual distance for threshold check
+      const pullDist = Math.min(distance * 0.4, threshold * 1.5); // Damped value for visual feedback
       setPullDistance(pullDist);
       setIsPulling(true);
     } else if (currentScrollTop > 3 || !isPullingDown) {
       // Reset if user scrolls down or isn't pulling down
       setPullDistance(0);
+      actualPullDistance.current = 0;
       setIsPulling(false);
       touchStartY.current = null;
     }
@@ -74,12 +77,14 @@ export function usePullToRefresh({
   const handleTouchEnd = async () => {
     if (!enabled || !isPulling) {
       setPullDistance(0);
+      actualPullDistance.current = 0;
       setIsPulling(false);
       touchStartY.current = null;
       return;
     }
 
-    if (pullDistance >= threshold) {
+    // Use actual distance (not damped) for threshold check
+    if (actualPullDistance.current >= threshold) {
       setIsRefreshing(true);
       try {
         await onRefresh();
@@ -92,6 +97,7 @@ export function usePullToRefresh({
 
     // Reset
     setPullDistance(0);
+    actualPullDistance.current = 0;
     setIsPulling(false);
     touchStartY.current = null;
   };
