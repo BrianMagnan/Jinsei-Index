@@ -4030,6 +4030,7 @@ button:disabled .spinner,
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-top: var(--spacing-sm);
   }
 
   /* Ensure parent containers allow flex children to scroll */
