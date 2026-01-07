@@ -4019,6 +4019,30 @@ button:disabled .spinner,
     padding-bottom: calc(80px + var(--spacing-xl));
   }
 
+  /* List container scrolling fixes for mobile */
+  .category-list,
+  .skill-list,
+  .challenge-list {
+    height: auto;
+    min-height: 0;
+    flex: 1;
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+
+  /* Ensure parent containers allow flex children to scroll */
+  .categories-list,
+  .skills-list,
+  .challenges-list {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+  }
+
   /* Challenge list optimizations */
   /* Challenge list padding now uses unified styles above */
 
