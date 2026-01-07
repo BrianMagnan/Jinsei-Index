@@ -20,7 +20,7 @@ interface UsePullToRefreshReturn {
 
 export function usePullToRefresh({
   onRefresh,
-  threshold = 80,
+  threshold = 120, // Increased from 80 to require more pull
   enabled = true,
 }: UsePullToRefreshOptions): UsePullToRefreshReturn {
   const [pullDistance, setPullDistance] = useState(0);
@@ -48,21 +48,22 @@ export function usePullToRefresh({
     const currentScrollTop = target.scrollTop;
 
     // Only allow pull-to-refresh if:
-    // 1. We're at or very close to the top (within 5px buffer)
+    // 1. We're at or very close to the top (within 10px buffer)
     // 2. User is pulling down (distance > 0)
-    // 3. We started at the top (scrollTop.current <= 5)
-    // 4. The scroll position hasn't changed significantly (within 5px of start)
-    const isAtTop = currentScrollTop <= 5;
-    const startedAtTop = scrollTop.current <= 5;
-    const scrollHasntChanged = Math.abs(currentScrollTop - scrollTop.current) <= 5;
-    const isPullingDown = distance > 10; // Require at least 10px pull before activating
+    // 3. We started at the top (scrollTop.current <= 10)
+    // 4. The scroll position hasn't changed significantly (within 10px of start)
+    // 5. User has pulled down significantly (at least 40px) before activating
+    const isAtTop = currentScrollTop <= 10;
+    const startedAtTop = scrollTop.current <= 10;
+    const scrollHasntChanged = Math.abs(currentScrollTop - scrollTop.current) <= 10;
+    const isPullingDown = distance > 40; // Require at least 40px pull before activating
 
     if (isAtTop && startedAtTop && scrollHasntChanged && isPullingDown) {
       e.preventDefault(); // Prevent default scroll behavior
-      const pullDist = Math.min(distance * 0.5, threshold * 1.5); // Damping factor
+      const pullDist = Math.min(distance * 0.4, threshold * 1.5); // Reduced damping factor from 0.5 to 0.4
       setPullDistance(pullDist);
       setIsPulling(true);
-    } else if (currentScrollTop > 5 || !isPullingDown) {
+    } else if (currentScrollTop > 10 || !isPullingDown) {
       // Reset if user scrolls down or isn't pulling down
       setPullDistance(0);
       setIsPulling(false);
