@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
 interface CategoriesListProps {
@@ -27,6 +28,20 @@ export function CategoriesList({
   );
   const [editCategoryName, setEditCategoryName] = useState("");
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
+  const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
+
+  // Swipe gesture state for category list items
+  const [itemSwipeStart, setItemSwipeStart] = useState<{
+    x: number;
+    y: number;
+    categoryId: string;
+  } | null>(null);
+  const [itemSwipeEnd, setItemSwipeEnd] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [swipedCategoryId, setSwipedCategoryId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
 
   const loadCategories = async () => {
     try {
@@ -126,6 +141,39 @@ export function CategoriesList({
     }
   };
 
+  const handleDeleteCategory = async (
+    categoryId: string,
+    categoryName: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (deletingCategory === categoryId) return;
+
+    hapticFeedback.medium();
+    if (
+      !confirm(
+        `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingCategory(categoryId);
+    try {
+      await categoryAPI.delete(categoryId);
+      if (selectedCategoryId === categoryId) {
+        onCategorySelect(null);
+      }
+      await loadCategories();
+      hapticFeedback.success();
+    } catch (err) {
+      hapticFeedback.error();
+      alert(err instanceof Error ? err.message : "Failed to delete category");
+    } finally {
+      setDeletingCategory(null);
+    }
+  };
+
   useEffect(() => {
     loadCategories();
   }, []);
@@ -202,9 +250,91 @@ export function CategoriesList({
               key={category._id}
               className={`category-item ${
                 selectedCategoryId === category._id ? "active" : ""
-              }`}
+              } ${swipedCategoryId === category._id ? "swiping" : ""}`}
               onClick={() => {
-                onCategorySelect(category._id);
+                if (editingCategoryId !== category._id) {
+                  onCategorySelect(category._id);
+                }
+              }}
+              onTouchStart={(e) => {
+                if (editingCategoryId !== category._id) {
+                  setItemSwipeStart({
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                    categoryId: category._id,
+                  });
+                  setItemSwipeEnd(null);
+                  setSwipeOffset(0);
+                }
+              }}
+              onTouchMove={(e) => {
+                if (
+                  itemSwipeStart &&
+                  itemSwipeStart.categoryId === category._id
+                ) {
+                  const currentX = e.touches[0].clientX;
+                  const currentY = e.touches[0].clientY;
+                  setItemSwipeEnd({ x: currentX, y: currentY });
+
+                  // Calculate swipe offset for visual feedback
+                  const deltaX = currentX - itemSwipeStart.x;
+                  const deltaY = Math.abs(currentY - itemSwipeStart.y);
+
+                  // Only allow horizontal swipes (ignore if vertical movement is too large)
+                  if (deltaY < 30) {
+                    setSwipeOffset(deltaX);
+                    setSwipedCategoryId(category._id);
+                  }
+                }
+              }}
+              onTouchEnd={() => {
+                if (
+                  itemSwipeStart &&
+                  itemSwipeStart.categoryId === category._id &&
+                  itemSwipeEnd
+                ) {
+                  const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
+                  const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
+                  const minSwipeDistance = 80;
+
+                  // Only handle horizontal swipes
+                  if (deltaY < 50 && Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX < 0) {
+                      // Swipe left - delete
+                      hapticFeedback.medium();
+                      if (confirm(`Delete "${category.name}"?`)) {
+                        handleDeleteCategory(category._id, category.name, {
+                          stopPropagation: () => {},
+                        } as React.MouseEvent);
+                      }
+                    }
+                  }
+                }
+
+                // Reset swipe state
+                setItemSwipeStart(null);
+                setItemSwipeEnd(null);
+                setSwipedCategoryId(null);
+                setSwipeOffset(0);
+              }}
+              onTouchCancel={() => {
+                setItemSwipeStart(null);
+                setItemSwipeEnd(null);
+                setSwipedCategoryId(null);
+                setSwipeOffset(0);
+              }}
+              style={{
+                transform:
+                  swipedCategoryId === category._id
+                    ? `translateX(${Math.max(
+                        -100,
+                        Math.min(100, swipeOffset)
+                      )}px)`
+                    : undefined,
+                transition:
+                  swipedCategoryId === category._id
+                    ? "none"
+                    : "transform 0.2s ease-out",
               }}
             >
               {editingCategoryId === category._id ? (
@@ -250,6 +380,17 @@ export function CategoriesList({
                 <>
                   <div className="categories-list-item-content">
                     <span className="category-name">{category.name}</span>
+                    {/* Swipe action indicators */}
+                    {swipedCategoryId === category._id && (
+                      <>
+                        {swipeOffset < 0 && (
+                          <div className="challenge-swipe-indicator swipe-delete">
+                            <span className="swipe-icon">🗑️</span>
+                            <span className="swipe-text">Delete</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </>
               )}

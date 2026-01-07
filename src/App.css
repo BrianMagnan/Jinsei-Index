@@ -1225,6 +1225,8 @@ body {
 }
 
 /* Swipe Action Indicators */
+.category-item,
+.skill-item,
 .challenge-item {
   position: relative;
   overflow: visible;
@@ -4916,4 +4918,3 @@ button:disabled .spinner,
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
 }
-

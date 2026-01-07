@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { SkillSkeletonList } from "./SkillSkeleton";
 import { EmptyState } from "./EmptyState";
+import { hapticFeedback } from "../utils/haptic";
 
 interface SkillsListProps {
   categoryId: string;
@@ -37,6 +38,20 @@ export function SkillsList({
   const [editCategoryName, setEditCategoryName] = useState("");
   const [updatingCategory, setUpdatingCategory] = useState(false);
   const [localCategory, setLocalCategory] = useState<Category | null>(category);
+  const [deletingSkill, setDeletingSkill] = useState<string | null>(null);
+
+  // Swipe gesture state for skill list items
+  const [itemSwipeStart, setItemSwipeStart] = useState<{
+    x: number;
+    y: number;
+    skillId: string;
+  } | null>(null);
+  const [itemSwipeEnd, setItemSwipeEnd] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [swipedSkillId, setSwipedSkillId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
 
   const loadSkills = async () => {
     try {
@@ -243,6 +258,36 @@ export function SkillsList({
     }
   };
 
+  const handleDeleteSkill = async (
+    skillId: string,
+    skillName: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (deletingSkill === skillId) return;
+
+    hapticFeedback.medium();
+    if (
+      !confirm(
+        `Are you sure you want to delete "${skillName}"? This will also delete all associated challenges.`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingSkill(skillId);
+    try {
+      await skillAPI.delete(skillId);
+      await loadSkills();
+      hapticFeedback.success();
+    } catch (err) {
+      hapticFeedback.error();
+      alert(err instanceof Error ? err.message : "Failed to delete skill");
+    } finally {
+      setDeletingSkill(null);
+    }
+  };
+
   return (
     <div className="skills-list">
       <Breadcrumbs
@@ -343,7 +388,9 @@ export function SkillsList({
               key={skill._id}
               className={`skill-item ${
                 draggedSkillId === skill._id ? "dragging" : ""
-              } ${dragOverSkillId === skill._id ? "drag-over" : ""}`}
+              } ${dragOverSkillId === skill._id ? "drag-over" : ""} ${
+                swipedSkillId === skill._id ? "swiping" : ""
+              }`}
               draggable={editingSkillId !== skill._id}
               onDragStart={() => handleDragStart(skill._id)}
               onDragOver={(e) => handleDragOver(e, skill._id)}
@@ -351,7 +398,86 @@ export function SkillsList({
               onDrop={(e) => handleDrop(e, skill._id)}
               onDragEnd={handleDragEnd}
               onClick={() => {
-                onSkillSelect(skill._id);
+                if (editingSkillId !== skill._id) {
+                  onSkillSelect(skill._id);
+                }
+              }}
+              onTouchStart={(e) => {
+                if (editingSkillId !== skill._id) {
+                  setItemSwipeStart({
+                    x: e.touches[0].clientX,
+                    y: e.touches[0].clientY,
+                    skillId: skill._id,
+                  });
+                  setItemSwipeEnd(null);
+                  setSwipeOffset(0);
+                }
+              }}
+              onTouchMove={(e) => {
+                if (itemSwipeStart && itemSwipeStart.skillId === skill._id) {
+                  const currentX = e.touches[0].clientX;
+                  const currentY = e.touches[0].clientY;
+                  setItemSwipeEnd({ x: currentX, y: currentY });
+
+                  // Calculate swipe offset for visual feedback
+                  const deltaX = currentX - itemSwipeStart.x;
+                  const deltaY = Math.abs(currentY - itemSwipeStart.y);
+
+                  // Only allow horizontal swipes (ignore if vertical movement is too large)
+                  if (deltaY < 30) {
+                    setSwipeOffset(deltaX);
+                    setSwipedSkillId(skill._id);
+                  }
+                }
+              }}
+              onTouchEnd={() => {
+                if (
+                  itemSwipeStart &&
+                  itemSwipeStart.skillId === skill._id &&
+                  itemSwipeEnd
+                ) {
+                  const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
+                  const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
+                  const minSwipeDistance = 80;
+
+                  // Only handle horizontal swipes
+                  if (deltaY < 50 && Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX < 0) {
+                      // Swipe left - delete
+                      hapticFeedback.medium();
+                      if (confirm(`Delete "${skill.name}"?`)) {
+                        handleDeleteSkill(skill._id, skill.name, {
+                          stopPropagation: () => {},
+                        } as React.MouseEvent);
+                      }
+                    }
+                  }
+                }
+
+                // Reset swipe state
+                setItemSwipeStart(null);
+                setItemSwipeEnd(null);
+                setSwipedSkillId(null);
+                setSwipeOffset(0);
+              }}
+              onTouchCancel={() => {
+                setItemSwipeStart(null);
+                setItemSwipeEnd(null);
+                setSwipedSkillId(null);
+                setSwipeOffset(0);
+              }}
+              style={{
+                transform:
+                  swipedSkillId === skill._id
+                    ? `translateX(${Math.max(
+                        -100,
+                        Math.min(100, swipeOffset)
+                      )}px)`
+                    : undefined,
+                transition:
+                  swipedSkillId === skill._id
+                    ? "none"
+                    : "transform 0.2s ease-out",
               }}
             >
               {editingSkillId === skill._id ? (
@@ -403,6 +529,17 @@ export function SkillsList({
                       <div className="skill-description">
                         {skill.description}
                       </div>
+                    )}
+                    {/* Swipe action indicators */}
+                    {swipedSkillId === skill._id && (
+                      <>
+                        {swipeOffset < 0 && (
+                          <div className="challenge-swipe-indicator swipe-delete">
+                            <span className="swipe-icon">🗑️</span>
+                            <span className="swipe-text">Delete</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </>
