@@ -54,7 +54,7 @@ export function usePullToRefresh({
     const scrollTop = target.scrollTop;
 
     // Only allow pull-to-refresh if at top and pulling down
-    const isAtTop = scrollTop <= 5 && initialScrollTop.current <= 5;
+    // const isAtTop = scrollTop <= 5 && initialScrollTop.current <= 5;
     const isPullingDown = distance > 30;
 
     if (isAtTop && isPullingDown) {
