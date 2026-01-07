@@ -4031,7 +4031,11 @@ button:disabled .spinner,
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     padding-top: var(--spacing-sm);
-    padding-bottom: 60px;
+    /* Account for fixed footer: bottom nav (60px) + spacing (16px) + footer height (80px: 16px top + 48px button + 16px bottom) + extra spacing */
+    padding-bottom: calc(
+      60px + var(--spacing-sm) * 2 + 80px + var(--spacing-lg) +
+        env(safe-area-inset-bottom)
+    );
   }
 
   /* Ensure parent containers allow flex children to scroll */
