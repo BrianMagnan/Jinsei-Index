@@ -728,6 +728,70 @@ body {
   padding-top: 10px;
 }
 
+/* Slide transitions for navigation */
+.categories-list,
+.skills-list,
+.challenges-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.categories-list.slide-in-left,
+.skills-list.slide-in-left,
+.challenges-container.slide-in-left {
+  animation: slideInLeft 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.categories-list.slide-in-right,
+.skills-list.slide-in-right,
+.challenges-container.slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Keyframes for slide animations - defined globally for both desktop and mobile */
+@keyframes slideInRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-2%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(2%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.categories-list.slide-out-left,
+.skills-list.slide-out-left,
+.challenges-container.slide-out-left {
+  animation: slideOutLeft 0.3s ease-in;
+}
+
+.categories-list.slide-out-right,
+.skills-list.slide-out-right,
+.challenges-container.slide-out-right {
+  animation: slideOutRight 0.3s ease-in;
+}
+
 /* Unified list item styles - used by all three lists */
 .category-item,
 .skill-item,
@@ -742,6 +806,7 @@ body {
   position: relative;
   overflow: hidden;
   min-height: 80px;
+  max-height: 80px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1360,6 +1425,132 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+}
+
+/* Edit Challenge Modal - Centered */
+.challenge-edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease-out;
+  padding: var(--spacing-lg);
+}
+
+.challenge-edit-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  padding: var(--spacing-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow-y: auto;
+}
+
+@keyframes scaleInSpring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Challenge Completion Modal */
+.challenge-completion-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  padding: var(--spacing-xl);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: visible;
+  position: relative;
+  text-align: center;
+}
+
+.challenge-completion-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.challenge-completion-icon {
+  font-size: 4rem;
+  line-height: 1;
+  animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.challenge-completion-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.challenge-completion-name {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin: 0;
+  font-weight: 600;
+}
+
+.challenge-completion-xp {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-accent-gold);
+  text-shadow: 0 0 15px var(--color-accent-gold-glow);
+  margin-top: var(--spacing-sm);
+}
+
+.challenge-completion-close {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.challenge-completion-close:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  transform: scale(1.1);
 }
 
 .challenge-action-button {
@@ -3541,6 +3732,11 @@ body {
   margin-top: var(--spacing-md);
 }
 
+/* Todo skeleton specific styles */
+.skeleton-checkbox {
+  flex-shrink: 0;
+}
+
 /* Improved Loading States */
 .loading,
 .sidebar-loading,
@@ -3756,6 +3952,25 @@ button:disabled .spinner,
     flex-direction: column;
   }
 
+  /* Touch active states for better mobile feedback */
+  button:active,
+  .category-item:active,
+  .skill-item:active,
+  .challenge-item:active,
+  .breadcrumb-link:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+    transition: opacity 0.1s, transform 0.1s;
+  }
+
+  /* Touch dragging state */
+  .challenge-item.touch-dragging,
+  .category-item.touch-dragging,
+  .skill-item.touch-dragging {
+    box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5);
+    border-color: var(--color-primary);
+  }
+
   .app-main {
     width: 100%;
     padding: var(--spacing-md);
@@ -3864,22 +4079,37 @@ button:disabled .spinner,
       80px + var(--spacing-md) + env(safe-area-inset-bottom)
     );
     overflow-y: auto;
-    animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
     will-change: transform;
   }
 
-  @keyframes slideInRight {
+  /* Direction-aware animations for challenge detail */
+  .challenge-detail.slide-in-left {
+    animation: slideInLeft 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .challenge-detail.slide-in-right {
+    animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideOutLeft {
     0% {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    60% {
-      transform: translateX(-2%);
+      transform: translateX(0);
       opacity: 1;
     }
     100% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+  }
+
+  @keyframes slideOutRight {
+    0% {
       transform: translateX(0);
       opacity: 1;
+    }
+    100% {
+      transform: translateX(100%);
+      opacity: 0;
     }
   }
 
@@ -4051,12 +4281,13 @@ button:disabled .spinner,
     flex: 1;
   }
 
-  /* Challenge list optimizations */
-  /* Challenge list padding now uses unified styles above */
-
+  /* List item optimizations - unified sizing for all items */
+  .category-item,
+  .skill-item,
   .challenge-item {
     padding: var(--spacing-md);
     min-height: 60px;
+    max-height: 60px;
   }
 
   .challenge-info {
@@ -4130,6 +4361,38 @@ button:disabled .spinner,
     min-height: 56px;
     font-size: var(--font-size-sm);
     padding: var(--spacing-md);
+  }
+
+  /* Convert edit modals to bottom sheets on mobile */
+  .challenge-edit-modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .challenge-edit-modal {
+    max-height: 85vh;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    width: 100%;
+    max-width: 100%;
+    animation: slideUpSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .challenge-completion-modal {
+    max-width: 90%;
+    padding: var(--spacing-lg);
+  }
+
+  .challenge-completion-icon {
+    font-size: 3rem;
+  }
+
+  .challenge-completion-title {
+    font-size: var(--font-size-xl);
+  }
+
+  .challenge-completion-xp {
+    font-size: var(--font-size-2xl);
   }
 
   /* List Selection Modal - Mobile */

@@ -5,10 +5,7 @@ import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
 import { Skeleton } from "./Skeleton";
-import {
-  ChallengeSkeletonList,
-  ChallengeDetailSkeleton,
-} from "./ChallengeSkeleton";
+import { ChallengeSkeletonList } from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
 import { hapticFeedback } from "../utils/haptic";
 import { linkifyText } from "../utils/linkifyText";
