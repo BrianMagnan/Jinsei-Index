@@ -3,7 +3,12 @@ import { challengeAPI, achievementAPI, skillAPI } from "../services/api";
 import type { SkillWithHierarchy, Challenge } from "../types";
 import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
-import { ChallengeSkeletonList } from "./ChallengeSkeleton";
+import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
+import { Skeleton } from "./Skeleton";
+import {
+  ChallengeSkeletonList,
+  ChallengeDetailSkeleton,
+} from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
 import { hapticFeedback } from "../utils/haptic";
 import { linkifyText } from "../utils/linkifyText";
@@ -23,6 +28,8 @@ interface ChallengesListProps {
   onBackToCategory?: () => void;
   onBackToCategories?: () => void;
   initialChallengeId?: string;
+  navDirection?: "forward" | "backward" | null;
+  onAnimationComplete?: () => void;
 }
 
 export function ChallengesList({
@@ -30,6 +37,8 @@ export function ChallengesList({
   onBackToCategory,
   onBackToCategories,
   initialChallengeId,
+  navDirection,
+  onAnimationComplete,
 }: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,11 +71,6 @@ export function ChallengesList({
   const [dragOverChallengeId, setDragOverChallengeId] = useState<string | null>(
     null
   );
-  const [challengeDescription, setChallengeDescription] = useState("");
-  const [savingChallengeDescription, setSavingChallengeDescription] =
-    useState(false);
-  const [editingChallengeDescription, setEditingChallengeDescription] =
-    useState(false);
   const [todoChallengeIds, setTodoChallengeIds] = useState<Set<string>>(
     new Set()
   );
@@ -76,7 +80,26 @@ export function ChallengesList({
   const [actionModalChallengeId, setActionModalChallengeId] = useState<
     string | null
   >(null);
+  const [completedChallengeId, setCompletedChallengeId] = useState<
+    string | null
+  >(null);
   const [listSelectionModalOpen, setListSelectionModalOpen] = useState(false);
+
+  // Swipe to close modal state
+  const [modalSwipeStart, setModalSwipeStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [modalSwipeEnd, setModalSwipeEnd] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [modalSwipeOffset, setModalSwipeOffset] = useState<number>(0);
+
+  // Direction tracking for challenge detail view
+  const [detailDirection, setDetailDirection] = useState<
+    "forward" | "backward" | null
+  >(null);
   const [selectedLists, setSelectedLists] = useState<{
     todo: boolean;
     daily: boolean;
@@ -122,8 +145,19 @@ export function ChallengesList({
   const longPressChallengeIdRef = useRef<string | null>(null);
   const longPressTriggeredRef = useRef<boolean>(false);
 
-  // Ref for textarea to handle keyboard scrolling
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Touch drag state for reordering
+  const [touchDragStart, setTouchDragStart] = useState<{
+    x: number;
+    y: number;
+    challengeId: string;
+    initialIndex: number;
+  } | null>(null);
+  const [touchDragCurrent, setTouchDragCurrent] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [touchDragOffset, setTouchDragOffset] = useState<number>(0);
+  const touchDragTimerRef = useRef<number | null>(null);
 
   const loadSkill = async () => {
     try {
@@ -190,34 +224,53 @@ export function ChallengesList({
         (c) => c._id === initialChallengeId
       );
       if (challengeExists && selectedChallengeId !== initialChallengeId) {
+        // Opening from navigation (e.g., search) = forward direction
+        setDetailDirection("forward");
         setSelectedChallengeId(initialChallengeId);
       }
     }
   }, [initialChallengeId, skill, selectedChallengeId]);
 
-  useEffect(() => {
-    // Sync challenge description state when selected challenge changes
-    if (selectedChallengeId && skill?.challenges) {
-      const challenge = skill.challenges.find(
-        (c) => c._id === selectedChallengeId
-      );
-      if (challenge) {
-        setChallengeDescription(challenge.description || "");
-        setEditingChallengeDescription(false); // Reset edit mode when challenge changes
-      }
-    }
-  }, [selectedChallengeId, skill]);
-
   // Removed auto-select - user must click to view challenge details
 
-  // Cleanup long press timer on unmount
+  // Cleanup long press and drag timers on unmount
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
       }
+      if (touchDragTimerRef.current) {
+        clearTimeout(touchDragTimerRef.current);
+      }
     };
   }, []);
+
+  // Clear animation after it completes - must be before early returns
+  useEffect(() => {
+    if (navDirection && onAnimationComplete) {
+      const timer = setTimeout(() => {
+        onAnimationComplete();
+      }, 350); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [navDirection, onAnimationComplete]);
+
+  // Clear detail direction after animation completes
+  useEffect(() => {
+    if (detailDirection) {
+      const timer = setTimeout(() => {
+        setDetailDirection(null);
+      }, 350); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [detailDirection]);
+
+  // Reset detail direction when detail view is closed
+  useEffect(() => {
+    if (!selectedChallengeId) {
+      setDetailDirection(null);
+    }
+  }, [selectedChallengeId]);
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -261,82 +314,6 @@ export function ChallengesList({
       };
     }
   }, [actionModalChallengeId, listSelectionModalOpen]);
-
-  const handleSaveChallengeDescription = async () => {
-    if (
-      !selectedChallengeId ||
-      !skill?.challenges ||
-      savingChallengeDescription
-    )
-      return;
-
-    const challenge = skill.challenges.find(
-      (c) => c._id === selectedChallengeId
-    );
-    if (!challenge) return;
-
-    const trimmedDescription = challengeDescription.trim();
-    // Only save if description actually changed
-    if (trimmedDescription === (challenge.description || "")) {
-      setEditingChallengeDescription(false);
-      return;
-    }
-
-    hapticFeedback.medium();
-    setSavingChallengeDescription(true);
-    try {
-      await challengeAPI.update(selectedChallengeId, {
-        description: trimmedDescription || undefined,
-      });
-      // Update local skill state to reflect the change
-      const updatedChallenges = skill.challenges.map((c) =>
-        c._id === selectedChallengeId
-          ? { ...c, description: trimmedDescription || undefined }
-          : c
-      );
-      setSkill({ ...skill, challenges: updatedChallenges });
-      setEditingChallengeDescription(false);
-      hapticFeedback.success();
-    } catch (err) {
-      hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to save description");
-      // Revert to original description on error
-      setChallengeDescription(challenge.description || "");
-    } finally {
-      setSavingChallengeDescription(false);
-    }
-  };
-
-  const handleCancelEditDescription = () => {
-    if (!selectedChallengeId || !skill?.challenges) return;
-    const challenge = skill.challenges.find(
-      (c) => c._id === selectedChallengeId
-    );
-    if (challenge) {
-      setChallengeDescription(challenge.description || "");
-    }
-    setEditingChallengeDescription(false);
-  };
-
-  const handleEditDescription = () => {
-    hapticFeedback.light();
-    if (editingChallengeDescription) {
-      // If already editing, cancel edit
-      setEditingChallengeDescription(false);
-      // Reset description to saved value
-      if (selectedChallengeId && skill?.challenges) {
-        const challenge = skill.challenges.find(
-          (c) => c._id === selectedChallengeId
-        );
-        if (challenge) {
-          setChallengeDescription(challenge.description || "");
-        }
-      }
-    } else {
-      // Start editing
-      setEditingChallengeDescription(true);
-    }
-  };
 
   const handleOpenListSelection = () => {
     if (!selectedChallenge || !skill) return;
@@ -624,6 +601,81 @@ export function ChallengesList({
     setDragOverChallengeId(null);
   };
 
+  // Touch-based drag handlers for mobile
+  const handleTouchDragStart = (challengeId: string, initialIndex: number) => {
+    // Start timer for drag activation (long press)
+    touchDragTimerRef.current = window.setTimeout(() => {
+      setTouchDragStart({
+        x: 0,
+        y: 0,
+        challengeId,
+        initialIndex,
+      });
+      hapticFeedback.medium();
+    }, 300); // 300ms long press to start drag
+  };
+
+  const handleTouchDragMove = (e: React.TouchEvent, challengeId: string) => {
+    if (!touchDragStart || touchDragStart.challengeId !== challengeId) {
+      return;
+    }
+
+    const touch = e.touches[0];
+    const currentY = touch.clientY;
+    const currentX = touch.clientX;
+
+    if (!touchDragCurrent) {
+      setTouchDragCurrent({ x: currentX, y: currentY });
+      return;
+    }
+
+    const deltaY = currentY - touchDragCurrent.y;
+    const deltaX = Math.abs(currentX - touchDragCurrent.x);
+
+    // Only allow vertical drag (ignore horizontal swipes)
+    if (deltaX < 30 && Math.abs(deltaY) > 5) {
+      setTouchDragOffset(deltaY);
+      setTouchDragCurrent({ x: currentX, y: currentY });
+
+      // Calculate which item we're over
+      const itemHeight = 60; // Mobile item height
+      const itemsAbove = Math.round(deltaY / itemHeight);
+      const newIndex = Math.max(
+        0,
+        Math.min(
+          (skill?.challenges?.length || 0) - 1,
+          touchDragStart.initialIndex + itemsAbove
+        )
+      );
+
+      if (newIndex !== touchDragStart.initialIndex && skill?.challenges) {
+        const newChallenges = [...skill.challenges];
+        const [draggedItem] = newChallenges.splice(
+          touchDragStart.initialIndex,
+          1
+        );
+        newChallenges.splice(newIndex, 0, draggedItem);
+        setSkill({ ...skill, challenges: newChallenges });
+        saveChallengeOrder(newChallenges);
+        setTouchDragStart({
+          ...touchDragStart,
+          initialIndex: newIndex,
+        });
+        hapticFeedback.light();
+      }
+    }
+  };
+
+  const handleTouchDragEnd = () => {
+    if (touchDragTimerRef.current) {
+      clearTimeout(touchDragTimerRef.current);
+      touchDragTimerRef.current = null;
+    }
+    setTouchDragStart(null);
+    setTouchDragCurrent(null);
+    setTouchDragOffset(0);
+  };
+
   const handleCreateChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newChallengeName.trim() || creatingChallenge) return;
@@ -642,14 +694,8 @@ export function ChallengesList({
       setNewChallengeXPReward(5);
       setShowAddForm(false);
       await loadSkill();
+      setSelectedChallengeId(null); // Stay on list view
       hapticFeedback.success();
-      // Auto-select the newly created challenge
-      const updatedSkill = await skillAPI.getById(skillId);
-      if (updatedSkill.challenges && updatedSkill.challenges.length > 0) {
-        const newChallenge =
-          updatedSkill.challenges[updatedSkill.challenges.length - 1];
-        setSelectedChallengeId(newChallenge._id);
-      }
     } catch (err) {
       hapticFeedback.error();
       alert(err instanceof Error ? err.message : "Failed to create challenge");
@@ -670,18 +716,24 @@ export function ChallengesList({
     try {
       await achievementAPI.create({ challenge: challenge._id });
       hapticFeedback.success();
-      alert(
-        `Challenge "${challenge.name}" completed! +${challenge.xpReward} XP`
-      );
-      await loadSkill(); // Reload to refresh skill data and update XP/level
+      setCompletedChallengeId(challenge._id);
+      const updatedSkill = await skillAPI.getById(skillId); // Reload to refresh skill data and update XP/level
+      setSkill(updatedSkill);
       // Auto-select next challenge or first if none selected
-      if (skill?.challenges && skill.challenges.length > 1) {
-        const currentIndex = skill.challenges.findIndex(
-          (c) => c._id === challenge._id
+      if (updatedSkill?.challenges && updatedSkill.challenges.length > 1) {
+        const currentIndex = updatedSkill.challenges.findIndex(
+          (c: Challenge) => c._id === challenge._id
         );
-        const nextIndex = (currentIndex + 1) % skill.challenges.length;
-        setSelectedChallengeId(skill.challenges[nextIndex]._id);
+        const nextIndex = (currentIndex + 1) % updatedSkill.challenges.length;
+        // Auto-selecting next = forward direction
+        setDetailDirection("forward");
+        setSelectedChallengeId(updatedSkill.challenges[nextIndex]._id);
       }
+
+      // Auto-close modal after 3 seconds
+      setTimeout(() => {
+        setCompletedChallengeId(null);
+      }, 3000);
     } catch (err) {
       hapticFeedback.error();
       alert(
@@ -747,7 +799,7 @@ export function ChallengesList({
       });
       setEditingChallengeId(null);
       await loadSkill();
-      setSelectedChallengeId(challengeId); // Keep same challenge selected
+      setSelectedChallengeId(null); // Return to list view
       hapticFeedback.success();
     } catch (err) {
       hapticFeedback.error();
@@ -773,18 +825,14 @@ export function ChallengesList({
     setDeletingChallenge(challengeId);
     try {
       await challengeAPI.delete(challengeId);
-      await loadSkill();
+      const updatedSkill = await skillAPI.getById(skillId);
+      setSkill(updatedSkill);
       hapticFeedback.success();
       // Auto-select first challenge if available
-      if (skill?.challenges && skill.challenges.length > 1) {
-        const remainingChallenges = skill.challenges.filter(
-          (c) => c._id !== challengeId
-        );
-        if (remainingChallenges.length > 0) {
-          setSelectedChallengeId(remainingChallenges[0]._id);
-        } else {
-          setSelectedChallengeId(null);
-        }
+      if (updatedSkill?.challenges && updatedSkill.challenges.length > 0) {
+        // Auto-selecting after delete = forward direction
+        setDetailDirection("forward");
+        setSelectedChallengeId(updatedSkill.challenges[0]._id);
       } else {
         setSelectedChallengeId(null);
       }
@@ -807,6 +855,7 @@ export function ChallengesList({
     );
     if (currentIndex > 0) {
       hapticFeedback.navigation();
+      setDetailDirection("backward"); // Going to previous = backward
       setSelectedChallengeId(skill.challenges[currentIndex - 1]._id);
     }
   };
@@ -818,6 +867,7 @@ export function ChallengesList({
     );
     if (currentIndex < skill.challenges.length - 1) {
       hapticFeedback.navigation();
+      setDetailDirection("forward"); // Going to next = forward
       setSelectedChallengeId(skill.challenges[currentIndex + 1]._id);
     }
   };
@@ -878,28 +928,48 @@ export function ChallengesList({
     }
 
     if (isLeftSwipe && canNavigateNext) {
+      // Swipe left = forward (next challenge)
+      setDetailDirection("forward");
       navigateToNextChallenge();
     }
     if (isRightSwipe && canNavigatePrevious) {
+      // Swipe right = backward (previous challenge)
+      setDetailDirection("backward");
       navigateToPreviousChallenge();
     }
   };
 
+  // Apply animation class based on navigation direction
+  // Swapped: forward (down hierarchy) = slide from right, backward (up) = slide from left
+  const animationClass =
+    navDirection === "forward"
+      ? "slide-in-right"
+      : navDirection === "backward"
+      ? "slide-in-left"
+      : "";
+
   if (loading) {
     return (
-      <div className="challenges-container">
-        <div className="challenges-header">
-          <h2>Challenges</h2>
+      <div className={`challenges-container ${animationClass}`}>
+        <div className="challenges-list">
+          <BreadcrumbsSkeleton />
+          <div className="section-header">
+            <Skeleton width="200px" height="2rem" />
+          </div>
+          <ul className="challenge-list">
+            <ChallengeSkeletonList count={4} />
+          </ul>
         </div>
-        <ul className="challenge-list">
-          <ChallengeSkeletonList count={4} />
-        </ul>
       </div>
     );
   }
 
   if (!skill) {
-    return <div className="empty-state">Skill not found</div>;
+    return (
+      <div className={`challenges-container ${animationClass}`}>
+        <div className="empty-state">Skill not found</div>
+      </div>
+    );
   }
 
   // Get category from skill for breadcrumbs
@@ -912,7 +982,7 @@ export function ChallengesList({
     <div
       className={`challenges-container ${
         selectedChallengeId ? "detail-view" : "list-view"
-      }`}
+      } ${animationClass}`}
     >
       <div className="challenges-list">
         <Breadcrumbs
@@ -928,54 +998,6 @@ export function ChallengesList({
 
         {skill.description && (
           <p className="skill-description">{skill.description}</p>
-        )}
-
-        {showAddForm && (
-          <form className="add-form" onSubmit={handleCreateChallenge}>
-            <input
-              type="text"
-              placeholder="Challenge name"
-              value={newChallengeName}
-              onChange={(e) => setNewChallengeName(e.target.value)}
-              required
-              autoFocus
-            />
-            <input
-              type="text"
-              placeholder="Description (optional)"
-              value={newChallengeDescription}
-              onChange={(e) => setNewChallengeDescription(e.target.value)}
-            />
-            <input
-              type="number"
-              placeholder="XP Reward"
-              value={newChallengeXPReward}
-              onChange={(e) =>
-                setNewChallengeXPReward(parseInt(e.target.value) || 5)
-              }
-              min="1"
-              required
-            />
-            <div className="form-actions">
-              <button type="submit" disabled={creatingChallenge}>
-                {creatingChallenge ? (
-                  <>
-                    <Spinner size="sm" />
-                    <span>Adding...</span>
-                  </>
-                ) : (
-                  "Add"
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                disabled={creatingChallenge}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
         )}
 
         {skill.challenges && skill.challenges.length === 0 ? (
@@ -999,7 +1021,11 @@ export function ChallengesList({
                     : ""
                 } ${draggedChallengeId === challenge._id ? "dragging" : ""} ${
                   dragOverChallengeId === challenge._id ? "drag-over" : ""
-                } ${swipedChallengeId === challenge._id ? "swiping" : ""}`}
+                } ${swipedChallengeId === challenge._id ? "swiping" : ""} ${
+                  touchDragStart?.challengeId === challenge._id
+                    ? "touch-dragging"
+                    : ""
+                }`}
                 draggable={
                   !selectionMode && editingChallengeId !== challenge._id
                 }
@@ -1029,6 +1055,8 @@ export function ChallengesList({
                     });
                   } else if (editingChallengeId !== challenge._id) {
                     hapticFeedback.selection();
+                    // Opening from list = forward direction
+                    setDetailDirection("forward");
                     setSelectedChallengeId(challenge._id);
                   }
                 }}
@@ -1041,12 +1069,22 @@ export function ChallengesList({
                 onMouseLeave={handleLongPressEnd}
                 onTouchStart={(e) => {
                   if (editingChallengeId !== challenge._id) {
-                    // Start long press timer
+                    const touch = e.touches[0];
+                    const initialIndex =
+                      skill?.challenges?.findIndex(
+                        (c) => c._id === challenge._id
+                      ) ?? -1;
+
+                    // Start long press timer for action modal
                     handleLongPressStart(challenge);
+                    // Start touch drag timer for reordering
+                    if (initialIndex >= 0 && !selectionMode) {
+                      handleTouchDragStart(challenge._id, initialIndex);
+                    }
                     // Also track for swipe
                     setItemSwipeStart({
-                      x: e.touches[0].clientX,
-                      y: e.touches[0].clientY,
+                      x: touch.clientX,
+                      y: touch.clientY,
                       challengeId: challenge._id,
                     });
                     setItemSwipeEnd(null);
@@ -1066,24 +1104,41 @@ export function ChallengesList({
                     const deltaX = currentX - itemSwipeStart.x;
                     const deltaY = Math.abs(currentY - itemSwipeStart.y);
 
+                    // If touch drag is active, handle vertical drag
+                    if (touchDragStart?.challengeId === challenge._id) {
+                      handleTouchDragMove(e, challenge._id);
+                      // Cancel swipe and long press when dragging
+                      handleLongPressEnd();
+                      setItemSwipeStart(null);
+                      return;
+                    }
+
                     // Only allow horizontal swipes (ignore if vertical movement is too large)
                     if (deltaY < 30) {
                       setSwipeOffset(deltaX);
                       setSwipedChallengeId(challenge._id);
-                      // Cancel long press if swiping
+                      // Cancel long press and drag if swiping horizontally
                       if (Math.abs(deltaX) > 10) {
                         handleLongPressEnd();
+                        handleTouchDragEnd();
                       }
+                    } else if (deltaY > 30) {
+                      // Cancel horizontal swipe if vertical movement is too large
+                      setItemSwipeStart(null);
+                      setSwipedChallengeId(null);
+                      setSwipeOffset(0);
                     }
                   }
                 }}
                 onTouchEnd={() => {
                   handleLongPressEnd();
+                  handleTouchDragEnd();
 
                   if (
                     itemSwipeStart &&
                     itemSwipeStart.challengeId === challenge._id &&
-                    itemSwipeEnd
+                    itemSwipeEnd &&
+                    !touchDragStart
                   ) {
                     const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
                     const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
@@ -1117,6 +1172,7 @@ export function ChallengesList({
                 }}
                 onTouchCancel={() => {
                   handleLongPressEnd();
+                  handleTouchDragEnd();
                   setItemSwipeStart(null);
                   setItemSwipeEnd(null);
                   setSwipedChallengeId(null);
@@ -1124,103 +1180,51 @@ export function ChallengesList({
                 }}
                 style={{
                   transform:
-                    swipedChallengeId === challenge._id
+                    touchDragStart?.challengeId === challenge._id
+                      ? `translateY(${touchDragOffset}px)`
+                      : swipedChallengeId === challenge._id
                       ? `translateX(${Math.max(
                           -100,
                           Math.min(100, swipeOffset)
                         )}px)`
                       : undefined,
                   transition:
+                    touchDragStart?.challengeId === challenge._id ||
                     swipedChallengeId === challenge._id
                       ? "none"
                       : "transform 0.2s ease-out",
+                  zIndex:
+                    touchDragStart?.challengeId === challenge._id
+                      ? 1000
+                      : undefined,
+                  opacity:
+                    touchDragStart?.challengeId === challenge._id
+                      ? 0.8
+                      : undefined,
                 }}
               >
-                {editingChallengeId === challenge._id ? (
-                  <form
-                    className="edit-form"
-                    onSubmit={(e) => handleUpdateChallenge(challenge._id, e)}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      type="text"
-                      value={editChallengeName}
-                      onChange={(e) => setEditChallengeName(e.target.value)}
-                      required
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Description (optional)"
-                      value={editChallengeDescription}
-                      onChange={(e) =>
-                        setEditChallengeDescription(e.target.value)
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <input
-                      type="number"
-                      placeholder="XP Reward"
-                      value={editChallengeXPReward}
-                      onChange={(e) =>
-                        setEditChallengeXPReward(parseInt(e.target.value) || 5)
-                      }
-                      min="1"
-                      required
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div className="edit-form-actions">
-                      <button
-                        type="submit"
-                        className="save-button"
-                        disabled={updatingChallenge === challenge._id}
-                      >
-                        {updatingChallenge === challenge._id ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Saving...</span>
-                          </>
-                        ) : (
-                          "Save"
+                <>
+                  <div className="challenge-info">
+                    <div className="challenge-name">{challenge.name}</div>
+                    {/* Swipe action indicators */}
+                    {swipedChallengeId === challenge._id && (
+                      <>
+                        {swipeOffset > 0 && (
+                          <div className="challenge-swipe-indicator swipe-complete">
+                            <span className="swipe-icon">✓</span>
+                            <span className="swipe-text">Complete</span>
+                          </div>
                         )}
-                      </button>
-                      <button
-                        type="button"
-                        className="cancel-button"
-                        onClick={() => {
-                          setEditingChallengeId(null);
-                        }}
-                        disabled={updatingChallenge === challenge._id}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <>
-                    <div className="challenge-info">
-                      <div className="challenge-name">{challenge.name}</div>
-                      {/* Swipe action indicators */}
-                      {swipedChallengeId === challenge._id && (
-                        <>
-                          {swipeOffset > 0 && (
-                            <div className="challenge-swipe-indicator swipe-complete">
-                              <span className="swipe-icon">✓</span>
-                              <span className="swipe-text">Complete</span>
-                            </div>
-                          )}
-                          {swipeOffset < 0 && (
-                            <div className="challenge-swipe-indicator swipe-delete">
-                              <span className="swipe-icon">🗑️</span>
-                              <span className="swipe-text">Delete</span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </>
-                )}
+                        {swipeOffset < 0 && (
+                          <div className="challenge-swipe-indicator swipe-delete">
+                            <span className="swipe-icon">🗑️</span>
+                            <span className="swipe-text">Delete</span>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
               </li>
             ))}
           </ul>
@@ -1229,7 +1233,13 @@ export function ChallengesList({
 
       {selectedChallenge && (
         <div
-          className="challenge-detail"
+          className={`challenge-detail ${
+            detailDirection === "forward"
+              ? "slide-in-right"
+              : detailDirection === "backward"
+              ? "slide-in-left"
+              : ""
+          }`}
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
@@ -1272,77 +1282,35 @@ export function ChallengesList({
             </button>
           </div>
           <div className="challenge-detail-description-container">
-            {editingChallengeDescription ? (
-              <div className="challenge-detail-description-editor">
-                <textarea
-                  ref={textareaRef}
-                  className="challenge-detail-description-textarea"
-                  value={challengeDescription}
-                  onChange={(e) => setChallengeDescription(e.target.value)}
-                  placeholder="Add a description for this challenge..."
-                  disabled={savingChallengeDescription}
-                  rows={8}
-                  autoFocus
-                />
-                <div className="challenge-detail-description-actions">
-                  <button
-                    className="save-button"
-                    onClick={handleSaveChallengeDescription}
-                    disabled={savingChallengeDescription}
-                  >
-                    {savingChallengeDescription ? (
-                      <>
-                        <Spinner size="sm" />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      "Save"
-                    )}
-                  </button>
-                  <button
-                    className="cancel-button"
-                    onClick={handleCancelEditDescription}
-                    disabled={savingChallengeDescription}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="challenge-detail-description-readonly">
-                {challengeDescription ? (
-                  <p className="challenge-detail-description">
-                    {linkifyText(challengeDescription)}
-                  </p>
-                ) : (
-                  <p className="challenge-detail-description no-description">
-                    No description provided.
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="challenge-detail-description-readonly">
+              {selectedChallenge.description ? (
+                <p className="challenge-detail-description">
+                  {linkifyText(selectedChallenge.description)}
+                </p>
+              ) : (
+                <p className="challenge-detail-description no-description">
+                  No description provided.
+                </p>
+              )}
+            </div>
           </div>
           <div className="challenge-detail-actions">
             <div className="challenge-detail-action-buttons">
               <button
                 className="challenge-detail-action-button edit"
-                onClick={handleEditDescription}
+                onClick={(e) => {
+                  handleEditChallenge(selectedChallenge, e);
+                }}
                 disabled={
                   deletingChallenge === selectedChallenge._id ||
-                  editingChallengeDescription ||
-                  savingChallengeDescription ||
+                  updatingChallenge === selectedChallenge._id ||
                   completingChallenge === selectedChallenge._id
                 }
               >
-                {savingChallengeDescription ? (
+                {updatingChallenge === selectedChallenge._id ? (
                   <>
                     <Spinner size="sm" />
                     <span>Saving...</span>
-                  </>
-                ) : editingChallengeDescription ? (
-                  <>
-                    <span className="button-icon">✕</span>
-                    <span>Cancel</span>
                   </>
                 ) : (
                   <>
@@ -1486,8 +1454,11 @@ export function ChallengesList({
                       className="challenge-action-button edit"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEditChallenge(challenge, e);
                         setActionModalChallengeId(null);
+                        // Small delay to ensure action modal closes before edit modal opens
+                        setTimeout(() => {
+                          handleEditChallenge(challenge, e);
+                        }, 100);
                       }}
                       disabled={
                         deletingChallenge === challenge._id ||
@@ -1782,6 +1753,355 @@ export function ChallengesList({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Challenge Modal */}
+      {editingChallengeId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setEditingChallengeId(null);
+          }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setEditingChallengeId(null);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+            }}
+          >
+            {(() => {
+              const challenge =
+                skill?.challenges?.find((c) => c._id === editingChallengeId) ||
+                (selectedChallenge?._id === editingChallengeId
+                  ? selectedChallenge
+                  : null);
+              if (!challenge) return null;
+
+              return (
+                <>
+                  <div className="challenge-action-modal-header">
+                    <h3>Edit Challenge</h3>
+                    <button
+                      className="challenge-action-modal-close"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setEditingChallengeId(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    className="edit-form"
+                    onSubmit={(e) => handleUpdateChallenge(challenge._id, e)}
+                  >
+                    <div className="auth-field">
+                      <label htmlFor="edit-challenge-name">Name *</label>
+                      <input
+                        id="edit-challenge-name"
+                        type="text"
+                        value={editChallengeName}
+                        onChange={(e) => setEditChallengeName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label htmlFor="edit-challenge-description">
+                        Description
+                      </label>
+                      <textarea
+                        id="edit-challenge-description"
+                        placeholder="Description (optional)"
+                        value={editChallengeDescription}
+                        onChange={(e) =>
+                          setEditChallengeDescription(e.target.value)
+                        }
+                        rows={4}
+                      />
+                    </div>
+                    <div className="auth-field">
+                      <label htmlFor="edit-challenge-xp">XP Reward *</label>
+                      <input
+                        id="edit-challenge-xp"
+                        type="number"
+                        placeholder="XP Reward"
+                        value={editChallengeXPReward}
+                        onChange={(e) =>
+                          setEditChallengeXPReward(
+                            parseInt(e.target.value) || 5
+                          )
+                        }
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div className="edit-form-actions">
+                      <button
+                        type="button"
+                        className="cancel-button"
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setEditingChallengeId(null);
+                        }}
+                        disabled={updatingChallenge === challenge._id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingChallenge === challenge._id}
+                      >
+                        {updatingChallenge === challenge._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Add Challenge Modal */}
+      {showAddForm && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setShowAddForm(false);
+          }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setShowAddForm(false);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+            }}
+          >
+            <div className="challenge-action-modal-header">
+              <h3>Add Challenge</h3>
+              <button
+                className="challenge-action-modal-close"
+                onClick={() => {
+                  hapticFeedback.light();
+                  setShowAddForm(false);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <form className="edit-form" onSubmit={handleCreateChallenge}>
+              <div className="auth-field">
+                <label htmlFor="new-challenge-name">Name *</label>
+                <input
+                  id="new-challenge-name"
+                  type="text"
+                  placeholder="Challenge name"
+                  value={newChallengeName}
+                  onChange={(e) => setNewChallengeName(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="auth-field">
+                <label htmlFor="new-challenge-description">Description</label>
+                <textarea
+                  id="new-challenge-description"
+                  placeholder="Description (optional)"
+                  value={newChallengeDescription}
+                  onChange={(e) => setNewChallengeDescription(e.target.value)}
+                  rows={4}
+                />
+              </div>
+              <div className="auth-field">
+                <label htmlFor="new-challenge-xp">XP Reward *</label>
+                <input
+                  id="new-challenge-xp"
+                  type="number"
+                  placeholder="XP Reward"
+                  value={newChallengeXPReward}
+                  onChange={(e) =>
+                    setNewChallengeXPReward(parseInt(e.target.value) || 5)
+                  }
+                  min="1"
+                  required
+                />
+              </div>
+              <div className="edit-form-actions">
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => {
+                    hapticFeedback.light();
+                    setShowAddForm(false);
+                  }}
+                  disabled={creatingChallenge}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={creatingChallenge}
+                >
+                  {creatingChallenge ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Challenge Completion Modal */}
+      {completedChallengeId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setCompletedChallengeId(null);
+          }}
+        >
+          <div
+            className="challenge-completion-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const challenge =
+                skill?.challenges?.find(
+                  (c) => c._id === completedChallengeId
+                ) ||
+                (selectedChallenge?._id === completedChallengeId
+                  ? selectedChallenge
+                  : null);
+              if (!challenge) return null;
+
+              return (
+                <>
+                  <div className="challenge-completion-content">
+                    <div className="challenge-completion-icon">🎉</div>
+                    <h2 className="challenge-completion-title">
+                      Challenge Completed!
+                    </h2>
+                    <p className="challenge-completion-name">
+                      {challenge.name}
+                    </p>
+                    <div className="challenge-completion-xp">
+                      +{challenge.xpReward} XP
+                    </div>
+                  </div>
+                  <button
+                    className="challenge-completion-close"
+                    onClick={() => {
+                      hapticFeedback.light();
+                      setCompletedChallengeId(null);
+                    }}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

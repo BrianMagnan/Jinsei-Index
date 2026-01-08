@@ -3,6 +3,8 @@ import { skillAPI, categoryAPI } from "../services/api";
 import type { Skill, Category } from "../types";
 import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
+import { Skeleton } from "./Skeleton";
 import { SkillSkeletonList } from "./SkillSkeleton";
 import { EmptyState } from "./EmptyState";
 import { hapticFeedback } from "../utils/haptic";
@@ -14,6 +16,8 @@ interface SkillsListProps {
   onCategoryUpdate?: () => void;
   onCategoryDelete?: () => void;
   onBackToCategories?: () => void;
+  navDirection?: "forward" | "backward" | null;
+  onAnimationComplete?: () => void;
 }
 
 export function SkillsList({
@@ -22,6 +26,8 @@ export function SkillsList({
   onSkillSelect,
   onCategoryUpdate,
   onBackToCategories,
+  navDirection,
+  onAnimationComplete,
 }: SkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +58,17 @@ export function SkillsList({
   } | null>(null);
   const [swipedSkillId, setSwipedSkillId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  
+  // Swipe to close modal state
+  const [modalSwipeStart, setModalSwipeStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [modalSwipeEnd, setModalSwipeEnd] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [modalSwipeOffset, setModalSwipeOffset] = useState<number>(0);
 
   const loadSkills = async () => {
     try {
@@ -300,14 +317,37 @@ export function SkillsList({
     }
   };
 
+  // Apply animation class based on navigation direction
+  // Swapped: forward (down hierarchy) = slide from right, backward (up) = slide from left
+  const animationClass =
+    navDirection === "forward"
+      ? "slide-in-right"
+      : navDirection === "backward"
+      ? "slide-in-left"
+      : "";
+
+  // Clear animation after it completes
+  useEffect(() => {
+    if (navDirection && onAnimationComplete) {
+      const timer = setTimeout(() => {
+        onAnimationComplete();
+      }, 350); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [navDirection, onAnimationComplete]);
+
   return (
-    <div className="skills-list">
-      <Breadcrumbs
-        category={localCategory || category}
-        skill={null}
-        onCategoriesClick={onBackToCategories}
-        onCategoryClick={undefined}
-      />
+    <div className={`skills-list ${animationClass}`}>
+      {loading ? (
+        <BreadcrumbsSkeleton />
+      ) : (
+        <Breadcrumbs
+          category={localCategory || category}
+          skill={null}
+          onCategoriesClick={onBackToCategories}
+          onCategoryClick={undefined}
+        />
+      )}
       <div className="section-header">
         <div className="header-title-section">
           {editingCategory ? (
@@ -337,6 +377,8 @@ export function SkillsList({
                 </button>
               </div>
             </form>
+          ) : loading ? (
+            <Skeleton width="150px" height="2rem" />
           ) : (
             <h2>{localCategory?.name || category?.name || "Skills"}</h2>
           )}
@@ -510,10 +552,51 @@ export function SkillsList({
             hapticFeedback.light();
             setShowAddForm(false);
           }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setShowAddForm(false);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
         >
           <div
             className="challenge-edit-modal"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+            }}
           >
             <div className="challenge-action-modal-header">
               <h3>Add Skill</h3>
@@ -581,10 +664,51 @@ export function SkillsList({
             hapticFeedback.light();
             setEditingSkillId(null);
           }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setEditingSkillId(null);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
         >
           <div
             className="challenge-edit-modal"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+            }}
           >
             {(() => {
               const skill = skills.find((s) => s._id === editingSkillId);

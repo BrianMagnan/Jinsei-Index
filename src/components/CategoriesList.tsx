@@ -11,11 +11,15 @@ import "../App.css";
 interface CategoriesListProps {
   selectedCategoryId: string | null;
   onCategorySelect: (categoryId: string | null) => void;
+  navDirection?: "forward" | "backward" | null;
+  onAnimationComplete?: () => void;
 }
 
 export function CategoriesList({
   selectedCategoryId,
   onCategorySelect,
+  navDirection,
+  onAnimationComplete,
 }: CategoriesListProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +46,17 @@ export function CategoriesList({
   } | null>(null);
   const [swipedCategoryId, setSwipedCategoryId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  
+  // Swipe to close modal state
+  const [modalSwipeStart, setModalSwipeStart] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [modalSwipeEnd, setModalSwipeEnd] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [modalSwipeOffset, setModalSwipeOffset] = useState<number>(0);
 
   const loadCategories = async () => {
     try {
@@ -213,9 +228,28 @@ export function CategoriesList({
     loadCategories();
   }, []);
 
+  // Clear animation after it completes - must be before early returns
+  useEffect(() => {
+    if (navDirection && onAnimationComplete) {
+      const timer = setTimeout(() => {
+        onAnimationComplete();
+      }, 350); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [navDirection, onAnimationComplete]);
+
+  // Apply animation class based on navigation direction
+  // Swapped: forward (down hierarchy) = slide from right, backward (up) = slide from left
+  const animationClass =
+    navDirection === "forward"
+      ? "slide-in-right"
+      : navDirection === "backward"
+      ? "slide-in-left"
+      : "";
+
   if (loading) {
     return (
-      <div className="categories-list">
+      <div className={`categories-list ${animationClass}`}>
         <Breadcrumbs
           category={null}
           skill={null}
@@ -232,7 +266,7 @@ export function CategoriesList({
   }
 
   return (
-    <div className="categories-list">
+    <div className={`categories-list ${animationClass}`}>
       <Breadcrumbs category={null} skill={null} onCategoriesClick={undefined} />
       <div className="section-header">
         <h2>Categories</h2>
@@ -393,10 +427,51 @@ export function CategoriesList({
             hapticFeedback.light();
             setShowAddForm(false);
           }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setShowAddForm(false);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
         >
           <div
             className="challenge-edit-modal"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+            }}
           >
             <div className="challenge-action-modal-header">
               <h3>Add Category</h3>
@@ -467,10 +542,51 @@ export function CategoriesList({
             hapticFeedback.light();
             setEditingCategoryId(null);
           }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setEditingCategoryId(null);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
         >
           <div
             className="challenge-edit-modal"
             onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+            }}
           >
             {(() => {
               const category = categories.find(

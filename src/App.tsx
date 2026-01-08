@@ -43,6 +43,9 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [navDirection, setNavDirection] = useState<
+    "forward" | "backward" | null
+  >(null);
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -96,12 +99,26 @@ function App() {
   };
 
   const handleCategorySelect = (categoryId: string | null) => {
+    if (categoryId && !selectedCategoryId) {
+      // Going forward (down hierarchy): Categories → Skills
+      setNavDirection("forward");
+    } else if (!categoryId && selectedCategoryId) {
+      // Going backward (up hierarchy): Skills → Categories
+      setNavDirection("backward");
+    }
     setSelectedCategoryId(categoryId);
     setSelectedSkillId(null); // Reset skill selection when category changes
     setSidebarOpen(false); // Close sidebar on mobile when category is selected
   };
 
   const handleSkillSelect = (skillId: string) => {
+    if (skillId && !selectedSkillId) {
+      // Going forward (down hierarchy): Skills → Challenges
+      setNavDirection("forward");
+    } else if (!skillId && selectedSkillId) {
+      // Going backward (up hierarchy): Challenges → Skills
+      setNavDirection("backward");
+    }
     setSelectedSkillId(skillId);
     setSidebarOpen(false); // Close sidebar on mobile when skill is selected
   };
@@ -118,6 +135,9 @@ function App() {
 
   const handleHomeClick = () => {
     // Always navigate to categories (home) and reset all selections
+    if (selectedCategoryId || selectedSkillId) {
+      setNavDirection("backward");
+    }
     setViewMode("main");
     setSelectedCategoryId(null);
     setSelectedSkillId(null);
@@ -211,6 +231,8 @@ function App() {
                   setSelectedCategory(null);
                 }}
                 onBackToCategories={handleHomeClick}
+                navDirection={navDirection}
+                onAnimationComplete={() => setNavDirection(null)}
               />
             )}
             {selectedSkillId && (
@@ -219,16 +241,21 @@ function App() {
                 initialChallengeId={initialChallengeId}
                 onBackToCategory={() => {
                   // Go back to the category's skills page (keep category selected, clear skill)
+                  setNavDirection("backward");
                   setSelectedSkillId(null);
                   setInitialChallengeId(undefined);
                 }}
                 onBackToCategories={handleHomeClick}
+                navDirection={navDirection}
+                onAnimationComplete={() => setNavDirection(null)}
               />
             )}
             {!selectedCategoryId && (
               <CategoriesList
                 selectedCategoryId={selectedCategoryId}
                 onCategorySelect={handleCategorySelect}
+                navDirection={navDirection}
+                onAnimationComplete={() => setNavDirection(null)}
               />
             )}
           </main>
