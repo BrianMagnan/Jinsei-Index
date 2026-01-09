@@ -58,14 +58,17 @@ export function usePullToRefresh({
       
       if (!container) return;
 
-      // Find the scrollable element (could be the container or a child)
-      const scrollableElement = container.querySelector(".pull-to-refresh-content-wrapper") as HTMLElement || container;
+      // Find the scrollable element (the content wrapper)
+      const scrollableElement = container.querySelector(".pull-to-refresh-content-wrapper") as HTMLElement;
+      if (!scrollableElement) return;
+      
       containerRef.current = scrollableElement;
-      scrollTop.current = scrollableElement.scrollTop;
+      const currentScrollTop = scrollableElement.scrollTop;
 
-      // Only start if at the top of the scrollable area
-      if (scrollTop.current <= 5) { // Small threshold for touch precision
+      // Only start if at the top of the scrollable area (with small threshold for touch precision)
+      if (currentScrollTop <= 5) {
         touchStartY.current = e.touches[0].clientY;
+        scrollTop.current = currentScrollTop;
         setState((prev) => ({ ...prev, isPulling: true }));
       }
     },
@@ -78,15 +81,30 @@ export function usePullToRefresh({
         disabled ||
         !state.isPulling ||
         touchStartY.current === null ||
-        state.isRefreshing
+        state.isRefreshing ||
+        !containerRef.current
       )
         return;
+
+      // Continuously check if we're still at the top
+      const currentScrollTop = containerRef.current.scrollTop;
+      
+      // If user has scrolled down, cancel the pull
+      if (currentScrollTop > 5) {
+        setState((prev) => ({
+          ...prev,
+          isPulling: false,
+          pullDistance: 0,
+        }));
+        touchStartY.current = null;
+        return;
+      }
 
       const currentY = e.touches[0].clientY;
       const deltaY = currentY - touchStartY.current;
 
-      // Only allow downward pull
-      if (deltaY > 0 && scrollTop.current <= 0) {
+      // Only allow downward pull when at the top
+      if (deltaY > 0 && currentScrollTop <= 0) {
         e.preventDefault(); // Prevent default scroll behavior
 
         let pullDistance = deltaY;
@@ -108,6 +126,14 @@ export function usePullToRefresh({
           return { ...prev, pullDistance };
         });
         return;
+      } else if (deltaY <= 0) {
+        // User is scrolling up or not pulling down - cancel
+        setState((prev) => ({
+          ...prev,
+          isPulling: false,
+          pullDistance: 0,
+        }));
+        touchStartY.current = null;
       }
     },
     [disabled, state.isPulling, state.isRefreshing, threshold]
