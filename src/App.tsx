@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   categoryAPI,
   getCurrentUser,
@@ -89,11 +89,6 @@ function App() {
       });
     }
   }, [selectedSkillId]);
-
-  // Callbacks for footer actions
-  const challengeFooterActionRef = useRef<((action: string) => void) | null>(
-    null
-  );
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -299,12 +294,6 @@ function App() {
                 navDirection={navDirection}
                 onAnimationComplete={() => setNavDirection(null)}
                 onFooterStateChange={setChallengeFooterState}
-                onFooterAction={(action) => {
-                  const handlers = (window as any).__challengeFooterActions;
-                  if (handlers && handlers[action]) {
-                    handlers[action]();
-                  }
-                }}
               />
             )}
             {!selectedCategoryId && (
