@@ -393,442 +393,440 @@ export function SkillsList({
 
   return (
     <div className={`skills-list ${animationClass}`}>
-        <Breadcrumbs
-          category={displayCategory}
-          skill={null}
-          onCategoriesClick={onBackToCategories}
-          onCategoryClick={undefined}
-        />
-        <div className="section-header">
-          <div className="header-title-section">
-            {editingCategory ? (
-              <form className="edit-form" onSubmit={handleUpdateCategory}>
-                <input
-                  type="text"
-                  value={editCategoryName}
-                  onChange={(e) => setEditCategoryName(e.target.value)}
-                  required
-                  autoFocus
-                />
-                <div className="edit-form-actions">
-                  <button
-                    type="submit"
-                    className="save-button"
-                    disabled={updatingCategory}
-                  >
-                    {updatingCategory ? <Spinner size="sm" /> : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    className="cancel-button"
-                    onClick={() => setEditingCategory(false)}
-                    disabled={updatingCategory}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <h2>{displayCategory?.name || "Skills"}</h2>
-            )}
-          </div>
+      <Breadcrumbs
+        category={displayCategory}
+        skill={null}
+        onCategoriesClick={onBackToCategories}
+        onCategoryClick={undefined}
+      />
+      <div className="section-header">
+        <div className="header-title-section">
+          {editingCategory ? (
+            <form className="edit-form" onSubmit={handleUpdateCategory}>
+              <input
+                type="text"
+                value={editCategoryName}
+                onChange={(e) => setEditCategoryName(e.target.value)}
+                required
+                autoFocus
+              />
+              <div className="edit-form-actions">
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={updatingCategory}
+                >
+                  {updatingCategory ? <Spinner size="sm" /> : "Save"}
+                </button>
+                <button
+                  type="button"
+                  className="cancel-button"
+                  onClick={() => setEditingCategory(false)}
+                  disabled={updatingCategory}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <h2>{displayCategory?.name || "Skills"}</h2>
+          )}
         </div>
+      </div>
 
-        {skills.length === 0 ? (
-          <EmptyState
-            icon="🎯"
-            title="No Skills Yet"
-            message="Skills help you track your progress in different areas. Add your first skill to start building your journey!"
-            actionLabel="Add Skill"
-            onAction={() => setShowAddForm(true)}
-          />
-        ) : (
-          <ul className="skill-list">
-            {skills.map((skill) => (
-              <li
-                key={skill._id}
-                className={`skill-item ${
-                  draggedSkillId === skill._id ? "dragging" : ""
-                } ${dragOverSkillId === skill._id ? "drag-over" : ""} ${
-                  swipedSkillId === skill._id ? "swiping" : ""
-                }`}
-                draggable={true}
-                onDragStart={() => handleDragStart(skill._id)}
-                onDragOver={(e) => handleDragOver(e, skill._id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, skill._id)}
-                onDragEnd={handleDragEnd}
-                onClick={() => {
-                  onSkillSelect(skill._id);
-                }}
-                onTouchStart={(e) => {
-                  setItemSwipeStart({
-                    x: e.touches[0].clientX,
-                    y: e.touches[0].clientY,
-                    skillId: skill._id,
-                  });
-                  setItemSwipeEnd(null);
-                  setSwipeOffset(0);
-                }}
-                onTouchMove={(e) => {
-                  if (itemSwipeStart && itemSwipeStart.skillId === skill._id) {
-                    const currentX = e.touches[0].clientX;
-                    const currentY = e.touches[0].clientY;
-                    setItemSwipeEnd({ x: currentX, y: currentY });
+      {skills.length === 0 ? (
+        <EmptyState
+          icon="🎯"
+          title="No Skills Yet"
+          message="Skills help you track your progress in different areas. Add your first skill to start building your journey!"
+          actionLabel="Add Skill"
+          onAction={() => setShowAddForm(true)}
+        />
+      ) : (
+        <ul className="skill-list">
+          {skills.map((skill) => (
+            <li
+              key={skill._id}
+              className={`skill-item ${
+                draggedSkillId === skill._id ? "dragging" : ""
+              } ${dragOverSkillId === skill._id ? "drag-over" : ""} ${
+                swipedSkillId === skill._id ? "swiping" : ""
+              }`}
+              draggable={true}
+              onDragStart={() => handleDragStart(skill._id)}
+              onDragOver={(e) => handleDragOver(e, skill._id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, skill._id)}
+              onDragEnd={handleDragEnd}
+              onClick={() => {
+                onSkillSelect(skill._id);
+              }}
+              onTouchStart={(e) => {
+                setItemSwipeStart({
+                  x: e.touches[0].clientX,
+                  y: e.touches[0].clientY,
+                  skillId: skill._id,
+                });
+                setItemSwipeEnd(null);
+                setSwipeOffset(0);
+              }}
+              onTouchMove={(e) => {
+                if (itemSwipeStart && itemSwipeStart.skillId === skill._id) {
+                  const currentX = e.touches[0].clientX;
+                  const currentY = e.touches[0].clientY;
+                  setItemSwipeEnd({ x: currentX, y: currentY });
 
-                    // Calculate swipe offset for visual feedback
-                    const deltaX = currentX - itemSwipeStart.x;
-                    const deltaY = Math.abs(currentY - itemSwipeStart.y);
+                  // Calculate swipe offset for visual feedback
+                  const deltaX = currentX - itemSwipeStart.x;
+                  const deltaY = Math.abs(currentY - itemSwipeStart.y);
 
-                    // Only allow horizontal swipes (ignore if vertical movement is too large)
-                    if (deltaY < 30) {
-                      setSwipeOffset(deltaX);
-                      setSwipedSkillId(skill._id);
-                    }
+                  // Only allow horizontal swipes (ignore if vertical movement is too large)
+                  if (deltaY < 30) {
+                    setSwipeOffset(deltaX);
+                    setSwipedSkillId(skill._id);
                   }
-                }}
-                onTouchEnd={() => {
-                  if (
-                    itemSwipeStart &&
-                    itemSwipeStart.skillId === skill._id &&
-                    itemSwipeEnd
-                  ) {
-                    const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
-                    const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
-                    const minSwipeDistance = 80;
-
-                    // Only handle horizontal swipes
-                    if (deltaY < 50 && Math.abs(deltaX) > minSwipeDistance) {
-                      if (deltaX < 0) {
-                        // Swipe left - delete
-                        hapticFeedback.medium();
-                        handleDeleteSkill(skill._id, skill.name, {
-                          stopPropagation: () => {},
-                        } as React.MouseEvent);
-                      }
-                    }
-                  }
-
-                  // Reset swipe state
-                  setItemSwipeStart(null);
-                  setItemSwipeEnd(null);
-                  setSwipedSkillId(null);
-                  setSwipeOffset(0);
-                }}
-                onTouchCancel={() => {
-                  setItemSwipeStart(null);
-                  setItemSwipeEnd(null);
-                  setSwipedSkillId(null);
-                  setSwipeOffset(0);
-                }}
-                style={{
-                  transform:
-                    swipedSkillId === skill._id
-                      ? `translateX(${Math.max(
-                          -100,
-                          Math.min(100, swipeOffset)
-                        )}px)`
-                      : undefined,
-                  transition:
-                    swipedSkillId === skill._id
-                      ? "none"
-                      : "transform 0.2s ease-out",
-                }}
-              >
-                <>
-                  <div className="skill-content">
-                    <div className="skill-header">
-                      <div className="skill-name">{skill.name}</div>
-                    </div>
-                    {skill.description && (
-                      <div className="skill-description">
-                        {skill.description}
-                      </div>
-                    )}
-                    {/* Swipe action indicators */}
-                    {swipedSkillId === skill._id && (
-                      <>
-                        {swipeOffset < 0 && (
-                          <div className="challenge-swipe-indicator swipe-delete">
-                            <span className="swipe-icon">🗑️</span>
-                            <span className="swipe-text">Delete</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                  <button
-                    className="edit-button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditSkill(skill, e);
-                    }}
-                    title="Edit skill"
-                    disabled={
-                      deletingSkill === skill._id || updatingSkill === skill._id
-                    }
-                  >
-                    ✎
-                  </button>
-                </>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Add Skill Modal */}
-        {showAddForm && (
-          <div
-            className="challenge-edit-modal-overlay"
-            onClick={() => {
-              hapticFeedback.light();
-              setShowAddForm(false);
-              if (onShowAddFormChange) onShowAddFormChange(false);
-            }}
-            onTouchStart={(e) => {
-              setModalSwipeStart({
-                x: e.touches[0].clientX,
-                y: e.touches[0].clientY,
-              });
-              setModalSwipeEnd(null);
-              setModalSwipeOffset(0);
-            }}
-            onTouchMove={(e) => {
-              if (modalSwipeStart) {
-                const currentY = e.touches[0].clientY;
-                const currentX = e.touches[0].clientX;
-                setModalSwipeEnd({ x: currentX, y: currentY });
-                const deltaY = currentY - modalSwipeStart.y;
-                const deltaX = Math.abs(currentX - modalSwipeStart.x);
-                // Only allow vertical swipes down
-                if (deltaY > 0 && deltaY > deltaX) {
-                  setModalSwipeOffset(deltaY);
                 }
+              }}
+              onTouchEnd={() => {
+                if (
+                  itemSwipeStart &&
+                  itemSwipeStart.skillId === skill._id &&
+                  itemSwipeEnd
+                ) {
+                  const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
+                  const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
+                  const minSwipeDistance = 80;
+
+                  // Only handle horizontal swipes
+                  if (deltaY < 50 && Math.abs(deltaX) > minSwipeDistance) {
+                    if (deltaX < 0) {
+                      // Swipe left - delete
+                      hapticFeedback.medium();
+                      handleDeleteSkill(skill._id, skill.name, {
+                        stopPropagation: () => {},
+                      } as React.MouseEvent);
+                    }
+                  }
+                }
+
+                // Reset swipe state
+                setItemSwipeStart(null);
+                setItemSwipeEnd(null);
+                setSwipedSkillId(null);
+                setSwipeOffset(0);
+              }}
+              onTouchCancel={() => {
+                setItemSwipeStart(null);
+                setItemSwipeEnd(null);
+                setSwipedSkillId(null);
+                setSwipeOffset(0);
+              }}
+              style={{
+                transform:
+                  swipedSkillId === skill._id
+                    ? `translateX(${Math.max(
+                        -100,
+                        Math.min(100, swipeOffset)
+                      )}px)`
+                    : undefined,
+                transition:
+                  swipedSkillId === skill._id
+                    ? "none"
+                    : "transform 0.2s ease-out",
+              }}
+            >
+              <>
+                <div className="skill-content">
+                  <div className="skill-header">
+                    <div className="skill-name">{skill.name}</div>
+                  </div>
+                  {skill.description && (
+                    <div className="skill-description">{skill.description}</div>
+                  )}
+                  {/* Swipe action indicators */}
+                  {swipedSkillId === skill._id && (
+                    <>
+                      {swipeOffset < 0 && (
+                        <div className="challenge-swipe-indicator swipe-delete">
+                          <span className="swipe-icon">🗑️</span>
+                          <span className="swipe-text">Delete</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <button
+                  className="edit-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditSkill(skill, e);
+                  }}
+                  title="Edit skill"
+                  disabled={
+                    deletingSkill === skill._id || updatingSkill === skill._id
+                  }
+                >
+                  ✎
+                </button>
+              </>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Add Skill Modal */}
+      {showAddForm && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setShowAddForm(false);
+            if (onShowAddFormChange) onShowAddFormChange(false);
+          }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
               }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setShowAddForm(false);
+                if (onShowAddFormChange) onShowAddFormChange(false);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+        >
+          <div
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
             }}
-            onTouchEnd={() => {
-              if (modalSwipeStart && modalSwipeEnd) {
-                const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
-                const minSwipeDistance = 100;
-                if (deltaY > minSwipeDistance) {
+          >
+            <div className="challenge-action-modal-header">
+              <h3>Add Skill</h3>
+              <button
+                className="challenge-action-modal-close"
+                onClick={() => {
                   hapticFeedback.light();
                   setShowAddForm(false);
                   if (onShowAddFormChange) onShowAddFormChange(false);
-                }
-              }
-              setModalSwipeStart(null);
-              setModalSwipeEnd(null);
-              setModalSwipeOffset(0);
-            }}
-          >
-            <div
-              className="challenge-edit-modal"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                transform:
-                  modalSwipeOffset > 0
-                    ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
-                    : undefined,
-                transition:
-                  modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
-              }}
-            >
-              <div className="challenge-action-modal-header">
-                <h3>Add Skill</h3>
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <form className="edit-form" onSubmit={handleCreateSkill}>
+              <div className="auth-field">
+                <label htmlFor="new-skill-name">Name *</label>
+                <input
+                  id="new-skill-name"
+                  type="text"
+                  placeholder="Skill name"
+                  value={newSkillName}
+                  onChange={(e) => setNewSkillName(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="edit-form-actions">
                 <button
-                  className="challenge-action-modal-close"
+                  type="button"
+                  className="cancel-button"
                   onClick={() => {
                     hapticFeedback.light();
                     setShowAddForm(false);
                     if (onShowAddFormChange) onShowAddFormChange(false);
                   }}
-                  aria-label="Close"
+                  disabled={creatingSkill}
                 >
-                  ×
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="save-button"
+                  disabled={creatingSkill}
+                >
+                  {creatingSkill ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    "Add"
+                  )}
                 </button>
               </div>
-              <form className="edit-form" onSubmit={handleCreateSkill}>
-                <div className="auth-field">
-                  <label htmlFor="new-skill-name">Name *</label>
-                  <input
-                    id="new-skill-name"
-                    type="text"
-                    placeholder="Skill name"
-                    value={newSkillName}
-                    onChange={(e) => setNewSkillName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-                <div className="edit-form-actions">
-                  <button
-                    type="button"
-                    className="cancel-button"
-                    onClick={() => {
-                      hapticFeedback.light();
-                      setShowAddForm(false);
-                      if (onShowAddFormChange) onShowAddFormChange(false);
-                    }}
-                    disabled={creatingSkill}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="save-button"
-                    disabled={creatingSkill}
-                  >
-                    {creatingSkill ? (
-                      <>
-                        <Spinner size="sm" />
-                        <span>Adding...</span>
-                      </>
-                    ) : (
-                      "Add"
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Edit Skill Modal */}
-        {editingSkillId && (
+      {/* Edit Skill Modal */}
+      {editingSkillId && (
+        <div
+          className="challenge-edit-modal-overlay"
+          onClick={() => {
+            hapticFeedback.light();
+            setEditingSkillId(null);
+          }}
+          onTouchStart={(e) => {
+            setModalSwipeStart({
+              x: e.touches[0].clientX,
+              y: e.touches[0].clientY,
+            });
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+          onTouchMove={(e) => {
+            if (modalSwipeStart) {
+              const currentY = e.touches[0].clientY;
+              const currentX = e.touches[0].clientX;
+              setModalSwipeEnd({ x: currentX, y: currentY });
+              const deltaY = currentY - modalSwipeStart.y;
+              const deltaX = Math.abs(currentX - modalSwipeStart.x);
+              // Only allow vertical swipes down
+              if (deltaY > 0 && deltaY > deltaX) {
+                setModalSwipeOffset(deltaY);
+              }
+            }
+          }}
+          onTouchEnd={() => {
+            if (modalSwipeStart && modalSwipeEnd) {
+              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
+              const minSwipeDistance = 100;
+              if (deltaY > minSwipeDistance) {
+                hapticFeedback.light();
+                setEditingSkillId(null);
+              }
+            }
+            setModalSwipeStart(null);
+            setModalSwipeEnd(null);
+            setModalSwipeOffset(0);
+          }}
+        >
           <div
-            className="challenge-edit-modal-overlay"
-            onClick={() => {
-              hapticFeedback.light();
-              setEditingSkillId(null);
-            }}
-            onTouchStart={(e) => {
-              setModalSwipeStart({
-                x: e.touches[0].clientX,
-                y: e.touches[0].clientY,
-              });
-              setModalSwipeEnd(null);
-              setModalSwipeOffset(0);
-            }}
-            onTouchMove={(e) => {
-              if (modalSwipeStart) {
-                const currentY = e.touches[0].clientY;
-                const currentX = e.touches[0].clientX;
-                setModalSwipeEnd({ x: currentX, y: currentY });
-                const deltaY = currentY - modalSwipeStart.y;
-                const deltaX = Math.abs(currentX - modalSwipeStart.x);
-                // Only allow vertical swipes down
-                if (deltaY > 0 && deltaY > deltaX) {
-                  setModalSwipeOffset(deltaY);
-                }
-              }
-            }}
-            onTouchEnd={() => {
-              if (modalSwipeStart && modalSwipeEnd) {
-                const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
-                const minSwipeDistance = 100;
-                if (deltaY > minSwipeDistance) {
-                  hapticFeedback.light();
-                  setEditingSkillId(null);
-                }
-              }
-              setModalSwipeStart(null);
-              setModalSwipeEnd(null);
-              setModalSwipeOffset(0);
+            className="challenge-edit-modal"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              transform:
+                modalSwipeOffset > 0
+                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
+                  : undefined,
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
             }}
           >
-            <div
-              className="challenge-edit-modal"
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                transform:
-                  modalSwipeOffset > 0
-                    ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
-                    : undefined,
-                transition:
-                  modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
-              }}
-            >
-              {(() => {
-                const skill = skills.find((s) => s._id === editingSkillId);
-                if (!skill) return null;
+            {(() => {
+              const skill = skills.find((s) => s._id === editingSkillId);
+              if (!skill) return null;
 
-                return (
-                  <>
-                    <div className="challenge-action-modal-header">
-                      <h3>Edit Skill</h3>
+              return (
+                <>
+                  <div className="challenge-action-modal-header">
+                    <h3>Edit Skill</h3>
+                    <button
+                      className="challenge-action-modal-close"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setEditingSkillId(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <form
+                    className="edit-form"
+                    onSubmit={(e) => handleUpdateSkill(skill._id, e)}
+                  >
+                    <div className="auth-field">
+                      <label htmlFor="edit-skill-name">Name *</label>
+                      <input
+                        id="edit-skill-name"
+                        type="text"
+                        value={editSkillName}
+                        onChange={(e) => setEditSkillName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <div className="edit-form-actions">
                       <button
-                        className="challenge-action-modal-close"
+                        type="button"
+                        className="cancel-button"
                         onClick={() => {
                           hapticFeedback.light();
                           setEditingSkillId(null);
                         }}
-                        aria-label="Close"
+                        disabled={updatingSkill === skill._id}
                       >
-                        ×
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="save-button"
+                        disabled={updatingSkill === skill._id}
+                      >
+                        {updatingSkill === skill._id ? (
+                          <>
+                            <Spinner size="sm" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          "Save"
+                        )}
                       </button>
                     </div>
-                    <form
-                      className="edit-form"
-                      onSubmit={(e) => handleUpdateSkill(skill._id, e)}
-                    >
-                      <div className="auth-field">
-                        <label htmlFor="edit-skill-name">Name *</label>
-                        <input
-                          id="edit-skill-name"
-                          type="text"
-                          value={editSkillName}
-                          onChange={(e) => setEditSkillName(e.target.value)}
-                          required
-                          autoFocus
-                        />
-                      </div>
-                      <div className="edit-form-actions">
-                        <button
-                          type="button"
-                          className="cancel-button"
-                          onClick={() => {
-                            hapticFeedback.light();
-                            setEditingSkillId(null);
-                          }}
-                          disabled={updatingSkill === skill._id}
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          className="save-button"
-                          disabled={updatingSkill === skill._id}
-                        >
-                          {updatingSkill === skill._id ? (
-                            <>
-                              <Spinner size="sm" />
-                              <span>Saving...</span>
-                            </>
-                          ) : (
-                            "Save"
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                  </>
-                );
-              })()}
-            </div>
+                  </form>
+                </>
+              );
+            })()}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Delete Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={deleteConfirmation.isOpen}
-          onClose={() =>
-            setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
-          }
-          onConfirm={handleConfirmDelete}
-          title="Delete Skill?"
-          message={`Are you sure you want to delete "${deleteConfirmation.skillName}"? This will also delete all associated challenges.`}
-          confirmText="Delete"
-          cancelText="Cancel"
-          variant="danger"
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={handleConfirmDelete}
+        title="Delete Skill?"
+        message={`Are you sure you want to delete "${deleteConfirmation.skillName}"? This will also delete all associated challenges.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
         loading={deletingSkill === deleteConfirmation.skillId}
       />
     </div>

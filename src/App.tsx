@@ -20,6 +20,7 @@ import { TodoList } from "./components/TodoList";
 import { DailyList } from "./components/DailyList";
 import { Spinner } from "./components/Spinner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { NetworkStatusIndicator } from "./components/NetworkStatusIndicator";
 import { hapticFeedback } from "./utils/haptic";
 import type { Category, Profile } from "./types";
 import "./App.css";
@@ -249,6 +250,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="app">
+        <NetworkStatusIndicator />
         {viewMode === "main" ? (
           <>
             <ErrorBoundary>
