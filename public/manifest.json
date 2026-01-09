@@ -1,0 +1,49 @@
+{
+  "name": "Jinsei Index",
+  "short_name": "Jinsei",
+  "description": "Track your skills, challenges, and achievements",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0ea5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "education"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Categories",
+      "short_name": "Categories",
+      "description": "View all categories",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Todo List",
+      "short_name": "Todo",
+      "description": "View todo list",
+      "url": "/todo",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Daily List",
+      "short_name": "Daily",
+      "description": "View daily list",
+      "url": "/daily",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
