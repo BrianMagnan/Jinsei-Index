@@ -111,8 +111,16 @@ export async function lockOrientationToPortrait(): Promise<void> {
         lockAttempts = 0; // Reset on success
         return;
       } catch (error: any) {
-        // Lock may fail if not in fullscreen or without user gesture
-        console.warn('[OrientationLock] Could not lock orientation:', error?.message || error);
+        // Lock may fail if API is not available on this device/browser
+        // This is expected on iOS and some Android browsers
+        const errorMsg = error?.message || String(error);
+        if (errorMsg.includes('not available') || errorMsg.includes('not supported')) {
+          // Silently handle "not available" errors - this is expected on many devices
+          // We'll rely on manifest.json orientation setting and CSS fallback
+          console.log('[OrientationLock] Orientation lock API not available - using manifest and CSS fallback');
+        } else {
+          console.warn('[OrientationLock] Could not lock orientation:', errorMsg);
+        }
         
         // Some browsers require fullscreen mode for orientation lock
         // Try fullscreen as a last resort (only on user interaction)
@@ -138,8 +146,13 @@ export async function lockOrientationToPortrait(): Promise<void> {
                 console.log('[OrientationLock] Successfully locked to portrait after fullscreen');
                 lockAttempts = 0;
                 return;
-              } catch (e3) {
-                console.warn('[OrientationLock] Still could not lock after fullscreen');
+              } catch (e3: any) {
+                const e3Msg = e3?.message || String(e3);
+                if (e3Msg.includes('not available') || e3Msg.includes('not supported')) {
+                  console.log('[OrientationLock] Orientation lock not available on this device');
+                } else {
+                  console.warn('[OrientationLock] Still could not lock after fullscreen');
+                }
               }
             }
           }
@@ -182,7 +195,9 @@ export async function lockOrientationToPortrait(): Promise<void> {
       console.warn('[OrientationLock] msLockOrientation failed:', e);
     }
   } else {
-    console.warn('[OrientationLock] No orientation lock API available');
+    // No orientation lock API available - this is expected on iOS and some browsers
+    // The manifest.json orientation setting and CSS will handle it
+    console.log('[OrientationLock] No orientation lock API available - using manifest and CSS fallback');
   }
 }
 
