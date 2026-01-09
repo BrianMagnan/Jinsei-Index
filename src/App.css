@@ -5842,6 +5842,73 @@ button:disabled .spinner,
   }
 }
 
+/* Landscape Lock Styles */
+.landscape-lock {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-dark) 0%,
+    var(--color-bg-darker) 100%
+  );
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  padding-top: calc(var(--spacing-xl) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(var(--spacing-xl) + env(safe-area-inset-left, 0px));
+  padding-right: calc(var(--spacing-xl) + env(safe-area-inset-right, 0px));
+}
+
+.landscape-lock-content {
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+
+.landscape-lock-icon {
+  font-size: 4rem;
+  animation: rotate 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes rotate {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-90deg);
+  }
+  75% {
+    transform: rotate(90deg);
+  }
+}
+
+.landscape-lock-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  text-shadow: 0 0 15px var(--color-primary-glow);
+  margin: 0;
+}
+
+.landscape-lock-message {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* Error Boundary Styles */
 .error-boundary {
   display: flex;
