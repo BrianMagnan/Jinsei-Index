@@ -7,6 +7,7 @@ interface ScreenOrientationLock extends ScreenOrientation {
 
 /**
  * Lock screen orientation to portrait on mobile devices
+ * Uses 'portrait-primary' for better compatibility
  */
 export function lockOrientationToPortrait(): void {
   // Check if we're on a mobile device
@@ -23,22 +24,41 @@ export function lockOrientationToPortrait(): void {
   // Try to lock orientation using Screen Orientation API
   const orientation = screen.orientation as ScreenOrientationLock;
   if (orientation && typeof orientation.lock === 'function') {
-    orientation.lock('portrait').catch((error: Error) => {
-      // Lock may fail if not in fullscreen or without user gesture
-      // This is expected behavior - we'll handle it gracefully
-      console.log('[OrientationLock] Could not lock orientation:', error.message);
+    const lockFn = orientation.lock;
+    // Try portrait-primary first (more specific, better support)
+    lockFn('portrait-primary').catch(() => {
+      // Fallback to portrait if portrait-primary fails
+      if (typeof lockFn === 'function') {
+        lockFn('portrait').catch((error: Error) => {
+          // Lock may fail if not in fullscreen or without user gesture
+          // This is expected behavior - we'll handle it gracefully
+          console.log('[OrientationLock] Could not lock orientation:', error.message);
+        });
+      }
     });
   } 
   // Fallback for older browsers
   else if ((screen as any).lockOrientation) {
-    (screen as any).lockOrientation('portrait');
+    try {
+      (screen as any).lockOrientation('portrait');
+    } catch (e) {
+      // Silently fail
+    }
   } 
   // Another fallback
   else if ((screen as any).mozLockOrientation) {
-    (screen as any).mozLockOrientation('portrait');
+    try {
+      (screen as any).mozLockOrientation('portrait');
+    } catch (e) {
+      // Silently fail
+    }
   } 
   else if ((screen as any).msLockOrientation) {
-    (screen as any).msLockOrientation('portrait');
+    try {
+      (screen as any).msLockOrientation('portrait');
+    } catch (e) {
+      // Silently fail
+    }
   }
 }
 

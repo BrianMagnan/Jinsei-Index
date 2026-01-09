@@ -16,20 +16,36 @@ if (import.meta.env.PROD) {
 
 // Lock orientation to portrait on mobile devices
 // Note: Some browsers require user interaction before locking
-// We'll try on load, and also on first user interaction
 if (typeof window !== 'undefined') {
   // Try immediately (may fail without user gesture)
   lockOrientationToPortrait();
   
-  // Also try on first user interaction
+  // Try on first user interaction (required by some browsers)
   const lockOnInteraction = () => {
     lockOrientationToPortrait();
-    document.removeEventListener('touchstart', lockOnInteraction);
-    document.removeEventListener('click', lockOnInteraction);
   };
   
-  document.addEventListener('touchstart', lockOnInteraction, { once: true });
+  // Try on multiple interaction types
+  document.addEventListener('touchstart', lockOnInteraction, { once: true, passive: true });
   document.addEventListener('click', lockOnInteraction, { once: true });
+  document.addEventListener('mousedown', lockOnInteraction, { once: true });
+  
+  // Re-lock on orientation change (in case it gets unlocked)
+  window.addEventListener('orientationchange', () => {
+    // Small delay to ensure orientation change is complete
+    setTimeout(() => {
+      lockOrientationToPortrait();
+    }, 100);
+  });
+  
+  // Also listen to screen orientation API changes
+  if (screen.orientation) {
+    screen.orientation.addEventListener('change', () => {
+      setTimeout(() => {
+        lockOrientationToPortrait();
+      }, 100);
+    });
+  }
 }
 
 createRoot(document.getElementById("root")!).render(

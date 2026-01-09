@@ -5887,6 +5887,23 @@ button:disabled .spinner,
   transform-origin: center;
 }
 
+/* Prevent rotation on mobile devices - CSS fallback */
+@media screen and (max-width: 768px) {
+  @media (orientation: landscape) {
+    html, body {
+      transform: rotate(-90deg);
+      transform-origin: center center;
+      width: 100vh;
+      height: 100vw;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin-left: -50vh;
+      margin-top: -50vw;
+    }
+  }
+}
+
 @keyframes rotate {
   0%,
   100% {
