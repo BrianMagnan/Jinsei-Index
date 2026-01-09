@@ -1,7 +1,7 @@
 // Service Worker for Jinsei Index PWA
-const CACHE_NAME = 'jinsei-index-v2';
-const API_CACHE_NAME = 'jinsei-index-api-v2';
-const STATIC_CACHE_NAME = 'jinsei-index-static-v2';
+const CACHE_NAME = 'jinsei-index-v3';
+const API_CACHE_NAME = 'jinsei-index-api-v3';
+const STATIC_CACHE_NAME = 'jinsei-index-static-v3';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
