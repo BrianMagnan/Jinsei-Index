@@ -88,8 +88,9 @@ export function usePullToRefresh({
 
       // Continuously check if we're still at the top
       const currentScrollTop = containerRef.current.scrollTop;
+      const previousScrollTop = scrollTop.current;
       
-      // If user has scrolled down, cancel the pull
+      // If user has scrolled down (scrollTop increased), cancel the pull
       if (currentScrollTop > 5) {
         setState((prev) => ({
           ...prev,
@@ -100,11 +101,24 @@ export function usePullToRefresh({
         return;
       }
 
+      // If scroll position decreased (scrolling up), cancel immediately
+      if (currentScrollTop < previousScrollTop) {
+        setState((prev) => ({
+          ...prev,
+          isPulling: false,
+          pullDistance: 0,
+        }));
+        touchStartY.current = null;
+        scrollTop.current = currentScrollTop;
+        return;
+      }
+
       const currentY = e.touches[0].clientY;
       const deltaY = currentY - touchStartY.current;
 
-      // Only allow downward pull when at the top
-      if (deltaY > 0 && currentScrollTop <= 0) {
+      // Only allow downward pull when at the top and user is actually pulling down
+      // Require minimum pull distance to avoid accidental triggers
+      if (deltaY > 10 && currentScrollTop <= 0) {
         e.preventDefault(); // Prevent default scroll behavior
 
         let pullDistance = deltaY;
@@ -125,15 +139,18 @@ export function usePullToRefresh({
           }
           return { ...prev, pullDistance };
         });
+        // Update scroll position reference
+        scrollTop.current = currentScrollTop;
         return;
-      } else if (deltaY <= 0) {
-        // User is scrolling up or not pulling down - cancel
+      } else if (deltaY <= 0 || currentScrollTop > 0) {
+        // User is scrolling up, not pulling down, or has scrolled - cancel immediately
         setState((prev) => ({
           ...prev,
           isPulling: false,
           pullDistance: 0,
         }));
         touchStartY.current = null;
+        scrollTop.current = currentScrollTop;
       }
     },
     [disabled, state.isPulling, state.isRefreshing, threshold]
