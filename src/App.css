@@ -109,6 +109,11 @@ body {
   color: var(--color-text-primary);
   height: 100vh;
   overflow: hidden;
+  /* Add safe area insets for PWA */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 .app {
@@ -155,6 +160,7 @@ body {
 
 .sidebar-header {
   padding: var(--spacing-lg);
+  padding-top: calc(var(--spacing-lg) + env(safe-area-inset-top, 0px));
   border-bottom: 2px solid var(--color-border-primary);
   background: var(--color-primary-light);
   box-shadow: var(--shadow-sm);
@@ -522,6 +528,7 @@ body {
 .app-main {
   flex: 1;
   padding: var(--spacing-md);
+  padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
   overflow: hidden;
   background: linear-gradient(
     135deg,
@@ -5768,8 +5775,8 @@ button:disabled .spinner,
 /* Network Status Indicator */
 .network-status-indicator {
   position: fixed;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
+  top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+  right: calc(var(--spacing-md) + env(safe-area-inset-right, 0px));
   z-index: 10000;
   display: flex;
   align-items: center;
@@ -5824,8 +5831,8 @@ button:disabled .spinner,
 /* Mobile Network Status Indicator */
 @media (max-width: 768px) {
   .network-status-indicator {
-    top: env(safe-area-inset-top, var(--spacing-md));
-    right: var(--spacing-md);
+    top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+    right: calc(var(--spacing-md) + env(safe-area-inset-right, 0px));
     font-size: var(--font-size-xs);
     padding: var(--spacing-xs) var(--spacing-sm);
   }
