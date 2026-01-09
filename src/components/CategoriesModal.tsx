@@ -6,6 +6,7 @@ import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { hapticFeedback } from "../utils/haptic";
+import { useToast } from "../contexts/ToastContext";
 import "../App.css";
 
 interface CategoriesModalProps {
@@ -23,6 +24,7 @@ export function CategoriesModal({
   onCategorySelect,
   onAddCategory,
 }: CategoriesModalProps) {
+  const toast = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -115,7 +117,9 @@ export function CategoriesModal({
       }
     } catch (err) {
       hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to create category");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to create category"
+      );
     } finally {
       setCreatingCategory(false);
     }
@@ -148,7 +152,9 @@ export function CategoriesModal({
       hapticFeedback.success();
     } catch (err) {
       hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to update category");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to update category"
+      );
     } finally {
       setUpdatingCategory(null);
     }
@@ -195,7 +201,9 @@ export function CategoriesModal({
       hapticFeedback.success();
     } catch (err) {
       hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to delete category");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to delete category"
+      );
     } finally {
       setDeletingCategory(null);
     }

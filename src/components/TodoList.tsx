@@ -10,7 +10,9 @@ import type { TodoItem } from "../types";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
 import { TodoSkeletonList } from "./TodoSkeleton";
+import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
+import { useToast } from "../contexts/ToastContext";
 import "../App.css";
 
 interface TodoListProps {
@@ -22,6 +24,7 @@ interface TodoListProps {
 }
 
 export function TodoList({ onNavigateToChallenge }: TodoListProps) {
+  const toast = useToast();
   const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -59,13 +62,13 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
         try {
           const challenge = await challengeAPI.getById(challengeId);
           hapticFeedback.success();
-          alert(
+          toast.showSuccess(
             `Challenge "${item.challengeName}" completed! +${challenge.xpReward} XP`
           );
         } catch {
           // If fetching challenge fails, still show success
           hapticFeedback.success();
-          alert(`Challenge "${item.challengeName}" completed!`);
+          toast.showSuccess(`Challenge "${item.challengeName}" completed!`);
         }
 
         // Update todo item as completed
@@ -73,7 +76,7 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
         loadTodoItems();
       } catch (err) {
         hapticFeedback.error();
-        alert(
+        toast.showError(
           err instanceof Error ? err.message : "Failed to complete challenge"
         );
       } finally {
@@ -138,10 +141,11 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
   }
 
   return (
-    <div className="todo-list-container">
-      <div className="todo-list-header">
-        <h1 className="todo-list-title">To-Do List</h1>
-        {todoItems.length > 0 && (
+    <PullToRefresh onRefresh={loadTodoItems} disabled={loading}>
+      <div className="todo-list-container">
+        <div className="todo-list-header">
+          <h1 className="todo-list-title">To-Do List</h1>
+          {todoItems.length > 0 && (
           <div className="todo-list-stats">
             <span className="todo-stat">
               {activeItems.length} active
@@ -291,6 +295,7 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
           )}
         </>
       )}
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

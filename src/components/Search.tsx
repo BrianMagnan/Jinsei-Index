@@ -10,6 +10,7 @@ export interface SearchResult {
   categoryName?: string;
   skillId?: string;
   skillName?: string;
+  completed?: boolean;
   [key: string]: any;
 }
 

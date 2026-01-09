@@ -6,6 +6,7 @@ import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { hapticFeedback } from "../utils/haptic";
+import { useToast } from "../contexts/ToastContext";
 
 interface SidebarProps {
   selectedCategoryId: string | null;
@@ -34,6 +35,7 @@ export function Sidebar({
   searchOpen: externalSearchOpen,
   onSearchToggle,
 }: SidebarProps) {
+  const toast = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
@@ -310,7 +312,9 @@ export function Sidebar({
 
       await loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to create category");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to create category"
+      );
     } finally {
       setCreatingCategory(false);
     }
@@ -343,7 +347,9 @@ export function Sidebar({
       hapticFeedback.success();
     } catch (err) {
       hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to update category");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to update category"
+      );
     } finally {
       setUpdatingCategory(null);
     }
@@ -387,7 +393,9 @@ export function Sidebar({
       }
       await loadCategories();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete category");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to delete category"
+      );
     } finally {
       setDeletingCategory(null);
     }

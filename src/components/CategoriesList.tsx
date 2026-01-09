@@ -8,7 +8,9 @@ import { Skeleton } from "./Skeleton";
 import { EmptyState } from "./EmptyState";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ConfirmationModal } from "./ConfirmationModal";
+import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
+import { useToast } from "../contexts/ToastContext";
 import "../App.css";
 
 interface CategoriesListProps {
@@ -28,6 +30,7 @@ export function CategoriesList({
   onShowAddForm: showAddFormProp,
   onShowAddFormChange,
 }: CategoriesListProps) {
+  const toast = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(showAddFormProp || false);
@@ -167,7 +170,7 @@ export function CategoriesList({
       await loadCategories();
       hapticFeedback.success();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to create category");
+      toast.showError(err instanceof Error ? err.message : "Failed to create category");
     } finally {
       setCreatingCategory(false);
     }
@@ -200,7 +203,7 @@ export function CategoriesList({
       hapticFeedback.success();
     } catch (err) {
       hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to update category");
+      toast.showError(err instanceof Error ? err.message : "Failed to update category");
     } finally {
       setUpdatingCategory(null);
     }
@@ -247,7 +250,7 @@ export function CategoriesList({
       hapticFeedback.success();
     } catch (err) {
       hapticFeedback.error();
-      alert(err instanceof Error ? err.message : "Failed to delete category");
+      toast.showError(err instanceof Error ? err.message : "Failed to delete category");
     } finally {
       setDeletingCategory(null);
     }
@@ -291,22 +294,23 @@ export function CategoriesList({
   }
 
   return (
-    <div className={`categories-list ${animationClass}`}>
-      <Breadcrumbs category={null} skill={null} onCategoriesClick={undefined} />
-      <div className="section-header">
-        <h2>Categories</h2>
-      </div>
+    <PullToRefresh onRefresh={loadCategories} disabled={loading}>
+      <div className={`categories-list ${animationClass}`}>
+        <Breadcrumbs category={null} skill={null} onCategoriesClick={undefined} />
+        <div className="section-header">
+          <h2>Categories</h2>
+        </div>
 
-      {categories.length === 0 ? (
-        <EmptyState
-          icon="📁"
-          title="No Categories Yet"
-          message="Organize your skills and challenges by creating categories. Start your journey by adding your first category!"
-          actionLabel="Create Category"
-          onAction={() => setShowAddForm(true)}
-        />
-      ) : (
-        <ul className="category-list">
+        {categories.length === 0 ? (
+          <EmptyState
+            icon="📁"
+            title="No Categories Yet"
+            message="Organize your skills and challenges by creating categories. Start your journey by adding your first category!"
+            actionLabel="Create Category"
+            onAction={() => setShowAddForm(true)}
+          />
+        ) : (
+          <ul className="category-list">
           {categories.map((category) => (
             <li
               key={category._id}
@@ -685,6 +689,7 @@ export function CategoriesList({
         variant="danger"
         loading={deletingCategory === deleteConfirmation.categoryId}
       />
-    </div>
+      </div>
+    </PullToRefresh>
   );
 }

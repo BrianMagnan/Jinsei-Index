@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { authAPI, setCurrentUser, profileAPI } from "../services/api";
 import type { Profile } from "../types";
 import { ProfileSkeleton } from "./ProfileSkeleton";
+import { useToast } from "../contexts/ToastContext";
 
 export function ProfilesList() {
+  const toast = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -53,7 +55,7 @@ export function ProfilesList() {
       setCurrentUser(updatedProfile);
       setEditing(false);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to update profile");
+      toast.showError(err instanceof Error ? err.message : "Failed to update profile");
     }
   };
 

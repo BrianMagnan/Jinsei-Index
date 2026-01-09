@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { categoryAPI, skillAPI, challengeAPI } from "../services/api";
-import type { Category, Skill, Challenge } from "../types";
+import { categoryAPI, skillAPI, challengeAPI, achievementAPI } from "../services/api";
+import type { Category, Skill, Challenge, Achievement } from "../types";
 import { type SearchResult } from "./Search";
 import { Skeleton } from "./Skeleton";
 import { EmptyState } from "./EmptyState";
@@ -53,8 +53,17 @@ export function SearchModal({
   const [categories, setCategories] = useState<Category[]>([]);
   const [allSkills, setAllSkills] = useState<Skill[]>([]);
   const [allChallenges, setAllChallenges] = useState<Challenge[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filter state
+  const [filterType, setFilterType] = useState<"all" | "category" | "skill" | "challenge">("all");
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
+  const [filterSkill, setFilterSkill] = useState<string | null>(null);
+  const [filterCompletion, setFilterCompletion] = useState<"all" | "completed" | "not-completed">("all");
+  
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounce search query to reduce computation
@@ -80,6 +89,12 @@ export function SearchModal({
       }, 100);
     } else {
       setSearchQuery("");
+      setShowFilters(false);
+      // Reset filters when closing
+      setFilterType("all");
+      setFilterCategory(null);
+      setFilterSkill(null);
+      setFilterCompletion("all");
     }
   }, [isOpen]);
 
@@ -102,20 +117,30 @@ export function SearchModal({
   const loadAllData = async () => {
     try {
       setLoading(true);
-      const [cats, skills, challenges] = await Promise.all([
+      const [cats, skills, challenges, achievementsData] = await Promise.all([
         categoryAPI.getAll(),
         skillAPI.getAll(),
         challengeAPI.getAll(),
+        achievementAPI.getAll().catch(() => []), // Fail silently if achievements can't be loaded
       ]);
       setCategories(cats);
       setAllSkills(skills);
       setAllChallenges(challenges);
+      setAchievements(achievementsData || []);
     } catch (err) {
       console.error("Failed to load data for search:", err);
     } finally {
       setLoading(false);
     }
   };
+  
+  // Get completed challenge IDs - memoized
+  const completedChallengeIds = new Set(
+    achievements.map((a) => {
+      const challengeId = typeof a.challenge === "string" ? a.challenge : a.challenge._id;
+      return challengeId;
+    })
+  );
 
   const getSearchResults = (): SearchResult[] => {
     if (!debouncedSearchQuery.trim()) return [];
@@ -124,41 +149,54 @@ export function SearchModal({
     const results: SearchResult[] = [];
 
     // Search categories
-    categories.forEach((category) => {
-      if (category.name.toLowerCase().includes(query)) {
-        results.push({
-          _id: category._id,
-          name: category.name,
-          type: "category",
-        });
-      }
-    });
+    if (filterType === "all" || filterType === "category") {
+      categories.forEach((category) => {
+        // Apply category filter
+        if (filterCategory && category._id !== filterCategory) return;
+        
+        if (category.name.toLowerCase().includes(query)) {
+          results.push({
+            _id: category._id,
+            name: category.name,
+            type: "category",
+          });
+        }
+      });
+    }
 
     // Search skills
-    allSkills.forEach((skill) => {
-      if (skill.name.toLowerCase().includes(query)) {
+    if (filterType === "all" || filterType === "skill") {
+      allSkills.forEach((skill) => {
         const categoryId =
           typeof skill.category === "string"
             ? skill.category
             : skill.category._id;
-        const categoryName =
-          typeof skill.category === "string"
-            ? categories.find((c) => c._id === categoryId)?.name
-            : skill.category.name;
+        
+        // Apply filters
+        if (filterCategory && categoryId !== filterCategory) return;
+        if (filterSkill && skill._id !== filterSkill) return;
+        
+        if (skill.name.toLowerCase().includes(query)) {
+          const categoryName =
+            typeof skill.category === "string"
+              ? categories.find((c) => c._id === categoryId)?.name
+              : skill.category.name;
 
-        results.push({
-          _id: skill._id,
-          name: skill.name,
-          type: "skill",
-          categoryId,
-          categoryName: categoryName || "Unknown",
-        });
-      }
-    });
+          results.push({
+            _id: skill._id,
+            name: skill.name,
+            type: "skill",
+            categoryId,
+            categoryName: categoryName || "Unknown",
+          });
+        }
+      });
+    }
 
     // Search challenges
-    allChallenges.forEach((challenge) => {
-      if (challenge.name.toLowerCase().includes(query)) {
+    if (filterType === "all" || filterType === "challenge") {
+      allChallenges.forEach((challenge) => {
+        const challengeId = challenge._id;
         const skillId =
           typeof challenge.skill === "string"
             ? challenge.skill
@@ -168,11 +206,23 @@ export function SearchModal({
             ? allSkills.find((s) => s._id === skillId)
             : challenge.skill;
 
-        if (skill) {
-          const categoryId =
-            typeof skill.category === "string"
-              ? skill.category
-              : skill.category._id;
+        if (!skill) return;
+        
+        const categoryId =
+          typeof skill.category === "string"
+            ? skill.category
+            : skill.category._id;
+        
+        // Apply filters
+        if (filterCategory && categoryId !== filterCategory) return;
+        if (filterSkill && skillId !== filterSkill) return;
+        
+        // Apply completion filter
+        const isCompleted = completedChallengeIds.has(challengeId);
+        if (filterCompletion === "completed" && !isCompleted) return;
+        if (filterCompletion === "not-completed" && isCompleted) return;
+        
+        if (challenge.name.toLowerCase().includes(query)) {
           const categoryName =
             typeof skill.category === "string"
               ? categories.find((c) => c._id === categoryId)?.name
@@ -186,10 +236,11 @@ export function SearchModal({
             categoryName: categoryName || "Unknown",
             skillId,
             skillName: skill.name,
+            completed: isCompleted,
           });
         }
-      }
-    });
+      });
+    }
 
     return results;
   };
@@ -222,6 +273,16 @@ export function SearchModal({
 
     onClose();
   };
+  
+  const handleClearFilters = () => {
+    hapticFeedback.light();
+    setFilterType("all");
+    setFilterCategory(null);
+    setFilterSkill(null);
+    setFilterCompletion("all");
+  };
+  
+  const hasActiveFilters = filterType !== "all" || filterCategory !== null || filterSkill !== null || filterCompletion !== "all";
 
   const handleRecentSearchClick = (query: string) => {
     setSearchQuery(query);
@@ -308,8 +369,123 @@ export function SearchModal({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <div className="search-modal-actions">
+            <button
+              className={`search-modal-action-button ${showFilters ? "active" : ""}`}
+              onClick={() => {
+                hapticFeedback.light();
+                setShowFilters(!showFilters);
+              }}
+              title="Filters"
+            >
+              <span className="button-icon">🔍</span>
+              {hasActiveFilters && <span className="filter-badge" />}
+            </button>
+          </div>
         </div>
-
+        
+        {showFilters && (
+          <div className="search-modal-filters">
+            <div className="search-modal-filters-header">
+              <h3>Filters</h3>
+              {hasActiveFilters && (
+                <button
+                  className="search-modal-clear-filters"
+                  onClick={handleClearFilters}
+                  title="Clear all filters"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+            <div className="search-modal-filters-content">
+              <div className="search-filter-group">
+                <label className="search-filter-label">Type</label>
+                <div className="search-filter-options">
+                  {(["all", "category", "skill", "challenge"] as const).map((type) => (
+                    <button
+                      key={type}
+                      className={`search-filter-option ${filterType === type ? "active" : ""}`}
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setFilterType(type);
+                      }}
+                    >
+                      {type === "all" ? "All" : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="search-filter-group">
+                <label className="search-filter-label">Category</label>
+                <select
+                  className="search-filter-select"
+                  value={filterCategory || ""}
+                  onChange={(e) => {
+                    hapticFeedback.light();
+                    setFilterCategory(e.target.value || null);
+                    setFilterSkill(null); // Reset skill when category changes
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {filterCategory && (
+                <div className="search-filter-group">
+                  <label className="search-filter-label">Skill</label>
+                  <select
+                    className="search-filter-select"
+                    value={filterSkill || ""}
+                    onChange={(e) => {
+                      hapticFeedback.light();
+                      setFilterSkill(e.target.value || null);
+                    }}
+                  >
+                    <option value="">All Skills</option>
+                    {allSkills
+                      .filter((skill) => {
+                        const categoryId = typeof skill.category === "string" ? skill.category : skill.category._id;
+                        return categoryId === filterCategory;
+                      })
+                      .map((skill) => (
+                        <option key={skill._id} value={skill._id}>
+                          {skill.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+              
+              {(filterType === "all" || filterType === "challenge") && (
+                <div className="search-filter-group">
+                  <label className="search-filter-label">Completion Status</label>
+                  <div className="search-filter-options">
+                    {(["all", "completed", "not-completed"] as const).map((status) => (
+                      <button
+                        key={status}
+                        className={`search-filter-option ${filterCompletion === status ? "active" : ""}`}
+                        onClick={() => {
+                          hapticFeedback.light();
+                          setFilterCompletion(status);
+                        }}
+                      >
+                        {status === "all" ? "All" : status === "completed" ? "Completed" : "Not Completed"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="search-modal-content">
           {loading || isSearching ? (
             <div className="search-modal-loading">
@@ -336,7 +512,7 @@ export function SearchModal({
               </div>
               <Skeleton width="80%" height="60px" className="skeleton-line" />
             </div>
-          ) : debouncedSearchQuery.trim() === "" ? (
+          ) : debouncedSearchQuery.trim() === "" && !showFilters ? (
             <div className="search-modal-recent">
               {recentSearches.length > 0 ? (
                 <>
@@ -394,48 +570,64 @@ export function SearchModal({
                 />
               )}
             </div>
-          ) : results.length === 0 ? (
+          ) : debouncedSearchQuery.trim() !== "" && results.length === 0 ? (
             <EmptyState
               icon="🔎"
               title="No Results Found"
-              message={`No categories, skills, or challenges match "${debouncedSearchQuery}". Try a different search term.`}
+              message={`No results match "${debouncedSearchQuery}"${hasActiveFilters ? " with current filters" : ""}. Try adjusting your search or filters.`}
               className="search-empty-state"
             />
-          ) : (
-            <ul className="search-modal-results-list">
-              {results.map((result) => (
-                <li
-                  key={`${result.type}-${result._id}`}
-                  className="search-modal-result-item"
-                  onClick={() => handleSelect(result)}
-                >
-                  <div className="search-modal-result-content">
-                    <div className="search-modal-result-header">
-                      <span className="search-modal-result-name">
-                        {highlightText(result.name, debouncedSearchQuery)}
-                      </span>
-                      <span
-                        className={`search-modal-result-type search-modal-result-type-${result.type}`}
-                      >
-                        {result.type}
-                      </span>
-                    </div>
-                    {result.categoryName && (
-                      <div className="search-modal-result-path">
-                        {highlightText(result.categoryName, debouncedSearchQuery)}
-                        {result.skillName && (
-                          <>
-                            {" > "}
-                            {highlightText(result.skillName, debouncedSearchQuery)}
-                          </>
-                        )}
+          ) : debouncedSearchQuery.trim() !== "" ? (
+            <>
+              {hasActiveFilters && (
+                <div className="search-modal-results-header">
+                  <span className="search-modal-results-count">
+                    {results.length} result{results.length !== 1 ? "s" : ""} found
+                  </span>
+                </div>
+              )}
+              <ul className="search-modal-results-list">
+                {results.map((result) => (
+                  <li
+                    key={`${result.type}-${result._id}`}
+                    className="search-modal-result-item"
+                    onClick={() => handleSelect(result)}
+                  >
+                    <div className="search-modal-result-content">
+                      <div className="search-modal-result-header">
+                        <span className="search-modal-result-name">
+                          {highlightText(result.name, debouncedSearchQuery)}
+                        </span>
+                        <div className="search-modal-result-badges">
+                          <span
+                            className={`search-modal-result-type search-modal-result-type-${result.type}`}
+                          >
+                            {result.type}
+                          </span>
+                          {result.completed && (
+                            <span className="search-modal-result-completed" title="Completed">
+                              ✓
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                      {result.categoryName && (
+                        <div className="search-modal-result-path">
+                          {highlightText(result.categoryName, debouncedSearchQuery)}
+                          {result.skillName && (
+                            <>
+                              {" > "}
+                              {highlightText(result.skillName, debouncedSearchQuery)}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </div>
       </div>
     </>

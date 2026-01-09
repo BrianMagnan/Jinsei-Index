@@ -19,6 +19,7 @@ import { CategoriesList } from "./components/CategoriesList";
 import { TodoList } from "./components/TodoList";
 import { DailyList } from "./components/DailyList";
 import { Spinner } from "./components/Spinner";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { hapticFeedback } from "./utils/haptic";
 import type { Category, Profile } from "./types";
 import "./App.css";
@@ -246,452 +247,472 @@ function App() {
 
   // Show main app if authenticated
   return (
-    <div className="app">
-      {viewMode === "main" ? (
-        <>
-          <Sidebar
-            selectedCategoryId={selectedCategoryId}
-            onCategorySelect={handleCategorySelect}
-            onSkillSelect={handleSkillSelect}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            searchOpen={searchOpen}
-            onSearchToggle={() => setSearchOpen(!searchOpen)}
-          />
-          <main className="app-main">
-            {selectedCategoryId && !selectedSkillId && (
-              <SkillsList
-                categoryId={selectedCategoryId}
-                category={selectedCategory}
-                onSkillSelect={handleSkillSelect}
-                onCategoryUpdate={() => loadCategory()}
-                onCategoryDelete={() => {
-                  setSelectedCategoryId(null);
-                  setSelectedCategory(null);
-                }}
-                onBackToCategories={handleHomeClick}
-                navDirection={navDirection}
-                onAnimationComplete={() => setNavDirection(null)}
-                onShowAddForm={showSkillAddForm}
-                onShowAddFormChange={setShowSkillAddForm}
-              />
-            )}
-            {selectedSkillId && (
-              <ChallengesList
-                skillId={selectedSkillId}
-                initialChallengeId={initialChallengeId}
-                onBackToCategory={() => {
-                  // Go back to the category's skills page (keep category selected, clear skill)
-                  setNavDirection("backward");
-                  setSelectedSkillId(null);
-                  setInitialChallengeId(undefined);
-                }}
-                onBackToCategories={handleHomeClick}
-                navDirection={navDirection}
-                onAnimationComplete={() => setNavDirection(null)}
-                onFooterStateChange={setChallengeFooterState}
-              />
-            )}
-            {!selectedCategoryId && (
-              <CategoriesList
+    <ErrorBoundary>
+      <div className="app">
+        {viewMode === "main" ? (
+          <>
+            <ErrorBoundary>
+              <Sidebar
                 selectedCategoryId={selectedCategoryId}
                 onCategorySelect={handleCategorySelect}
-                navDirection={navDirection}
-                onAnimationComplete={() => setNavDirection(null)}
-                onShowAddForm={showCategoryAddForm}
-                onShowAddFormChange={setShowCategoryAddForm}
+                onSkillSelect={handleSkillSelect}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                searchOpen={searchOpen}
+                onSearchToggle={() => setSearchOpen(!searchOpen)}
               />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <main className="app-main">
+                {selectedCategoryId && !selectedSkillId && (
+                  <SkillsList
+                    categoryId={selectedCategoryId}
+                    category={selectedCategory}
+                    onSkillSelect={handleSkillSelect}
+                    onCategoryUpdate={() => loadCategory()}
+                    onCategoryDelete={() => {
+                      setSelectedCategoryId(null);
+                      setSelectedCategory(null);
+                    }}
+                    onBackToCategories={handleHomeClick}
+                    navDirection={navDirection}
+                    onAnimationComplete={() => setNavDirection(null)}
+                    onShowAddForm={showSkillAddForm}
+                    onShowAddFormChange={setShowSkillAddForm}
+                  />
+                )}
+                {selectedSkillId && (
+                  <ChallengesList
+                    skillId={selectedSkillId}
+                    initialChallengeId={initialChallengeId}
+                    onBackToCategory={() => {
+                      // Go back to the category's skills page (keep category selected, clear skill)
+                      setNavDirection("backward");
+                      setSelectedSkillId(null);
+                      setInitialChallengeId(undefined);
+                    }}
+                    onBackToCategories={handleHomeClick}
+                    navDirection={navDirection}
+                    onAnimationComplete={() => setNavDirection(null)}
+                    onFooterStateChange={setChallengeFooterState}
+                  />
+                )}
+                {!selectedCategoryId && (
+                  <CategoriesList
+                    selectedCategoryId={selectedCategoryId}
+                    onCategorySelect={handleCategorySelect}
+                    navDirection={navDirection}
+                    onAnimationComplete={() => setNavDirection(null)}
+                    onShowAddForm={showCategoryAddForm}
+                    onShowAddFormChange={setShowCategoryAddForm}
+                  />
+                )}
+              </main>
+            </ErrorBoundary>
+            {/* Footer - rendered outside animated containers to prevent jumping */}
+            {viewMode === "main" && (
+              <>
+                {!selectedCategoryId && (
+                  <div className="categories-list-footer">
+                    <button
+                      className="add-button"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setShowCategoryAddForm(true);
+                      }}
+                      title="Add category"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+                {selectedCategoryId && !selectedSkillId && (
+                  <div className="categories-list-footer">
+                    <button
+                      className="add-button"
+                      onClick={() => {
+                        hapticFeedback.light();
+                        setShowSkillAddForm(true);
+                      }}
+                      title="Add skill"
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
+                {selectedSkillId && (
+                  <div className="categories-list-footer">
+                    {challengeFooterState.selectedChallenge ? (
+                      // Challenge detail actions
+                      <>
+                        <button
+                          className="challenge-detail-action-button edit"
+                          onClick={(e) => {
+                            hapticFeedback.light();
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.editChallenge) {
+                              handlers.editChallenge(e);
+                            }
+                          }}
+                          disabled={
+                            challengeFooterState.selectedChallenge.isDeleting ||
+                            challengeFooterState.selectedChallenge.isUpdating ||
+                            challengeFooterState.selectedChallenge.isCompleting
+                          }
+                          title="Edit challenge"
+                        >
+                          {challengeFooterState.selectedChallenge.isUpdating ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Saving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="button-icon">✏️</span>
+                              <span>Edit</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="challenge-detail-action-button delete"
+                          onClick={(e) => {
+                            hapticFeedback.medium();
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.deleteChallenge) {
+                              handlers.deleteChallenge(e);
+                            }
+                          }}
+                          disabled={
+                            challengeFooterState.selectedChallenge.isDeleting ||
+                            challengeFooterState.selectedChallenge.isUpdating ||
+                            challengeFooterState.selectedChallenge.isCompleting
+                          }
+                          title="Delete challenge"
+                        >
+                          {challengeFooterState.selectedChallenge.isDeleting ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Deleting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="button-icon">🗑️</span>
+                              <span>Delete</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className={`challenge-detail-action-button list ${
+                            challengeFooterState.selectedChallenge.inTodo ||
+                            challengeFooterState.selectedChallenge.inDaily
+                              ? "in-list"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            hapticFeedback.light();
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.openListSelection) {
+                              handlers.openListSelection();
+                            }
+                          }}
+                          disabled={
+                            challengeFooterState.selectedChallenge.isDeleting ||
+                            challengeFooterState.selectedChallenge.isCompleting
+                          }
+                          title="Add to list"
+                        >
+                          <span className="button-icon">
+                            {challengeFooterState.selectedChallenge.inTodo ||
+                            challengeFooterState.selectedChallenge.inDaily
+                              ? "✓"
+                              : "➕"}
+                          </span>
+                          <span>
+                            {challengeFooterState.selectedChallenge.inTodo ||
+                            challengeFooterState.selectedChallenge.inDaily
+                              ? "In List"
+                              : "+ To List"}
+                          </span>
+                        </button>
+                        <button
+                          className="challenge-detail-action-button complete"
+                          onClick={(e) => {
+                            hapticFeedback.medium();
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.completeChallenge) {
+                              handlers.completeChallenge(e);
+                            }
+                          }}
+                          disabled={
+                            challengeFooterState.selectedChallenge
+                              .isCompleting ||
+                            challengeFooterState.selectedChallenge.isDeleting ||
+                            challengeFooterState.selectedChallenge.isUpdating
+                          }
+                          title="Complete challenge"
+                        >
+                          {challengeFooterState.selectedChallenge
+                            .isCompleting ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Completing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="button-icon">✓</span>
+                              <span>Complete</span>
+                            </>
+                          )}
+                        </button>
+                      </>
+                    ) : challengeFooterState.selectionMode ? (
+                      // Selection mode actions
+                      <>
+                        <button
+                          className="delete-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.deleteSelected) {
+                              handlers.deleteSelected();
+                            }
+                          }}
+                          disabled={
+                            challengeFooterState.selectedIds.size === 0 ||
+                            challengeFooterState.deleting
+                          }
+                          title="Delete selected challenges"
+                        >
+                          {challengeFooterState.deleting ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Deleting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🗑️</span>
+                              <span>Delete</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="add-to-list-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.openBulkList) {
+                              handlers.openBulkList();
+                            }
+                          }}
+                          disabled={challengeFooterState.selectedIds.size === 0}
+                          title="Add challenges to list"
+                        >
+                          <span>+</span>
+                          <span>To List</span>
+                        </button>
+                        <button
+                          className="select-button active"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.exitSelect) {
+                              handlers.exitSelect();
+                            }
+                          }}
+                          title="Exit selection"
+                        >
+                          Done
+                        </button>
+                      </>
+                    ) : (
+                      // Default list actions
+                      <>
+                        <button
+                          className="select-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.toggleSelect) {
+                              handlers.toggleSelect();
+                            }
+                          }}
+                          title="Select challenges"
+                        >
+                          Select
+                        </button>
+                        <button
+                          className="add-button"
+                          onClick={() => {
+                            hapticFeedback.light();
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.toggleAdd) {
+                              handlers.toggleAdd();
+                            }
+                          }}
+                          title="Add challenge"
+                        >
+                          +
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </>
             )}
-          </main>
-          {/* Footer - rendered outside animated containers to prevent jumping */}
-          {viewMode === "main" && (
-            <>
-              {!selectedCategoryId && (
-                <div className="categories-list-footer">
-                  <button
-                    className="add-button"
-                    onClick={() => {
-                      hapticFeedback.light();
-                      setShowCategoryAddForm(true);
-                    }}
-                    title="Add category"
-                  >
-                    +
-                  </button>
-                </div>
-              )}
-              {selectedCategoryId && !selectedSkillId && (
-                <div className="categories-list-footer">
-                  <button
-                    className="add-button"
-                    onClick={() => {
-                      hapticFeedback.light();
-                      setShowSkillAddForm(true);
-                    }}
-                    title="Add skill"
-                  >
-                    +
-                  </button>
-                </div>
-              )}
-              {selectedSkillId && (
-                <div className="categories-list-footer">
-                  {challengeFooterState.selectedChallenge ? (
-                    // Challenge detail actions
-                    <>
-                      <button
-                        className="challenge-detail-action-button edit"
-                        onClick={(e) => {
-                          hapticFeedback.light();
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.editChallenge) {
-                            handlers.editChallenge(e);
-                          }
-                        }}
-                        disabled={
-                          challengeFooterState.selectedChallenge.isDeleting ||
-                          challengeFooterState.selectedChallenge.isUpdating ||
-                          challengeFooterState.selectedChallenge.isCompleting
-                        }
-                        title="Edit challenge"
-                      >
-                        {challengeFooterState.selectedChallenge.isUpdating ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Saving...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="button-icon">✏️</span>
-                            <span>Edit</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        className="challenge-detail-action-button delete"
-                        onClick={(e) => {
-                          hapticFeedback.medium();
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.deleteChallenge) {
-                            handlers.deleteChallenge(e);
-                          }
-                        }}
-                        disabled={
-                          challengeFooterState.selectedChallenge.isDeleting ||
-                          challengeFooterState.selectedChallenge.isUpdating ||
-                          challengeFooterState.selectedChallenge.isCompleting
-                        }
-                        title="Delete challenge"
-                      >
-                        {challengeFooterState.selectedChallenge.isDeleting ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Deleting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="button-icon">🗑️</span>
-                            <span>Delete</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        className={`challenge-detail-action-button list ${
-                          challengeFooterState.selectedChallenge.inTodo ||
-                          challengeFooterState.selectedChallenge.inDaily
-                            ? "in-list"
-                            : ""
-                        }`}
-                        onClick={() => {
-                          hapticFeedback.light();
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.openListSelection) {
-                            handlers.openListSelection();
-                          }
-                        }}
-                        disabled={
-                          challengeFooterState.selectedChallenge.isDeleting ||
-                          challengeFooterState.selectedChallenge.isCompleting
-                        }
-                        title="Add to list"
-                      >
-                        <span className="button-icon">
-                          {challengeFooterState.selectedChallenge.inTodo ||
-                          challengeFooterState.selectedChallenge.inDaily
-                            ? "✓"
-                            : "➕"}
-                        </span>
-                        <span>
-                          {challengeFooterState.selectedChallenge.inTodo ||
-                          challengeFooterState.selectedChallenge.inDaily
-                            ? "In List"
-                            : "+ To List"}
-                        </span>
-                      </button>
-                      <button
-                        className="challenge-detail-action-button complete"
-                        onClick={(e) => {
-                          hapticFeedback.medium();
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.completeChallenge) {
-                            handlers.completeChallenge(e);
-                          }
-                        }}
-                        disabled={
-                          challengeFooterState.selectedChallenge.isCompleting ||
-                          challengeFooterState.selectedChallenge.isDeleting ||
-                          challengeFooterState.selectedChallenge.isUpdating
-                        }
-                        title="Complete challenge"
-                      >
-                        {challengeFooterState.selectedChallenge.isCompleting ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Completing...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="button-icon">✓</span>
-                            <span>Complete</span>
-                          </>
-                        )}
-                      </button>
-                    </>
-                  ) : challengeFooterState.selectionMode ? (
-                    // Selection mode actions
-                    <>
-                      <button
-                        className="delete-button"
-                        onClick={() => {
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.deleteSelected) {
-                            handlers.deleteSelected();
-                          }
-                        }}
-                        disabled={
-                          challengeFooterState.selectedIds.size === 0 ||
-                          challengeFooterState.deleting
-                        }
-                        title="Delete selected challenges"
-                      >
-                        {challengeFooterState.deleting ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Deleting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>🗑️</span>
-                            <span>Delete</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        className="add-to-list-button"
-                        onClick={() => {
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.openBulkList) {
-                            handlers.openBulkList();
-                          }
-                        }}
-                        disabled={challengeFooterState.selectedIds.size === 0}
-                        title="Add challenges to list"
-                      >
-                        <span>+</span>
-                        <span>To List</span>
-                      </button>
-                      <button
-                        className="select-button active"
-                        onClick={() => {
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.exitSelect) {
-                            handlers.exitSelect();
-                          }
-                        }}
-                        title="Exit selection"
-                      >
-                        Done
-                      </button>
-                    </>
-                  ) : (
-                    // Default list actions
-                    <>
-                      <button
-                        className="select-button"
-                        onClick={() => {
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.toggleSelect) {
-                            handlers.toggleSelect();
-                          }
-                        }}
-                        title="Select challenges"
-                      >
-                        Select
-                      </button>
-                      <button
-                        className="add-button"
-                        onClick={() => {
-                          hapticFeedback.light();
-                          const handlers = (window as any)
-                            .__challengeFooterActions;
-                          if (handlers?.toggleAdd) {
-                            handlers.toggleAdd();
-                          }
-                        }}
-                        title="Add challenge"
-                      >
-                        +
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-          <BottomNav
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            onSearchClick={() => setSearchModalOpen(true)}
-            onHomeClick={handleHomeClick}
-          />
-          <CategoriesModal
-            isOpen={categoriesModalOpen}
-            onClose={() => setCategoriesModalOpen(false)}
-            selectedCategoryId={selectedCategoryId}
-            onCategorySelect={handleCategorySelect}
-          />
-          <SearchModal
-            isOpen={searchModalOpen}
-            onClose={() => setSearchModalOpen(false)}
-            onCategorySelect={handleCategorySelect}
-            onSkillSelect={handleSkillSelect}
-          />
-        </>
-      ) : viewMode === "todo" ? (
-        <>
-          <Sidebar
-            selectedCategoryId={null}
-            onCategorySelect={() => {}}
-            onSkillSelect={handleSkillSelect}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            searchOpen={searchOpen}
-            onSearchToggle={() => setSearchOpen(!searchOpen)}
-          />
-          <main className="app-main todo-main">
-            <TodoList onNavigateToChallenge={handleNavigateToChallenge} />
-          </main>
-          <BottomNav
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            onSearchClick={() => setSearchModalOpen(true)}
-            onHomeClick={handleHomeClick}
-          />
-          <CategoriesModal
-            isOpen={categoriesModalOpen}
-            onClose={() => setCategoriesModalOpen(false)}
-            selectedCategoryId={selectedCategoryId}
-            onCategorySelect={handleCategorySelect}
-          />
-          <SearchModal
-            isOpen={searchModalOpen}
-            onClose={() => setSearchModalOpen(false)}
-            onCategorySelect={handleCategorySelect}
-            onSkillSelect={handleSkillSelect}
-          />
-        </>
-      ) : viewMode === "daily" ? (
-        <>
-          <Sidebar
-            selectedCategoryId={null}
-            onCategorySelect={() => {}}
-            onSkillSelect={handleSkillSelect}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            searchOpen={searchOpen}
-            onSearchToggle={() => setSearchOpen(!searchOpen)}
-          />
-          <main className="app-main daily-main">
-            <DailyList onNavigateToChallenge={handleNavigateToChallenge} />
-          </main>
-          <BottomNav
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            onSearchClick={() => setSearchModalOpen(true)}
-            onHomeClick={handleHomeClick}
-          />
-          <CategoriesModal
-            isOpen={categoriesModalOpen}
-            onClose={() => setCategoriesModalOpen(false)}
-            selectedCategoryId={selectedCategoryId}
-            onCategorySelect={handleCategorySelect}
-          />
-          <SearchModal
-            isOpen={searchModalOpen}
-            onClose={() => setSearchModalOpen(false)}
-            onCategorySelect={handleCategorySelect}
-            onSkillSelect={handleSkillSelect}
-          />
-        </>
-      ) : (
-        <>
-          <Sidebar
-            selectedCategoryId={null}
-            onCategorySelect={() => {}}
-            onSkillSelect={handleSkillSelect}
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            currentUser={currentUser}
-            onLogout={handleLogout}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-            searchOpen={searchOpen}
-            onSearchToggle={() => setSearchOpen(!searchOpen)}
-          />
-          <main className="app-main profiles-main">
-            <ProfilesList />
-          </main>
-          <BottomNav
-            viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
-            onSearchClick={() => setSearchModalOpen(true)}
-            onHomeClick={handleHomeClick}
-          />
-          <CategoriesModal
-            isOpen={categoriesModalOpen}
-            onClose={() => setCategoriesModalOpen(false)}
-            selectedCategoryId={selectedCategoryId}
-            onCategorySelect={handleCategorySelect}
-          />
-          <SearchModal
-            isOpen={searchModalOpen}
-            onClose={() => setSearchModalOpen(false)}
-            onCategorySelect={handleCategorySelect}
-            onSkillSelect={handleSkillSelect}
-          />
-        </>
-      )}
-    </div>
+            <BottomNav
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onSearchClick={() => setSearchModalOpen(true)}
+              onHomeClick={handleHomeClick}
+            />
+            <CategoriesModal
+              isOpen={categoriesModalOpen}
+              onClose={() => setCategoriesModalOpen(false)}
+              selectedCategoryId={selectedCategoryId}
+              onCategorySelect={handleCategorySelect}
+            />
+            <SearchModal
+              isOpen={searchModalOpen}
+              onClose={() => setSearchModalOpen(false)}
+              onCategorySelect={handleCategorySelect}
+              onSkillSelect={handleSkillSelect}
+            />
+          </>
+        ) : viewMode === "todo" ? (
+          <>
+            <ErrorBoundary>
+              <Sidebar
+                selectedCategoryId={null}
+                onCategorySelect={() => {}}
+                onSkillSelect={handleSkillSelect}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                searchOpen={searchOpen}
+                onSearchToggle={() => setSearchOpen(!searchOpen)}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <main className="app-main todo-main">
+                <TodoList onNavigateToChallenge={handleNavigateToChallenge} />
+              </main>
+            </ErrorBoundary>
+            <BottomNav
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onSearchClick={() => setSearchModalOpen(true)}
+              onHomeClick={handleHomeClick}
+            />
+            <CategoriesModal
+              isOpen={categoriesModalOpen}
+              onClose={() => setCategoriesModalOpen(false)}
+              selectedCategoryId={selectedCategoryId}
+              onCategorySelect={handleCategorySelect}
+            />
+            <SearchModal
+              isOpen={searchModalOpen}
+              onClose={() => setSearchModalOpen(false)}
+              onCategorySelect={handleCategorySelect}
+              onSkillSelect={handleSkillSelect}
+            />
+          </>
+        ) : viewMode === "daily" ? (
+          <>
+            <ErrorBoundary>
+              <Sidebar
+                selectedCategoryId={null}
+                onCategorySelect={() => {}}
+                onSkillSelect={handleSkillSelect}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                searchOpen={searchOpen}
+                onSearchToggle={() => setSearchOpen(!searchOpen)}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <main className="app-main daily-main">
+                <DailyList onNavigateToChallenge={handleNavigateToChallenge} />
+              </main>
+            </ErrorBoundary>
+            <BottomNav
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onSearchClick={() => setSearchModalOpen(true)}
+              onHomeClick={handleHomeClick}
+            />
+            <CategoriesModal
+              isOpen={categoriesModalOpen}
+              onClose={() => setCategoriesModalOpen(false)}
+              selectedCategoryId={selectedCategoryId}
+              onCategorySelect={handleCategorySelect}
+            />
+            <SearchModal
+              isOpen={searchModalOpen}
+              onClose={() => setSearchModalOpen(false)}
+              onCategorySelect={handleCategorySelect}
+              onSkillSelect={handleSkillSelect}
+            />
+          </>
+        ) : (
+          <>
+            <ErrorBoundary>
+              <Sidebar
+                selectedCategoryId={null}
+                onCategorySelect={() => {}}
+                onSkillSelect={handleSkillSelect}
+                viewMode={viewMode}
+                onViewModeChange={handleViewModeChange}
+                currentUser={currentUser}
+                onLogout={handleLogout}
+                isOpen={sidebarOpen}
+                onClose={() => setSidebarOpen(false)}
+                searchOpen={searchOpen}
+                onSearchToggle={() => setSearchOpen(!searchOpen)}
+              />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <main className="app-main profiles-main">
+                <ProfilesList />
+              </main>
+            </ErrorBoundary>
+            <BottomNav
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onSearchClick={() => setSearchModalOpen(true)}
+              onHomeClick={handleHomeClick}
+            />
+            <CategoriesModal
+              isOpen={categoriesModalOpen}
+              onClose={() => setCategoriesModalOpen(false)}
+              selectedCategoryId={selectedCategoryId}
+              onCategorySelect={handleCategorySelect}
+            />
+            <SearchModal
+              isOpen={searchModalOpen}
+              onClose={() => setSearchModalOpen(false)}
+              onCategorySelect={handleCategorySelect}
+              onSkillSelect={handleSkillSelect}
+            />
+          </>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 }
 
