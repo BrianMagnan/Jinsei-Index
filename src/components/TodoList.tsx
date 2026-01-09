@@ -10,7 +10,6 @@ import type { TodoItem } from "../types";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
 import { TodoSkeletonList } from "./TodoSkeleton";
-import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
 import "../App.css";
@@ -141,8 +140,7 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
   }
 
   return (
-    <PullToRefresh onRefresh={loadTodoItems} disabled={loading}>
-      <div className="todo-list-container">
+    <div className="todo-list-container">
         <div className="todo-list-header">
           <h1 className="todo-list-title">To-Do List</h1>
           {todoItems.length > 0 && (
@@ -295,7 +293,6 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
           )}
         </>
       )}
-      </div>
-    </PullToRefresh>
+    </div>
   );
 }

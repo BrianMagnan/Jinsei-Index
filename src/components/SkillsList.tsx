@@ -8,7 +8,6 @@ import { Skeleton } from "./Skeleton";
 import { SkillSkeletonList } from "./SkillSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
 
@@ -393,8 +392,7 @@ export function SkillsList({
   const displayCategory = localCategory || category;
 
   return (
-    <PullToRefresh onRefresh={loadSkills} disabled={loading}>
-      <div className={`skills-list ${animationClass}`}>
+    <div className={`skills-list ${animationClass}`}>
         <Breadcrumbs
           category={displayCategory}
           skill={null}
@@ -831,9 +829,8 @@ export function SkillsList({
           confirmText="Delete"
           cancelText="Cancel"
           variant="danger"
-          loading={deletingSkill === deleteConfirmation.skillId}
-        />
-      </div>
-    </PullToRefresh>
+        loading={deletingSkill === deleteConfirmation.skillId}
+      />
+    </div>
   );
 }

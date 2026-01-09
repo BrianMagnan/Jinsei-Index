@@ -8,7 +8,6 @@ import { Skeleton } from "./Skeleton";
 import { EmptyState } from "./EmptyState";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
 import "../App.css";
@@ -294,8 +293,7 @@ export function CategoriesList({
   }
 
   return (
-    <PullToRefresh onRefresh={loadCategories} disabled={loading}>
-      <div className={`categories-list ${animationClass}`}>
+    <div className={`categories-list ${animationClass}`}>
         <Breadcrumbs category={null} skill={null} onCategoriesClick={undefined} />
         <div className="section-header">
           <h2>Categories</h2>
@@ -689,7 +687,6 @@ export function CategoriesList({
         variant="danger"
         loading={deletingCategory === deleteConfirmation.categoryId}
       />
-      </div>
-    </PullToRefresh>
+    </div>
   );
 }

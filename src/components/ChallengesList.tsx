@@ -8,7 +8,6 @@ import { Skeleton } from "./Skeleton";
 import { ChallengeSkeletonList } from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import { linkifyText } from "../utils/linkifyText";
 import { useToast } from "../contexts/ToastContext";
@@ -1123,12 +1122,11 @@ export function ChallengesList({
     skill && typeof skill.category === "object" ? skill : null;
 
   return (
-    <PullToRefresh onRefresh={loadSkill} disabled={loading}>
-      <div
-        className={`challenges-container ${
-          selectedChallengeId ? "detail-view" : "list-view"
-        } ${animationClass}`}
-      >
+    <div
+      className={`challenges-container ${
+        selectedChallengeId ? "detail-view" : "list-view"
+      } ${animationClass}`}
+    >
         <div className="challenges-list">
           <Breadcrumbs
             category={category}
@@ -2136,9 +2134,8 @@ export function ChallengesList({
             deleteConfirmation.isBulk
               ? deletingChallenges
               : deletingChallenge === deleteConfirmation.challengeId
-          }
-        />
-      </div>
-    </PullToRefresh>
+           }
+         />
+    </div>
   );
 }

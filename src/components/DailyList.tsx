@@ -9,7 +9,6 @@ import type { DailyItem } from "../types";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
 import { TodoSkeletonList } from "./TodoSkeleton";
-import { PullToRefresh } from "./PullToRefresh";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
 import "../App.css";
@@ -133,8 +132,7 @@ export function DailyList({ onNavigateToChallenge }: DailyListProps) {
   }
 
   return (
-    <PullToRefresh onRefresh={loadDailyItems} disabled={loading}>
-      <div className="todo-list-container daily-list-container">
+    <div className="todo-list-container daily-list-container">
         <div className="todo-list-header">
           <h1 className="todo-list-title">Daily List</h1>
           {dailyItems.length > 0 && (
@@ -268,9 +266,8 @@ export function DailyList({ onNavigateToChallenge }: DailyListProps) {
                 ))}
               </ul>
             )}
-          </>
-        )}
-      </div>
-    </PullToRefresh>
+        </>
+      )}
+    </div>
   );
 }
