@@ -5863,6 +5863,12 @@ button:disabled .spinner,
   padding-bottom: calc(var(--spacing-xl) + env(safe-area-inset-bottom, 0px));
   padding-left: calc(var(--spacing-xl) + env(safe-area-inset-left, 0px));
   padding-right: calc(var(--spacing-xl) + env(safe-area-inset-right, 0px));
+  pointer-events: auto;
+}
+
+/* Hide app content when landscape lock is active */
+.app:has(.landscape-lock) > *:not(.landscape-lock) {
+  display: none !important;
 }
 
 .landscape-lock-content {
