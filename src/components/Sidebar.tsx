@@ -3,6 +3,9 @@ import { categoryAPI, skillAPI, challengeAPI } from "../services/api";
 import type { Category, Profile, Skill, Challenge } from "../types";
 import { Search, type SearchResult } from "./Search";
 import { Spinner } from "./Spinner";
+import { CategorySkeletonList } from "./CategorySkeleton";
+import { ConfirmationModal } from "./ConfirmationModal";
+import { hapticFeedback } from "../utils/haptic";
 
 interface SidebarProps {
   selectedCategoryId: string | null;
@@ -346,7 +349,17 @@ export function Sidebar({
     }
   };
 
-  const handleDeleteCategory = async (
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    categoryId: string | null;
+    categoryName: string;
+  }>({
+    isOpen: false,
+    categoryId: null,
+    categoryName: "",
+  });
+
+  const handleDeleteCategory = (
     categoryId: string,
     categoryName: string,
     e: React.MouseEvent
@@ -354,14 +367,18 @@ export function Sidebar({
     e.stopPropagation();
     if (deletingCategory === categoryId) return;
 
-    if (
-      !confirm(
-        `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      categoryId,
+      categoryName,
+    });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation.categoryId) return;
+
+    const categoryId = deleteConfirmation.categoryId;
+    setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     setDeletingCategory(categoryId);
     try {
       await categoryAPI.delete(categoryId);
@@ -530,10 +547,9 @@ export function Sidebar({
           )}
 
           {loading ? (
-            <div className="sidebar-loading">
-              <Spinner size="md" />
-              <span>Loading categories...</span>
-            </div>
+            <ul className="category-list">
+              <CategorySkeletonList count={6} />
+            </ul>
           ) : (
             <>
               {filteredCategories.length === 0 && searchQuery ? (
@@ -752,6 +768,21 @@ export function Sidebar({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={handleConfirmDelete}
+        title="Delete Category?"
+        message={`Are you sure you want to delete "${deleteConfirmation.categoryName}"? This will also delete all associated skills and challenges.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deletingCategory === deleteConfirmation.categoryId}
+      />
     </>
   );
 }

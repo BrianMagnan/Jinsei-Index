@@ -5,6 +5,7 @@ import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { ConfirmationModal } from "./ConfirmationModal";
 import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
@@ -46,7 +47,7 @@ export function CategoriesList({
   } | null>(null);
   const [swipedCategoryId, setSwipedCategoryId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
-  
+
   // Swipe to close modal state
   const [modalSwipeStart, setModalSwipeStart] = useState<{
     x: number;
@@ -191,7 +192,17 @@ export function CategoriesList({
     }
   };
 
-  const handleDeleteCategory = async (
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    categoryId: string | null;
+    categoryName: string;
+  }>({
+    isOpen: false,
+    categoryId: null,
+    categoryName: "",
+  });
+
+  const handleDeleteCategory = (
     categoryId: string,
     categoryName: string,
     e: React.MouseEvent
@@ -200,14 +211,18 @@ export function CategoriesList({
     if (deletingCategory === categoryId) return;
 
     hapticFeedback.medium();
-    if (
-      !confirm(
-        `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      categoryId,
+      categoryName,
+    });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation.categoryId) return;
+
+    const categoryId = deleteConfirmation.categoryId;
+    setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     setDeletingCategory(categoryId);
     try {
       await categoryAPI.delete(categoryId);
@@ -272,7 +287,6 @@ export function CategoriesList({
         <h2>Categories</h2>
       </div>
 
-
       {categories.length === 0 ? (
         <EmptyState
           icon="📁"
@@ -336,11 +350,9 @@ export function CategoriesList({
                     if (deltaX < 0) {
                       // Swipe left - delete
                       hapticFeedback.medium();
-                      if (confirm(`Delete "${category.name}"?`)) {
-                        handleDeleteCategory(category._id, category.name, {
-                          stopPropagation: () => {},
-                        } as React.MouseEvent);
-                      }
+                      handleDeleteCategory(category._id, category.name, {
+                        stopPropagation: () => {},
+                      } as React.MouseEvent);
                     }
                   }
                 }
@@ -470,7 +482,8 @@ export function CategoriesList({
                 modalSwipeOffset > 0
                   ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
                   : undefined,
-              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
             }}
           >
             <div className="challenge-action-modal-header">
@@ -486,10 +499,7 @@ export function CategoriesList({
                 ×
               </button>
             </div>
-            <form
-              className="edit-form"
-              onSubmit={handleCreateCategory}
-            >
+            <form className="edit-form" onSubmit={handleCreateCategory}>
               <div className="auth-field">
                 <label htmlFor="new-category-name">Name *</label>
                 <input
@@ -585,7 +595,8 @@ export function CategoriesList({
                 modalSwipeOffset > 0
                   ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
                   : undefined,
-              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
             }}
           >
             {(() => {
@@ -658,6 +669,21 @@ export function CategoriesList({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={handleConfirmDelete}
+        title="Delete Category?"
+        message={`Are you sure you want to delete "${deleteConfirmation.categoryName}"? This will also delete all associated skills and challenges.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deletingCategory === deleteConfirmation.categoryId}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { Category } from "../types";
 import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
+import { ConfirmationModal } from "./ConfirmationModal";
 import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
@@ -153,7 +154,17 @@ export function CategoriesModal({
     }
   };
 
-  const handleDeleteCategory = async (
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    categoryId: string | null;
+    categoryName: string;
+  }>({
+    isOpen: false,
+    categoryId: null,
+    categoryName: "",
+  });
+
+  const handleDeleteCategory = (
     categoryId: string,
     categoryName: string,
     e: React.MouseEvent
@@ -162,14 +173,18 @@ export function CategoriesModal({
     if (deletingCategory === categoryId) return;
 
     hapticFeedback.medium();
-    if (
-      !confirm(
-        `Are you sure you want to delete "${categoryName}"? This will also delete all associated skills and challenges.`
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      categoryId,
+      categoryName,
+    });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation.categoryId) return;
+
+    const categoryId = deleteConfirmation.categoryId;
+    setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     setDeletingCategory(categoryId);
     try {
       await categoryAPI.delete(categoryId);
@@ -299,9 +314,7 @@ export function CategoriesModal({
                     >
                       <>
                         <div className="categories-modal-item-content">
-                          <span className="category-name">
-                            {category.name}
-                          </span>
+                          <span className="category-name">{category.name}</span>
                         </div>
                         <div className="category-actions">
                           <button
@@ -456,6 +469,21 @@ export function CategoriesModal({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={handleConfirmDelete}
+        title="Delete Category?"
+        message={`Are you sure you want to delete "${deleteConfirmation.categoryName}"? This will also delete all associated skills and challenges.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deletingCategory === deleteConfirmation.categoryId}
+      />
     </>
   );
 }

@@ -7,6 +7,7 @@ import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
 import { Skeleton } from "./Skeleton";
 import { ChallengeSkeletonList } from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
+import { ConfirmationModal } from "./ConfirmationModal";
 import { hapticFeedback } from "../utils/haptic";
 import { linkifyText } from "../utils/linkifyText";
 import {
@@ -81,6 +82,19 @@ export function ChallengesList({
     string | null
   >(null);
   const [listSelectionModalOpen, setListSelectionModalOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    challengeId: string | null;
+    challengeName: string;
+    isBulk: boolean;
+    challengeNames?: string;
+    count?: number;
+  }>({
+    isOpen: false,
+    challengeId: null,
+    challengeName: "",
+    isBulk: false,
+  });
 
   // Swipe to close modal state
   const [modalSwipeStart, setModalSwipeStart] = useState<{
@@ -406,7 +420,7 @@ export function ChallengesList({
     handleCloseListSelection();
   };
 
-  const handleDeleteSelectedChallenges = async () => {
+  const handleDeleteSelectedChallenges = () => {
     if (selectedChallengeIds.size === 0) return;
 
     const selectedChallenges =
@@ -417,18 +431,20 @@ export function ChallengesList({
       .map((challenge) => challenge.name)
       .join(", ");
 
-    if (
-      !confirm(
-        `Are you sure you want to delete ${
-          selectedChallengeIds.size
-        } challenge${
-          selectedChallengeIds.size === 1 ? "" : "s"
-        }?\n\n${challengeNames}`
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      challengeId: null,
+      challengeName: "",
+      isBulk: true,
+      challengeNames,
+      count: selectedChallengeIds.size,
+    });
+  };
 
+  const handleConfirmBulkDelete = async () => {
+    if (selectedChallengeIds.size === 0) return;
+
+    setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     setDeletingChallenges(true);
     hapticFeedback.medium();
 
@@ -806,7 +822,7 @@ export function ChallengesList({
     }
   };
 
-  const handleDeleteChallenge = async (
+  const handleDeleteChallenge = (
     challengeId: string,
     challengeName: string,
     e: React.MouseEvent
@@ -815,10 +831,19 @@ export function ChallengesList({
     if (deletingChallenge === challengeId) return;
 
     hapticFeedback.medium();
-    if (!confirm(`Are you sure you want to delete "${challengeName}"?`)) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      challengeId,
+      challengeName,
+      isBulk: false,
+    });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation.challengeId || deleteConfirmation.isBulk) return;
+
+    const challengeId = deleteConfirmation.challengeId;
+    setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     setDeletingChallenge(challengeId);
     try {
       await challengeAPI.delete(challengeId);
@@ -1152,11 +1177,9 @@ export function ChallengesList({
                       } else {
                         // Swipe left - delete
                         hapticFeedback.medium();
-                        if (confirm(`Delete "${challenge.name}"?`)) {
-                          handleDeleteChallenge(challenge._id, challenge.name, {
-                            stopPropagation: () => {},
-                          } as React.MouseEvent);
-                        }
+                        handleDeleteChallenge(challenge._id, challenge.name, {
+                          stopPropagation: () => {},
+                        } as React.MouseEvent);
                       }
                     }
                   }
@@ -2102,6 +2125,43 @@ export function ChallengesList({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={
+          deleteConfirmation.isBulk
+            ? handleConfirmBulkDelete
+            : handleConfirmDelete
+        }
+        title={
+          deleteConfirmation.isBulk
+            ? `Delete ${deleteConfirmation.count} Challenge${
+                deleteConfirmation.count === 1 ? "" : "s"
+              }?`
+            : `Delete Challenge?`
+        }
+        message={
+          deleteConfirmation.isBulk
+            ? `Are you sure you want to delete ${
+                deleteConfirmation.count
+              } challenge${deleteConfirmation.count === 1 ? "" : "s"}?\n\n${
+                deleteConfirmation.challengeNames
+              }`
+            : `Are you sure you want to delete "${deleteConfirmation.challengeName}"?`
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={
+          deleteConfirmation.isBulk
+            ? deletingChallenges
+            : deletingChallenge === deleteConfirmation.challengeId
+        }
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
 import { Skeleton } from "./Skeleton";
 import { SkillSkeletonList } from "./SkillSkeleton";
 import { EmptyState } from "./EmptyState";
+import { ConfirmationModal } from "./ConfirmationModal";
 import { hapticFeedback } from "../utils/haptic";
 
 interface SkillsListProps {
@@ -58,7 +59,7 @@ export function SkillsList({
   } | null>(null);
   const [swipedSkillId, setSwipedSkillId] = useState<string | null>(null);
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
-  
+
   // Swipe to close modal state
   const [modalSwipeStart, setModalSwipeStart] = useState<{
     x: number;
@@ -287,7 +288,17 @@ export function SkillsList({
     }
   };
 
-  const handleDeleteSkill = async (
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    isOpen: boolean;
+    skillId: string | null;
+    skillName: string;
+  }>({
+    isOpen: false,
+    skillId: null,
+    skillName: "",
+  });
+
+  const handleDeleteSkill = (
     skillId: string,
     skillName: string,
     e: React.MouseEvent
@@ -296,14 +307,18 @@ export function SkillsList({
     if (deletingSkill === skillId) return;
 
     hapticFeedback.medium();
-    if (
-      !confirm(
-        `Are you sure you want to delete "${skillName}"? This will also delete all associated challenges.`
-      )
-    ) {
-      return;
-    }
+    setDeleteConfirmation({
+      isOpen: true,
+      skillId,
+      skillName,
+    });
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmation.skillId) return;
+
+    const skillId = deleteConfirmation.skillId;
+    setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }));
     setDeletingSkill(skillId);
     try {
       await skillAPI.delete(skillId);
@@ -457,11 +472,9 @@ export function SkillsList({
                     if (deltaX < 0) {
                       // Swipe left - delete
                       hapticFeedback.medium();
-                      if (confirm(`Delete "${skill.name}"?`)) {
-                        handleDeleteSkill(skill._id, skill.name, {
-                          stopPropagation: () => {},
-                        } as React.MouseEvent);
-                      }
+                      handleDeleteSkill(skill._id, skill.name, {
+                        stopPropagation: () => {},
+                      } as React.MouseEvent);
                     }
                   }
                 }
@@ -595,7 +608,8 @@ export function SkillsList({
                 modalSwipeOffset > 0
                   ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
                   : undefined,
-              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
             }}
           >
             <div className="challenge-action-modal-header">
@@ -707,7 +721,8 @@ export function SkillsList({
                 modalSwipeOffset > 0
                   ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
                   : undefined,
-              transition: modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
+              transition:
+                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
             }}
           >
             {(() => {
@@ -778,6 +793,21 @@ export function SkillsList({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() =>
+          setDeleteConfirmation((prev) => ({ ...prev, isOpen: false }))
+        }
+        onConfirm={handleConfirmDelete}
+        title="Delete Skill?"
+        message={`Are you sure you want to delete "${deleteConfirmation.skillName}"? This will also delete all associated challenges.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deletingSkill === deleteConfirmation.skillId}
+      />
     </div>
   );
 }
