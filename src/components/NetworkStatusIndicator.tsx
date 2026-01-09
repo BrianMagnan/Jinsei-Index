@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useToast } from "../contexts/ToastContext";
+import { syncOfflineQueue } from "../services/api";
+import { getQueueSize } from "../utils/offlineQueue";
 
 /**
  * Network status indicator component
@@ -22,9 +24,27 @@ export function NetworkStatusIndicator() {
 
     if (lastStatusRef.current !== isOnline) {
       if (!isOnline) {
-        toast.showError("You're offline. Some features may be unavailable.");
+        const queueSize = getQueueSize();
+        const message = queueSize > 0
+          ? `You're offline. ${queueSize} request${queueSize === 1 ? '' : 's'} queued.`
+          : "You're offline. Some features may be unavailable.";
+        toast.showError(message);
       } else {
-        toast.showSuccess("Connection restored. Syncing data...");
+        // Sync offline queue when back online
+        syncOfflineQueue()
+          .then(({ success, failed }) => {
+            if (success > 0 || failed > 0) {
+              toast.showSuccess(
+                `Connection restored. ${success} request${success === 1 ? '' : 's'} synced.${failed > 0 ? ` ${failed} failed.` : ''}`
+              );
+            } else {
+              toast.showSuccess("Connection restored.");
+            }
+          })
+          .catch((error) => {
+            console.error('Error syncing offline queue:', error);
+            toast.showSuccess("Connection restored.");
+          });
       }
       lastStatusRef.current = isOnline;
     }
