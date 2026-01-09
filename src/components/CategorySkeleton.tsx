@@ -3,28 +3,20 @@ import "../App.css";
 
 export function CategorySkeleton() {
   return (
-    <li className="categories-list-item skeleton-item">
-      <div className="category-info">
-        <Skeleton width="60%" height="1.5rem" className="skeleton-title" />
-        <div className="category-stats">
-          <Skeleton width="50px" height="1rem" />
-          <Skeleton width="50px" height="1rem" />
-        </div>
+    <li className="category-item skeleton-item">
+      <div className="categories-list-item-content">
+        <span className="category-name">
+          <Skeleton width="60%" height="1.5rem" />
+        </span>
       </div>
-      <div className="category-actions">
+      <button className="edit-button" disabled>
         <Skeleton
-          width="32px"
-          height="32px"
+          width="28px"
+          height="28px"
           borderRadius="4px"
           variant="rectangular"
         />
-        <Skeleton
-          width="32px"
-          height="32px"
-          borderRadius="4px"
-          variant="rectangular"
-        />
-      </div>
+      </button>
     </li>
   );
 }

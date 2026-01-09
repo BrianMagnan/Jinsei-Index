@@ -4,21 +4,21 @@ import "../App.css";
 export function SkillSkeleton() {
   return (
     <li className="skill-item skeleton-item">
-      <div className="skill-info">
-        <Skeleton width="70%" height="1.25rem" className="skeleton-title" />
-        <div className="skill-stats">
-          <Skeleton width="60px" height="0.875rem" />
-          <Skeleton width="60px" height="0.875rem" />
+      <div className="skill-content">
+        <div className="skill-header">
+          <div className="skill-name">
+            <Skeleton width="70%" height="1.25rem" />
+          </div>
         </div>
       </div>
-      <div className="skill-actions">
+      <button className="edit-button" disabled>
         <Skeleton
           width="28px"
           height="28px"
           borderRadius="4px"
           variant="rectangular"
         />
-      </div>
+      </button>
     </li>
   );
 }

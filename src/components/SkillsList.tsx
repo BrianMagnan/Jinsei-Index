@@ -19,6 +19,8 @@ interface SkillsListProps {
   onBackToCategories?: () => void;
   navDirection?: "forward" | "backward" | null;
   onAnimationComplete?: () => void;
+  onShowAddForm?: boolean;
+  onShowAddFormChange?: (show: boolean) => void;
 }
 
 export function SkillsList({
@@ -29,12 +31,21 @@ export function SkillsList({
   onBackToCategories,
   navDirection,
   onAnimationComplete,
+  onShowAddForm: showAddFormProp,
+  onShowAddFormChange,
 }: SkillsListProps) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingSkill, setCreatingSkill] = useState(false);
   const [updatingSkill, setUpdatingSkill] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(showAddFormProp || false);
+
+  // Sync with parent state
+  useEffect(() => {
+    if (showAddFormProp !== undefined) {
+      setShowAddForm(showAddFormProp);
+    }
+  }, [showAddFormProp]);
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillDescription, setNewSkillDescription] = useState("");
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
@@ -176,6 +187,7 @@ export function SkillsList({
       setNewSkillName("");
       setNewSkillDescription("");
       setShowAddForm(false);
+      if (onShowAddFormChange) onShowAddFormChange(false);
       await loadSkills();
       hapticFeedback.success();
     } catch (err) {
@@ -341,7 +353,7 @@ export function SkillsList({
       ? "slide-in-left"
       : "";
 
-  // Clear animation after it completes
+  // Clear animation after it completes - must be before early returns
   useEffect(() => {
     if (navDirection && onAnimationComplete) {
       const timer = setTimeout(() => {
@@ -351,18 +363,32 @@ export function SkillsList({
     }
   }, [navDirection, onAnimationComplete]);
 
+  // Early return with full skeleton when loading or category not available
+  if (loading || (!localCategory && !category)) {
+    return (
+      <div className={`skills-list ${animationClass}`}>
+        <BreadcrumbsSkeleton />
+        <div className="section-header">
+          <Skeleton width="150px" height="2rem" />
+        </div>
+        <ul className="skill-list">
+          <SkillSkeletonList count={5} />
+        </ul>
+      </div>
+    );
+  }
+
+  // Get the category to use (localCategory takes precedence)
+  const displayCategory = localCategory || category;
+
   return (
     <div className={`skills-list ${animationClass}`}>
-      {loading ? (
-        <BreadcrumbsSkeleton />
-      ) : (
-        <Breadcrumbs
-          category={localCategory || category}
-          skill={null}
-          onCategoriesClick={onBackToCategories}
-          onCategoryClick={undefined}
-        />
-      )}
+      <Breadcrumbs
+        category={displayCategory}
+        skill={null}
+        onCategoriesClick={onBackToCategories}
+        onCategoryClick={undefined}
+      />
       <div className="section-header">
         <div className="header-title-section">
           {editingCategory ? (
@@ -392,19 +418,13 @@ export function SkillsList({
                 </button>
               </div>
             </form>
-          ) : loading ? (
-            <Skeleton width="150px" height="2rem" />
           ) : (
-            <h2>{localCategory?.name || category?.name || "Skills"}</h2>
+            <h2>{displayCategory?.name || "Skills"}</h2>
           )}
         </div>
       </div>
 
-      {loading ? (
-        <ul className="skill-list">
-          <SkillSkeletonList count={5} />
-        </ul>
-      ) : skills.length === 0 ? (
+      {skills.length === 0 ? (
         <EmptyState
           icon="🎯"
           title="No Skills Yet"
@@ -544,19 +564,6 @@ export function SkillsList({
         </ul>
       )}
 
-      <div className="categories-list-footer">
-        <button
-          className="add-button"
-          onClick={() => {
-            hapticFeedback.light();
-            setShowAddForm(true);
-          }}
-          title="Add skill"
-        >
-          +
-        </button>
-      </div>
-
       {/* Add Skill Modal */}
       {showAddForm && (
         <div
@@ -564,6 +571,7 @@ export function SkillsList({
           onClick={() => {
             hapticFeedback.light();
             setShowAddForm(false);
+            if (onShowAddFormChange) onShowAddFormChange(false);
           }}
           onTouchStart={(e) => {
             setModalSwipeStart({
@@ -593,6 +601,7 @@ export function SkillsList({
               if (deltaY > minSwipeDistance) {
                 hapticFeedback.light();
                 setShowAddForm(false);
+                if (onShowAddFormChange) onShowAddFormChange(false);
               }
             }
             setModalSwipeStart(null);
@@ -619,6 +628,7 @@ export function SkillsList({
                 onClick={() => {
                   hapticFeedback.light();
                   setShowAddForm(false);
+                  if (onShowAddFormChange) onShowAddFormChange(false);
                 }}
                 aria-label="Close"
               >
@@ -645,6 +655,7 @@ export function SkillsList({
                   onClick={() => {
                     hapticFeedback.light();
                     setShowAddForm(false);
+                    if (onShowAddFormChange) onShowAddFormChange(false);
                   }}
                   disabled={creatingSkill}
                 >

@@ -9,6 +9,7 @@ import { achievementAPI, challengeAPI } from "../services/api";
 import type { TodoItem } from "../types";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
+import { TodoSkeletonList } from "./TodoSkeleton";
 import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
@@ -129,9 +130,9 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
         <div className="todo-list-header">
           <h1 className="todo-list-title">To-Do List</h1>
         </div>
-        <div className="todo-list-loading">
-          <Spinner />
-        </div>
+        <ul className="todo-list">
+          <TodoSkeletonList count={5} />
+        </ul>
       </div>
     );
   }

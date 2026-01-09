@@ -749,6 +749,8 @@ body {
   animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Footer is now rendered via portal outside animated containers, so no special handling needed */
+
 /* Keyframes for slide animations - defined globally for both desktop and mobile */
 @keyframes slideInRight {
   0% {
@@ -909,6 +911,7 @@ body {
   border-top: 1px solid var(--color-border);
   z-index: 999; /* Above bottom nav (z-index: 998) */
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  /* Footer is rendered via portal outside animated containers, so no transform issues */
 }
 
 .categories-list-footer .add-button {
@@ -4051,8 +4054,7 @@ button:disabled .spinner,
 .breadcrumbs-list {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  /* flex-wrap: wrap; */
   list-style: none;
   margin: 0;
   padding: 0;
@@ -4101,6 +4103,15 @@ button:disabled .spinner,
   min-height: 44px;
   display: flex;
   align-items: center;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  direction: ltr;
+  unicode-bidi: isolate;
 }
 
 /* Mobile Media Queries */

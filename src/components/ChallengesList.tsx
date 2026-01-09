@@ -28,6 +28,22 @@ interface ChallengesListProps {
   initialChallengeId?: string;
   navDirection?: "forward" | "backward" | null;
   onAnimationComplete?: () => void;
+  onFooterStateChange?: (state: {
+    showAddForm: boolean;
+    selectionMode: boolean;
+    selectedIds: Set<string>;
+    deleting: boolean;
+    selectedChallengeId: string | null;
+    selectedChallenge: {
+      id: string;
+      name: string;
+      inTodo: boolean;
+      inDaily: boolean;
+      isDeleting: boolean;
+      isUpdating: boolean;
+      isCompleting: boolean;
+    } | null;
+  }) => void;
 }
 
 export function ChallengesList({
@@ -37,6 +53,7 @@ export function ChallengesList({
   initialChallengeId,
   navDirection,
   onAnimationComplete,
+  onFooterStateChange,
 }: ChallengesListProps) {
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
   const [loading, setLoading] = useState(true);
@@ -440,6 +457,102 @@ export function ChallengesList({
       count: selectedChallengeIds.size,
     });
   };
+
+  // Notify parent when footer state changes
+  useEffect(() => {
+    if (onFooterStateChange) {
+      const selectedChallenge =
+        skill?.challenges?.find((c) => c._id === selectedChallengeId) || null;
+      onFooterStateChange({
+        showAddForm,
+        selectionMode,
+        selectedIds: selectedChallengeIds,
+        deleting: deletingChallenges,
+        selectedChallengeId,
+        selectedChallenge: selectedChallenge
+          ? {
+              id: selectedChallenge._id,
+              name: selectedChallenge.name,
+              inTodo: todoChallengeIds.has(selectedChallenge._id),
+              inDaily: dailyChallengeIds.has(selectedChallenge._id),
+              isDeleting: deletingChallenge === selectedChallenge._id,
+              isUpdating: updatingChallenge === selectedChallenge._id,
+              isCompleting: completingChallenge === selectedChallenge._id,
+            }
+          : null,
+      });
+    }
+  }, [
+    showAddForm,
+    selectionMode,
+    selectedChallengeIds,
+    deletingChallenges,
+    selectedChallengeId,
+    skill,
+    todoChallengeIds,
+    dailyChallengeIds,
+    deletingChallenge,
+    updatingChallenge,
+    completingChallenge,
+    onFooterStateChange,
+  ]);
+
+  // Expose actions to parent via window object (for App.tsx footer)
+  useEffect(() => {
+    const selectedChallenge =
+      skill?.challenges?.find((c) => c._id === selectedChallengeId) || null;
+
+    // Store handlers in a way parent can call them
+    const actionHandlers: Record<string, (e?: React.MouseEvent) => void> = {
+      toggleAdd: () => setShowAddForm(!showAddForm),
+      toggleSelect: () => setSelectionMode(true),
+      deleteSelected: handleDeleteSelectedChallenges,
+      openBulkList: handleOpenBulkListSelection,
+      exitSelect: () => {
+        setSelectionMode(false);
+        setSelectedChallengeIds(new Set());
+      },
+      // Detail actions
+      editChallenge: (e?: React.MouseEvent) => {
+        if (selectedChallenge) {
+          handleEditChallenge(selectedChallenge, e);
+        }
+      },
+      deleteChallenge: (e?: React.MouseEvent) => {
+        if (selectedChallenge) {
+          handleDeleteChallenge(
+            selectedChallenge._id,
+            selectedChallenge.name,
+            e || ({} as React.MouseEvent)
+          );
+        }
+      },
+      openListSelection: () => {
+        handleOpenListSelection();
+      },
+      completeChallenge: (e?: React.MouseEvent) => {
+        if (selectedChallenge) {
+          handleCompleteChallenge(
+            selectedChallenge,
+            e || ({} as React.MouseEvent)
+          );
+        }
+      },
+    };
+    // Store in a way parent can access
+    (window as any).__challengeFooterActions = actionHandlers;
+    return () => {
+      delete (window as any).__challengeFooterActions;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    showAddForm,
+    selectionMode,
+    selectedChallengeIds,
+    selectedChallengeId,
+    skill,
+    // Handlers are stable, but we include them for completeness
+  ]);
 
   const handleConfirmBulkDelete = async () => {
     if (selectedChallengeIds.size === 0) return;
@@ -1314,107 +1427,7 @@ export function ChallengesList({
               )}
             </div>
           </div>
-          <div className="challenge-detail-actions">
-            <div className="challenge-detail-action-buttons">
-              <button
-                className="challenge-detail-action-button edit"
-                onClick={(e) => {
-                  handleEditChallenge(selectedChallenge, e);
-                }}
-                disabled={
-                  deletingChallenge === selectedChallenge._id ||
-                  updatingChallenge === selectedChallenge._id ||
-                  completingChallenge === selectedChallenge._id
-                }
-              >
-                {updatingChallenge === selectedChallenge._id ? (
-                  <>
-                    <Spinner size="sm" />
-                    <span>Saving...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="button-icon">✏️</span>
-                    <span>Edit</span>
-                  </>
-                )}
-              </button>
-              <button
-                className="challenge-detail-action-button delete"
-                onClick={(e) =>
-                  handleDeleteChallenge(
-                    selectedChallenge._id,
-                    selectedChallenge.name,
-                    e
-                  )
-                }
-                disabled={
-                  deletingChallenge === selectedChallenge._id ||
-                  updatingChallenge === selectedChallenge._id ||
-                  completingChallenge === selectedChallenge._id
-                }
-              >
-                {deletingChallenge === selectedChallenge._id ? (
-                  <>
-                    <Spinner size="sm" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="button-icon">🗑️</span>
-                    <span>Delete</span>
-                  </>
-                )}
-              </button>
-              <button
-                className={`challenge-detail-action-button list ${
-                  todoChallengeIds.has(selectedChallenge._id) ||
-                  dailyChallengeIds.has(selectedChallenge._id)
-                    ? "in-list"
-                    : ""
-                }`}
-                onClick={handleOpenListSelection}
-                disabled={
-                  deletingChallenge === selectedChallenge._id ||
-                  completingChallenge === selectedChallenge._id
-                }
-              >
-                <span className="button-icon">
-                  {todoChallengeIds.has(selectedChallenge._id) ||
-                  dailyChallengeIds.has(selectedChallenge._id)
-                    ? "✓"
-                    : "➕"}
-                </span>
-                <span>
-                  {todoChallengeIds.has(selectedChallenge._id) ||
-                  dailyChallengeIds.has(selectedChallenge._id)
-                    ? "In List"
-                    : "+ To List"}
-                </span>
-              </button>
-              <button
-                className="challenge-detail-action-button complete"
-                onClick={(e) => handleCompleteChallenge(selectedChallenge, e)}
-                disabled={
-                  completingChallenge === selectedChallenge._id ||
-                  deletingChallenge === selectedChallenge._id ||
-                  updatingChallenge === selectedChallenge._id
-                }
-              >
-                {completingChallenge === selectedChallenge._id ? (
-                  <>
-                    <Spinner size="sm" />
-                    <span>Completing...</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="button-icon">✓</span>
-                    <span>Complete</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+          {/* Actions are now rendered in App.tsx footer */}
         </div>
       )}
 
@@ -1617,68 +1630,7 @@ export function ChallengesList({
         </div>
       )}
 
-      {!selectedChallengeId && (
-        <div className="categories-list-footer">
-          {selectionMode ? (
-            <>
-              <button
-                className="delete-button"
-                onClick={handleDeleteSelectedChallenges}
-                disabled={selectedChallengeIds.size === 0 || deletingChallenges}
-                title="Delete selected challenges"
-              >
-                {deletingChallenges ? (
-                  <>
-                    <Spinner size="sm" />
-                    <span>Deleting...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>🗑️</span>
-                    <span>Delete</span>
-                  </>
-                )}
-              </button>
-              <button
-                className="add-to-list-button"
-                onClick={handleOpenBulkListSelection}
-                disabled={selectedChallengeIds.size === 0}
-                title="Add challenges to list"
-              >
-                <span>+</span>
-                <span>To List</span>
-              </button>
-              <button
-                className="select-button active"
-                onClick={() => {
-                  setSelectionMode(false);
-                  setSelectedChallengeIds(new Set());
-                }}
-                title="Exit selection"
-              >
-                Done
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                className="select-button"
-                onClick={() => setSelectionMode(true)}
-                title="Select challenges"
-              >
-                Select
-              </button>
-              <button
-                className="add-button"
-                onClick={() => setShowAddForm(!showAddForm)}
-                title="Add challenge"
-              >
-                +
-              </button>
-            </>
-          )}
-        </div>
-      )}
+      {/* Footer is rendered in App.tsx to avoid transform issues */}
 
       {bulkListSelectionModalOpen && (
         <div className="list-selection-modal-overlay">

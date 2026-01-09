@@ -3,6 +3,8 @@ import { categoryAPI } from "../services/api";
 import type { Category } from "../types";
 import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
+import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
+import { Skeleton } from "./Skeleton";
 import { EmptyState } from "./EmptyState";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { ConfirmationModal } from "./ConfirmationModal";
@@ -14,6 +16,8 @@ interface CategoriesListProps {
   onCategorySelect: (categoryId: string | null) => void;
   navDirection?: "forward" | "backward" | null;
   onAnimationComplete?: () => void;
+  onShowAddForm?: boolean;
+  onShowAddFormChange?: (show: boolean) => void;
 }
 
 export function CategoriesList({
@@ -21,10 +25,19 @@ export function CategoriesList({
   onCategorySelect,
   navDirection,
   onAnimationComplete,
+  onShowAddForm: showAddFormProp,
+  onShowAddFormChange,
 }: CategoriesListProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(showAddFormProp || false);
+
+  // Sync with parent state
+  useEffect(() => {
+    if (showAddFormProp !== undefined) {
+      setShowAddForm(showAddFormProp);
+    }
+  }, [showAddFormProp]);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -150,6 +163,7 @@ export function CategoriesList({
       setNewCategoryName("");
       setNewCategoryDescription("");
       setShowAddForm(false);
+      if (onShowAddFormChange) onShowAddFormChange(false);
       await loadCategories();
       hapticFeedback.success();
     } catch (err) {
@@ -265,13 +279,9 @@ export function CategoriesList({
   if (loading) {
     return (
       <div className={`categories-list ${animationClass}`}>
-        <Breadcrumbs
-          category={null}
-          skill={null}
-          onCategoriesClick={undefined}
-        />
+        <BreadcrumbsSkeleton />
         <div className="section-header">
-          <h2>Categories</h2>
+          <Skeleton width="150px" height="2rem" />
         </div>
         <ul className="category-list">
           <CategorySkeletonList count={6} />
@@ -418,19 +428,6 @@ export function CategoriesList({
         </ul>
       )}
 
-      <div className="categories-list-footer">
-        <button
-          className="add-button"
-          onClick={() => {
-            hapticFeedback.light();
-            setShowAddForm(true);
-          }}
-          title="Add category"
-        >
-          +
-        </button>
-      </div>
-
       {/* Add Category Modal */}
       {showAddForm && (
         <div
@@ -438,6 +435,7 @@ export function CategoriesList({
           onClick={() => {
             hapticFeedback.light();
             setShowAddForm(false);
+            if (onShowAddFormChange) onShowAddFormChange(false);
           }}
           onTouchStart={(e) => {
             setModalSwipeStart({
@@ -467,6 +465,7 @@ export function CategoriesList({
               if (deltaY > minSwipeDistance) {
                 hapticFeedback.light();
                 setShowAddForm(false);
+                if (onShowAddFormChange) onShowAddFormChange(false);
               }
             }
             setModalSwipeStart(null);
@@ -493,6 +492,7 @@ export function CategoriesList({
                 onClick={() => {
                   hapticFeedback.light();
                   setShowAddForm(false);
+                  if (onShowAddFormChange) onShowAddFormChange(false);
                 }}
                 aria-label="Close"
               >
@@ -519,6 +519,7 @@ export function CategoriesList({
                   onClick={() => {
                     hapticFeedback.light();
                     setShowAddForm(false);
+                    if (onShowAddFormChange) onShowAddFormChange(false);
                   }}
                   disabled={creatingCategory}
                 >

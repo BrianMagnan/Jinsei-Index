@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { authAPI, setCurrentUser, profileAPI } from "../services/api";
 import type { Profile } from "../types";
-import { Spinner } from "./Spinner";
+import { ProfileSkeleton } from "./ProfileSkeleton";
 
 export function ProfilesList() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -62,14 +62,7 @@ export function ProfilesList() {
   };
 
   if (loading) {
-    return (
-      <div className="profiles-container">
-        <div className="profiles-loading">
-          <Spinner size="md" />
-          <span>Loading profile...</span>
-        </div>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (!profile) {

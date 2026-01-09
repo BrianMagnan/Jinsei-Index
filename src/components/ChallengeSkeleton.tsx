@@ -5,18 +5,9 @@ export function ChallengeSkeleton() {
   return (
     <li className="challenge-item skeleton-item">
       <div className="challenge-info">
-        <Skeleton width="75%" height="1.125rem" className="skeleton-title" />
-        <div className="challenge-stats">
-          <Skeleton width="50px" height="0.875rem" />
+        <div className="challenge-name">
+          <Skeleton width="75%" height="1.125rem" />
         </div>
-      </div>
-      <div className="challenge-actions">
-        <Skeleton
-          width="28px"
-          height="28px"
-          borderRadius="4px"
-          variant="rectangular"
-        />
       </div>
     </li>
   );

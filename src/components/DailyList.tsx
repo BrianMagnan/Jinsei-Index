@@ -8,6 +8,7 @@ import { achievementAPI, challengeAPI } from "../services/api";
 import type { DailyItem } from "../types";
 import { EmptyState } from "./EmptyState";
 import { Spinner } from "./Spinner";
+import { TodoSkeletonList } from "./TodoSkeleton";
 import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
@@ -121,9 +122,9 @@ export function DailyList({ onNavigateToChallenge }: DailyListProps) {
         <div className="todo-list-header">
           <h1 className="todo-list-title">Daily List</h1>
         </div>
-        <div className="todo-list-loading">
-          <Spinner />
-        </div>
+        <ul className="todo-list">
+          <TodoSkeletonList count={5} />
+        </ul>
       </div>
     );
   }
@@ -268,4 +269,3 @@ export function DailyList({ onNavigateToChallenge }: DailyListProps) {
     </div>
   );
 }
-
