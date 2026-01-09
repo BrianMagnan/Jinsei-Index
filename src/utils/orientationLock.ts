@@ -5,60 +5,184 @@ interface ScreenOrientationLock extends ScreenOrientation {
   lock?(orientation: 'portrait' | 'landscape' | 'portrait-primary' | 'portrait-secondary' | 'landscape-primary' | 'landscape-secondary' | 'natural'): Promise<void>;
 }
 
+let lockAttempts = 0;
+const MAX_LOCK_ATTEMPTS = 10;
+
+/**
+ * Check if device is mobile
+ */
+function isMobileDevice(): boolean {
+  return (
+    window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0)
+  );
+}
+
+/**
+ * Check if device is iOS
+ */
+function isIOS(): boolean {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Request fullscreen mode (required by some browsers for orientation lock)
+ */
+async function requestFullscreen(): Promise<boolean> {
+  const doc = document.documentElement as any;
+  
+  if (doc.requestFullscreen) {
+    try {
+      await doc.requestFullscreen();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  } else if (doc.webkitRequestFullscreen) {
+    try {
+      await doc.webkitRequestFullscreen();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  } else if (doc.mozRequestFullScreen) {
+    try {
+      await doc.mozRequestFullScreen();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  } else if (doc.msRequestFullscreen) {
+    try {
+      await doc.msRequestFullscreen();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+  
+  return false;
+}
+
 /**
  * Lock screen orientation to portrait on mobile devices
  * Uses 'portrait-primary' for better compatibility
  */
-export function lockOrientationToPortrait(): void {
+export async function lockOrientationToPortrait(): Promise<void> {
   // Check if we're on a mobile device
-  const isMobile = 
-    window.innerWidth <= 768 || 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    ('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0);
-
-  if (!isMobile) {
+  if (!isMobileDevice()) {
     return; // Don't lock on desktop
   }
 
+  // iOS doesn't support programmatic orientation locking
+  // The manifest.json orientation setting is the best we can do
+  if (isIOS()) {
+    console.log('[OrientationLock] iOS detected - using manifest orientation setting only');
+    return;
+  }
+
+  // Prevent excessive lock attempts
+  if (lockAttempts >= MAX_LOCK_ATTEMPTS) {
+    return;
+  }
+
+  lockAttempts++;
+
   // Try to lock orientation using Screen Orientation API
   const orientation = screen.orientation as ScreenOrientationLock;
+  
   if (orientation && typeof orientation.lock === 'function') {
     const lockFn = orientation.lock;
+    
     // Try portrait-primary first (more specific, better support)
-    lockFn('portrait-primary').catch(() => {
+    try {
+      await lockFn('portrait-primary');
+      console.log('[OrientationLock] Successfully locked to portrait-primary');
+      lockAttempts = 0; // Reset on success
+      return;
+    } catch (e) {
       // Fallback to portrait if portrait-primary fails
-      if (typeof lockFn === 'function') {
-        lockFn('portrait').catch((error: Error) => {
-          // Lock may fail if not in fullscreen or without user gesture
-          // This is expected behavior - we'll handle it gracefully
-          console.log('[OrientationLock] Could not lock orientation:', error.message);
-        });
+      try {
+        await lockFn('portrait');
+        console.log('[OrientationLock] Successfully locked to portrait');
+        lockAttempts = 0; // Reset on success
+        return;
+      } catch (error: any) {
+        // Lock may fail if not in fullscreen or without user gesture
+        console.warn('[OrientationLock] Could not lock orientation:', error?.message || error);
+        
+        // Some browsers require fullscreen mode for orientation lock
+        // Try fullscreen as a last resort (only on user interaction)
+        const isFullscreen = document.fullscreenElement || 
+                             (document as any).webkitFullscreenElement ||
+                             (document as any).mozFullScreenElement ||
+                             (document as any).msFullscreenElement;
+        
+        if (!isFullscreen && lockAttempts <= 2) {
+          // Only try fullscreen on first few attempts to avoid being too intrusive
+          const fullscreenSuccess = await requestFullscreen();
+          if (fullscreenSuccess) {
+            console.log('[OrientationLock] Entered fullscreen mode, retrying lock...');
+            // Retry lock after fullscreen
+            try {
+              await lockFn('portrait-primary');
+              console.log('[OrientationLock] Successfully locked after fullscreen');
+              lockAttempts = 0;
+              return;
+            } catch (e2) {
+              try {
+                await lockFn('portrait');
+                console.log('[OrientationLock] Successfully locked to portrait after fullscreen');
+                lockAttempts = 0;
+                return;
+              } catch (e3) {
+                console.warn('[OrientationLock] Still could not lock after fullscreen');
+              }
+            }
+          }
+        }
       }
-    });
+    }
   } 
   // Fallback for older browsers
   else if ((screen as any).lockOrientation) {
     try {
-      (screen as any).lockOrientation('portrait');
+      const result = (screen as any).lockOrientation('portrait');
+      if (result) {
+        console.log('[OrientationLock] Successfully locked using lockOrientation');
+        lockAttempts = 0;
+      }
     } catch (e) {
-      // Silently fail
+      console.warn('[OrientationLock] lockOrientation failed:', e);
     }
   } 
   // Another fallback
   else if ((screen as any).mozLockOrientation) {
     try {
-      (screen as any).mozLockOrientation('portrait');
+      const result = (screen as any).mozLockOrientation('portrait');
+      if (result) {
+        console.log('[OrientationLock] Successfully locked using mozLockOrientation');
+        lockAttempts = 0;
+      }
     } catch (e) {
-      // Silently fail
+      console.warn('[OrientationLock] mozLockOrientation failed:', e);
     }
   } 
   else if ((screen as any).msLockOrientation) {
     try {
-      (screen as any).msLockOrientation('portrait');
+      const result = (screen as any).msLockOrientation('portrait');
+      if (result) {
+        console.log('[OrientationLock] Successfully locked using msLockOrientation');
+        lockAttempts = 0;
+      }
     } catch (e) {
-      // Silently fail
+      console.warn('[OrientationLock] msLockOrientation failed:', e);
     }
+  } else {
+    console.warn('[OrientationLock] No orientation lock API available');
   }
 }
 
