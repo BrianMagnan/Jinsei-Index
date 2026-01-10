@@ -870,6 +870,18 @@ body {
   background: var(--color-primary-light);
 }
 
+.category-item.context-menu-active,
+.skill-item.context-menu-active,
+.challenge-item.context-menu-active {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border-primary);
+}
+
+/* Hide inline edit buttons in main category list (use context menu instead) */
+.category-list .category-item .edit-button {
+  display: none;
+}
+
 /* Unified item content containers - used by all three lists */
 .categories-list-item-content,
 .skill-content,
@@ -914,6 +926,7 @@ body {
   ); /* Position above bottom nav */
   left: 0;
   right: 0;
+  z-index: 1000; /* Ensure footer is above content but below modals */
   background: var(--color-bg-dark);
   border-top: 1px solid var(--color-border);
   z-index: 999; /* Above bottom nav (z-index: 998) */
@@ -1041,6 +1054,29 @@ body {
   cursor: not-allowed;
 }
 
+/* Desktop adjustments for categories list footer */
+@media (min-width: 769px) {
+  .categories-list-footer {
+    bottom: env(
+      safe-area-inset-bottom,
+      0px
+    ); /* No bottom nav on desktop, position at bottom */
+    left: 280px; /* Account for sidebar width */
+    right: 0;
+    z-index: 1000; /* Ensure footer is above content but below modals */
+  }
+
+  /* Adjust for smaller sidebar on tablets */
+  @media (max-width: 1024px) {
+    .categories-list-footer {
+      left: 240px;
+    }
+  }
+
+  /* On desktop, modal is centered and footer is at bottom, so no extra padding needed */
+  /* The default padding from base .confirmation-modal-overlay is sufficient */
+}
+
 /* Mobile adjustments for categories list footer */
 @media (max-width: 768px) {
   .categories-list-footer {
@@ -1048,6 +1084,8 @@ body {
     bottom: calc(
       60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
     ); /* Position above bottom nav on mobile */
+    left: 0; /* Full width on mobile */
+    right: 0;
     gap: var(--spacing-sm);
   }
 
@@ -1748,6 +1786,42 @@ body {
   flex-shrink: 0;
 }
 
+/* Challenge selection checkbox - visible only in selection mode */
+.challenge-selection-checkbox {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: var(--spacing-md);
+  accent-color: var(--color-primary);
+  border: 2px solid var(--color-border-primary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+}
+
+.challenge-selection-checkbox:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary-glow);
+  transform: scale(1.1);
+}
+
+.challenge-selection-checkbox:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.challenge-selection-checkbox:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.challenge-selection-checkbox:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .list-selection-option-content {
   display: flex;
   align-items: center;
@@ -1844,6 +1918,7 @@ body {
   justify-content: center;
   animation: fadeInOverlay 0.2s ease-out;
   padding: var(--spacing-lg);
+  overflow-y: auto; /* Allow scrolling if modal is too tall */
 }
 
 .confirmation-modal {
@@ -1851,17 +1926,21 @@ body {
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 500px;
+  max-height: calc(100vh - 120px);
   padding: var(--spacing-lg);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-  position: relative;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateZ(0);
   z-index: 10003;
   backdrop-filter: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transform: translateZ(0);
   will-change: transform;
+  overflow-y: auto; /* Allow scrolling if content is too tall */
 }
 
 .confirmation-modal.danger .confirmation-modal-title {
@@ -4486,6 +4565,15 @@ button:disabled .spinner,
     font-size: var(--font-size-md);
   }
 
+  /* Selection checkbox mobile sizing */
+  .challenge-selection-checkbox {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    margin-right: var(--spacing-sm);
+  }
+
   .challenge-stats {
     gap: var(--spacing-sm);
   }
@@ -4580,17 +4668,24 @@ button:disabled .spinner,
   }
 
   .confirmation-modal-overlay {
-    padding: 0;
-    align-items: flex-end;
+    padding: var(--spacing-md);
+    padding-bottom: calc(
+      var(--spacing-md) + 80px + 60px + var(--spacing-md) * 2 +
+        env(safe-area-inset-bottom)
+    ); /* Account for footer height (~80px) + bottom nav (60px) + spacing */
+    align-items: center;
+    justify-content: center;
   }
 
   .confirmation-modal {
-    max-height: 85vh;
+    max-height: calc(
+      85vh - 200px
+    ); /* Account for footer + bottom nav + spacing */
     padding: var(--spacing-md);
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-xl);
     width: 100%;
-    max-width: 100%;
-    animation: slideUpSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 500px;
+    animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   .challenge-completion-xp {
@@ -5841,7 +5936,6 @@ button:disabled .spinner,
     font-size: var(--font-size-md);
   }
 }
-
 
 /* Error Boundary Styles */
 .error-boundary {

@@ -59,6 +59,7 @@ function App() {
     selectionMode: boolean;
     selectedIds: Set<string>;
     deleting: boolean;
+    completing: boolean;
     selectedChallengeId: string | null;
     selectedChallenge: {
       id: string;
@@ -74,8 +75,28 @@ function App() {
     selectionMode: false,
     selectedIds: new Set(),
     deleting: false,
+    completing: false,
     selectedChallengeId: null,
     selectedChallenge: null,
+  });
+  // CategoriesList and SkillsList footer state (managed via window handlers)
+  const [categoryFooterState, setCategoryFooterState] = useState<{
+    selectionMode: boolean;
+    selectedIds: Set<string>;
+    deleting: boolean;
+  }>({
+    selectionMode: false,
+    selectedIds: new Set(),
+    deleting: false,
+  });
+  const [skillFooterState, setSkillFooterState] = useState<{
+    selectionMode: boolean;
+    selectedIds: Set<string>;
+    deleting: boolean;
+  }>({
+    selectionMode: false,
+    selectedIds: new Set(),
+    deleting: false,
   });
 
   // Reset challenge footer state when navigating away from challenges
@@ -86,11 +107,66 @@ function App() {
         selectionMode: false,
         selectedIds: new Set(),
         deleting: false,
+        completing: false,
         selectedChallengeId: null,
         selectedChallenge: null,
       });
     }
   }, [selectedSkillId]);
+
+  // Sync category footer state from window handlers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const handlers = (window as any).__categoryFooterActions;
+      if (handlers) {
+        const categorySelectionMode =
+          (window as any).__categorySelectionMode || false;
+        const categorySelectedIds =
+          (window as any).__categorySelectedIds || new Set();
+        const categoryDeleting = (window as any).__categoryDeleting || false;
+
+        setCategoryFooterState({
+          selectionMode: categorySelectionMode,
+          selectedIds: categorySelectedIds,
+          deleting: categoryDeleting,
+        });
+      } else {
+        setCategoryFooterState({
+          selectionMode: false,
+          selectedIds: new Set(),
+          deleting: false,
+        });
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Sync skill footer state from window handlers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const handlers = (window as any).__skillFooterActions;
+      if (handlers) {
+        const skillSelectionMode =
+          (window as any).__skillSelectionMode || false;
+        const skillSelectedIds =
+          (window as any).__skillSelectedIds || new Set();
+        const skillDeleting = (window as any).__skillDeleting || false;
+
+        setSkillFooterState({
+          selectionMode: skillSelectionMode,
+          selectedIds: skillSelectedIds,
+          deleting: skillDeleting,
+        });
+      } else {
+        setSkillFooterState({
+          selectionMode: false,
+          selectedIds: new Set(),
+          deleting: false,
+        });
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -320,30 +396,156 @@ function App() {
               <>
                 {!selectedCategoryId && (
                   <div className="categories-list-footer">
-                    <button
-                      className="add-button"
-                      onClick={() => {
-                        hapticFeedback.light();
-                        setShowCategoryAddForm(true);
-                      }}
-                      title="Add category"
-                    >
-                      +
-                    </button>
+                    {categoryFooterState.selectionMode ? (
+                      // Selection mode actions
+                      <>
+                        <button
+                          className="delete-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__categoryFooterActions;
+                            if (handlers?.deleteSelected) {
+                              handlers.deleteSelected();
+                            }
+                          }}
+                          disabled={
+                            categoryFooterState.selectedIds.size === 0 ||
+                            categoryFooterState.deleting
+                          }
+                          title="Delete selected categories"
+                        >
+                          {categoryFooterState.deleting ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Deleting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🗑️</span>
+                              <span>Delete</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="select-button active"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__categoryFooterActions;
+                            if (handlers?.exitSelect) {
+                              handlers.exitSelect();
+                            }
+                          }}
+                          title="Exit selection mode"
+                        >
+                          <span>✓</span>
+                          <span>Done</span>
+                        </button>
+                      </>
+                    ) : (
+                      // Default list actions
+                      <>
+                        <button
+                          className="select-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__categoryFooterActions;
+                            if (handlers?.toggleSelect) {
+                              handlers.toggleSelect();
+                            }
+                          }}
+                          title="Select categories"
+                        >
+                          Select
+                        </button>
+                        <button
+                          className="add-button"
+                          onClick={() => {
+                            hapticFeedback.light();
+                            setShowCategoryAddForm(true);
+                          }}
+                          title="Add category"
+                        >
+                          +
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
                 {selectedCategoryId && !selectedSkillId && (
                   <div className="categories-list-footer">
-                    <button
-                      className="add-button"
-                      onClick={() => {
-                        hapticFeedback.light();
-                        setShowSkillAddForm(true);
-                      }}
-                      title="Add skill"
-                    >
-                      +
-                    </button>
+                    {skillFooterState.selectionMode ? (
+                      // Selection mode actions
+                      <>
+                        <button
+                          className="delete-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__skillFooterActions;
+                            if (handlers?.deleteSelected) {
+                              handlers.deleteSelected();
+                            }
+                          }}
+                          disabled={
+                            skillFooterState.selectedIds.size === 0 ||
+                            skillFooterState.deleting
+                          }
+                          title="Delete selected skills"
+                        >
+                          {skillFooterState.deleting ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Deleting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>🗑️</span>
+                              <span>Delete</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="select-button active"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__skillFooterActions;
+                            if (handlers?.exitSelect) {
+                              handlers.exitSelect();
+                            }
+                          }}
+                          title="Exit selection mode"
+                        >
+                          <span>✓</span>
+                          <span>Done</span>
+                        </button>
+                      </>
+                    ) : (
+                      // Default list actions
+                      <>
+                        <button
+                          className="select-button"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__skillFooterActions;
+                            if (handlers?.toggleSelect) {
+                              handlers.toggleSelect();
+                            }
+                          }}
+                          title="Select skills"
+                        >
+                          Select
+                        </button>
+                        <button
+                          className="add-button"
+                          onClick={() => {
+                            hapticFeedback.light();
+                            setShowSkillAddForm(true);
+                          }}
+                          title="Add skill"
+                        >
+                          +
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
                 {selectedSkillId && (
@@ -502,6 +704,33 @@ function App() {
                             <>
                               <span>🗑️</span>
                               <span>Delete</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          className="challenge-detail-action-button complete"
+                          onClick={() => {
+                            const handlers = (window as any)
+                              .__challengeFooterActions;
+                            if (handlers?.completeSelected) {
+                              handlers.completeSelected();
+                            }
+                          }}
+                          disabled={
+                            challengeFooterState.selectedIds.size === 0 ||
+                            challengeFooterState.completing
+                          }
+                          title="Complete selected challenges"
+                        >
+                          {challengeFooterState.completing ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span>Completing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="button-icon">✓</span>
+                              <span>Complete</span>
                             </>
                           )}
                         </button>

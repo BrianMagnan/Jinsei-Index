@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { categoryAPI, skillAPI, challengeAPI } from "../services/api";
 import type { Category, Profile, Skill, Challenge } from "../types";
 import { Search, type SearchResult } from "./Search";
 import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { ConfirmationModal } from "./ConfirmationModal";
+import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
 
@@ -81,6 +82,38 @@ export function Sidebar({
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
 
+  // Context menu state
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [contextMenuCategoryId, setContextMenuCategoryId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Long press state (unified drag + menu)
+  const longPressTimerRef = useRef<number | null>(null);
+  const dragStartTimerRef = useRef<number | null>(null);
+  const longPressCategoryIdRef = useRef<string | null>(null);
+  const longPressTriggeredRef = useRef<boolean>(false);
+  const longPressPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const hasMovedRef = useRef<boolean>(false);
+  const dragThreshold = 10; // pixels - movement distance before drag starts
+  const DRAG_START_DELAY = 300; // ms - time before drag can start
+  const MENU_DELAY = 600; // ms - time before menu shows if no movement
+
+  // Track clicks for double-click detection
+  const clickTimerRef = useRef<number | null>(null);
+  const clickCountRef = useRef<number>(0);
+
+  // Update mobile state on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     loadCategories();
   }, []);
@@ -137,7 +170,7 @@ export function Sidebar({
     localStorage.setItem("categoryOrder", JSON.stringify(orderIds));
   };
 
-  const handleDragStart = (categoryId: string) => {
+  const handleDragStart = (categoryId: string, _index?: number) => {
     setDraggedCategoryId(categoryId);
   };
 
@@ -152,7 +185,7 @@ export function Sidebar({
     setDragOverCategoryId(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetCategoryId: string) => {
+  const handleDrop = (e: React.DragEvent, targetCategoryId: string, targetIndex: number) => {
     e.preventDefault();
     if (!draggedCategoryId || draggedCategoryId === targetCategoryId) {
       setDraggedCategoryId(null);
@@ -162,9 +195,6 @@ export function Sidebar({
 
     const draggedIndex = categories.findIndex(
       (cat) => cat._id === draggedCategoryId
-    );
-    const targetIndex = categories.findIndex(
-      (cat) => cat._id === targetCategoryId
     );
 
     if (draggedIndex === -1 || targetIndex === -1) return;
@@ -177,6 +207,7 @@ export function Sidebar({
     saveCategoryOrder(newCategories);
     setDraggedCategoryId(null);
     setDragOverCategoryId(null);
+    hapticFeedback.success();
   };
 
   const handleDragEnd = () => {
@@ -320,12 +351,174 @@ export function Sidebar({
     }
   };
 
-  const handleEditCategory = (category: Category, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEditCategory = (category: Category, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     hapticFeedback.light();
     setEditingCategoryId(category._id);
     setEditCategoryName(category.name);
     setEditCategoryDescription(category.description || "");
+  };
+
+  // Handle context menu (right-click or long-press)
+  const handleContextMenu = (
+    event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
+    category: Category
+  ) => {
+    if ('preventDefault' in event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    // For mobile, position doesn't matter (bottom sheet style)
+    // For desktop, use cursor position
+    if (isMobile) {
+      // Mobile: bottom sheet style - position will be handled by ContextMenu component
+      setContextMenuPosition({ x: 0, y: 0 });
+    } else if ('clientX' in event && 'clientY' in event) {
+      // Desktop: right-click or mouse event - show menu at cursor position
+      setContextMenuPosition({ x: event.clientX, y: event.clientY });
+    } else {
+      // Fallback: center of screen
+      setContextMenuPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    }
+    
+    setContextMenuCategoryId(category._id);
+    hapticFeedback.medium();
+  };
+
+  // Get context menu items for a category
+  const getContextMenuItems = (category: Category): ContextMenuItem[] => {
+    return [
+      {
+        label: "Edit",
+        icon: "✎",
+        action: () => {
+          handleEditCategory(category);
+          setContextMenuPosition(null);
+          setContextMenuCategoryId(null);
+        },
+      },
+      {
+        label: "Delete",
+        icon: "🗑️",
+        action: () => {
+          handleDeleteCategory(category._id, category.name, {
+            stopPropagation: () => {},
+          } as React.MouseEvent);
+          setContextMenuPosition(null);
+          setContextMenuCategoryId(null);
+        },
+        destructive: true,
+      },
+    ];
+  };
+
+  // Unified long-press handlers: drag with movement, menu without movement
+  const handleLongPressStart = (category: Category, event: React.MouseEvent | React.TouchEvent, _index: number) => {
+    longPressTriggeredRef.current = false;
+    hasMovedRef.current = false;
+    longPressCategoryIdRef.current = category._id;
+    
+    // Store initial position for movement detection
+    if ('touches' in event) {
+      const touch = event.touches[0];
+      longPressPositionRef.current = { x: touch.clientX, y: touch.clientY };
+    } else {
+      longPressPositionRef.current = { x: event.clientX, y: event.clientY };
+    }
+    
+    // Start drag timer (shorter - 300ms) - enables drag after this delay if movement occurs
+    dragStartTimerRef.current = window.setTimeout(() => {
+      if (longPressCategoryIdRef.current === category._id && hasMovedRef.current && !longPressTriggeredRef.current && !draggedCategoryId) {
+        // 300ms passed and movement detected - start drag
+        hapticFeedback.medium();
+        handleDragStart(category._id);
+        // Cancel menu timer since we're dragging
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
+    }, DRAG_START_DELAY);
+    
+    // Start menu timer (longer - 600ms, only if no movement)
+    longPressTimerRef.current = window.setTimeout(() => {
+      if (longPressCategoryIdRef.current === category._id && !hasMovedRef.current && !longPressTriggeredRef.current) {
+        // No movement - show menu
+        longPressTriggeredRef.current = true;
+        hapticFeedback.medium();
+        // Cancel drag timer if it's still running
+        if (dragStartTimerRef.current) {
+          clearTimeout(dragStartTimerRef.current);
+          dragStartTimerRef.current = null;
+        }
+        // Show context menu
+        const syntheticEvent = {
+          clientX: longPressPositionRef.current?.x || window.innerWidth / 2,
+          clientY: longPressPositionRef.current?.y || window.innerHeight / 2,
+          preventDefault: () => {},
+          stopPropagation: () => {},
+        } as React.MouseEvent;
+        handleContextMenu(syntheticEvent, category);
+      }
+    }, MENU_DELAY);
+  };
+
+  const handleLongPressMove = (category: Category, event: React.MouseEvent | React.TouchEvent, _index: number) => {
+    if (longPressCategoryIdRef.current !== category._id || longPressTriggeredRef.current) return;
+    
+    // Get current position
+    const currentX = 'touches' in event ? event.touches[0].clientX : event.clientX;
+    const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY;
+    
+    if (longPressPositionRef.current) {
+      // Calculate movement distance
+      const deltaX = Math.abs(currentX - longPressPositionRef.current.x);
+      const deltaY = Math.abs(currentY - longPressPositionRef.current.y);
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      
+      // If moved beyond threshold, mark as moved
+      if (distance > dragThreshold) {
+        hasMovedRef.current = true;
+        
+        // Cancel menu timer if user is moving
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        
+        // Start drag if enough time has passed (DRAG_START_DELAY) and movement detected
+        if (!draggedCategoryId && !dragStartTimerRef.current) {
+          // Timer already fired (300ms passed) - start drag immediately since movement detected
+          hapticFeedback.medium();
+          handleDragStart(category._id);
+        }
+        
+        // Update position
+        longPressPositionRef.current = { x: currentX, y: currentY };
+      }
+    }
+  };
+
+  const handleLongPressEnd = () => {
+    // Reset the flag after a short delay to allow click handler to check it
+    setTimeout(() => {
+      longPressTriggeredRef.current = false;
+    }, 100);
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    if (dragStartTimerRef.current) {
+      clearTimeout(dragStartTimerRef.current);
+      dragStartTimerRef.current = null;
+    }
+    longPressCategoryIdRef.current = null;
+    longPressPositionRef.current = null;
+    hasMovedRef.current = false;
   };
 
   const handleUpdateCategory = async (
@@ -566,7 +759,7 @@ export function Sidebar({
                 </div>
               ) : (
                 <ul className="category-list">
-                  {filteredCategories.map((category) => (
+                  {filteredCategories.map((category, index) => (
                     <li
                       key={category._id}
                       className={`category-item ${
@@ -575,56 +768,94 @@ export function Sidebar({
                         draggedCategoryId === category._id ? "dragging" : ""
                       } ${
                         dragOverCategoryId === category._id ? "drag-over" : ""
-                      }`}
-                      draggable={true}
-                      onDragStart={() => handleDragStart(category._id)}
-                      onDragOver={(e) => handleDragOver(e, category._id)}
+                      } ${contextMenuCategoryId === category._id ? "context-menu-active" : ""}`}
+                      draggable={!isMobile && !editingCategoryId && draggedCategoryId !== category._id && !longPressTriggeredRef.current && (hasMovedRef.current || dragStartTimerRef.current === null)}
+                      onDragStart={() => {
+                        if (!isMobile && !editingCategoryId) {
+                          // Cancel long-press timers when native drag starts
+                          handleLongPressEnd();
+                          handleDragStart(category._id, index);
+                        }
+                      }}
+                      onDragOver={(e) => {
+                        if (!isMobile) {
+                          handleDragOver(e, category._id);
+                        }
+                      }}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, category._id)}
+                      onDrop={(e) => {
+                        if (!isMobile) {
+                          handleDrop(e, category._id, index);
+                        }
+                      }}
                       onDragEnd={handleDragEnd}
                       onClick={() => {
-                        if (editingCategoryId !== category._id) {
+                        // Don't trigger select if context menu is active or dragging
+                        if (contextMenuPosition || draggedCategoryId || editingCategoryId === category._id) {
+                          return;
+                        }
+
+                        // Handle double-click detection (desktop only)
+                        if (!isMobile) {
+                          clickCountRef.current += 1;
+                          
+                          // Clear existing timer
+                          if (clickTimerRef.current) {
+                            clearTimeout(clickTimerRef.current);
+                          }
+                          
+                          // Wait to see if it's a double-click
+                          clickTimerRef.current = window.setTimeout(() => {
+                            // Single click - select category (only if long-press wasn't triggered)
+                            if (clickCountRef.current === 1 && !longPressTriggeredRef.current) {
+                              onCategorySelect(category._id);
+                            }
+                            clickCountRef.current = 0;
+                          }, 300); // 300ms delay to detect double-click
+                        } else {
+                          // Mobile: immediate select
                           onCategorySelect(category._id);
                         }
                       }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        // Desktop: double-click to edit
+                        if (!isMobile) {
+                          // Clear single-click timer immediately
+                          if (clickTimerRef.current) {
+                            clearTimeout(clickTimerRef.current);
+                            clickTimerRef.current = null;
+                          }
+                          clickCountRef.current = 0;
+                          // Small delay to ensure onClick doesn't fire
+                          setTimeout(() => {
+                            handleEditCategory(category);
+                          }, 0);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        // Desktop: right-click to show context menu
+                        if (!isMobile) {
+                          handleContextMenu(e, category);
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        // Desktop: long-press for drag (with movement) or menu (without movement)
+                        if (e.button === 0 && !editingCategoryId && !isMobile) {
+                          handleLongPressStart(category, e, index);
+                        }
+                      }}
+                      onMouseMove={(e) => {
+                        // Desktop: track movement during long-press
+                        if (!isMobile && !editingCategoryId && longPressCategoryIdRef.current === category._id) {
+                          handleLongPressMove(category, e, index);
+                        }
+                      }}
+                      onMouseUp={handleLongPressEnd}
+                      onMouseLeave={handleLongPressEnd}
                     >
-                      <>
-                        <span className="category-name">{category.name}</span>
-                        <div className="category-actions">
-                          <button
-                            className="edit-button"
-                            onClick={(e) => handleEditCategory(category, e)}
-                            title="Edit category"
-                            disabled={
-                              deletingCategory === category._id ||
-                              updatingCategory === category._id
-                            }
-                          >
-                            ✎
-                          </button>
-                          <button
-                            className="delete-button"
-                            onClick={(e) =>
-                              handleDeleteCategory(
-                                category._id,
-                                category.name,
-                                e
-                              )
-                            }
-                            title="Delete category"
-                            disabled={
-                              deletingCategory === category._id ||
-                              updatingCategory === category._id
-                            }
-                          >
-                            {deletingCategory === category._id ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              "×"
-                            )}
-                          </button>
-                        </div>
-                      </>
+                      <span className="category-name">{category.name}</span>
                     </li>
                   ))}
                 </ul>
@@ -775,6 +1006,21 @@ export function Sidebar({
             })()}
           </div>
         </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenuPosition && contextMenuCategoryId && (
+        <ContextMenu
+          items={getContextMenuItems(
+            categories.find((c) => c._id === contextMenuCategoryId)!
+          )}
+          position={contextMenuPosition}
+          onClose={() => {
+            setContextMenuPosition(null);
+            setContextMenuCategoryId(null);
+          }}
+          mobile={isMobile}
+        />
       )}
 
       {/* Delete Confirmation Modal */}

@@ -9,14 +9,6 @@ export function CategorySkeleton() {
           <Skeleton width="60%" height="1.5rem" />
         </span>
       </div>
-      <button className="edit-button" disabled>
-        <Skeleton
-          width="28px"
-          height="28px"
-          borderRadius="4px"
-          variant="rectangular"
-        />
-      </button>
     </li>
   );
 }

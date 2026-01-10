@@ -11,14 +11,6 @@ export function SkillSkeleton() {
           </div>
         </div>
       </div>
-      <button className="edit-button" disabled>
-        <Skeleton
-          width="28px"
-          height="28px"
-          borderRadius="4px"
-          variant="rectangular"
-        />
-      </button>
     </li>
   );
 }

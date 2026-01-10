@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { categoryAPI } from "../services/api";
 import type { Category } from "../types";
 import { Spinner } from "./Spinner";
 import { CategorySkeletonList } from "./CategorySkeleton";
 import { EmptyState } from "./EmptyState";
 import { ConfirmationModal } from "./ConfirmationModal";
+import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
 import "../App.css";
@@ -39,6 +40,34 @@ export function CategoriesModal({
   const [updatingCategory, setUpdatingCategory] = useState<string | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Context menu state
+  const [contextMenuPosition, setContextMenuPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [contextMenuCategoryId, setContextMenuCategoryId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Long press state (menu only - no drag in modal)
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressCategoryIdRef = useRef<string | null>(null);
+  const longPressTriggeredRef = useRef<boolean>(false);
+  const longPressPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const MENU_DELAY = 600; // ms - time before menu shows
+
+  // Track clicks for double-click detection
+  const clickTimerRef = useRef<number | null>(null);
+  const clickCountRef = useRef<number>(0);
+
+  // Update mobile state on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const loadCategories = async () => {
     try {
@@ -125,12 +154,111 @@ export function CategoriesModal({
     }
   };
 
-  const handleEditCategory = (category: Category, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleEditCategory = (category: Category, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     hapticFeedback.light();
     setEditingCategoryId(category._id);
     setEditCategoryName(category.name);
     setEditCategoryDescription(category.description || "");
+  };
+
+  // Handle context menu (right-click or long-press)
+  const handleContextMenu = (
+    event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
+    category: Category
+  ) => {
+    if ('preventDefault' in event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
+    // For mobile, position doesn't matter (bottom sheet style)
+    // For desktop, use cursor position
+    if (isMobile) {
+      // Mobile: bottom sheet style - position will be handled by ContextMenu component
+      setContextMenuPosition({ x: 0, y: 0 });
+    } else if ('clientX' in event && 'clientY' in event) {
+      // Desktop: right-click or mouse event - show menu at cursor position
+      setContextMenuPosition({ x: event.clientX, y: event.clientY });
+    } else {
+      // Fallback: center of screen
+      setContextMenuPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    }
+    
+    setContextMenuCategoryId(category._id);
+    hapticFeedback.medium();
+  };
+
+  // Get context menu items for a category
+  const getContextMenuItems = (category: Category): ContextMenuItem[] => {
+    return [
+      {
+        label: "Edit",
+        icon: "✎",
+        action: () => {
+          handleEditCategory(category);
+          setContextMenuPosition(null);
+          setContextMenuCategoryId(null);
+        },
+      },
+      {
+        label: "Delete",
+        icon: "🗑️",
+        action: () => {
+          handleDeleteCategory(category._id, category.name, {
+            stopPropagation: () => {},
+          } as React.MouseEvent);
+          setContextMenuPosition(null);
+          setContextMenuCategoryId(null);
+        },
+        destructive: true,
+      },
+    ];
+  };
+
+  // Long-press handler for menu (CategoriesModal doesn't have drag functionality)
+  const handleLongPressStart = (category: Category, event: React.MouseEvent | React.TouchEvent) => {
+    longPressTriggeredRef.current = false;
+    longPressCategoryIdRef.current = category._id;
+    
+    // Store initial position for context menu
+    if ('touches' in event) {
+      const touch = event.touches[0];
+      longPressPositionRef.current = { x: touch.clientX, y: touch.clientY };
+    } else {
+      longPressPositionRef.current = { x: event.clientX, y: event.clientY };
+    }
+    
+    longPressTimerRef.current = window.setTimeout(() => {
+      if (longPressCategoryIdRef.current === category._id) {
+        longPressTriggeredRef.current = true;
+        hapticFeedback.medium();
+        // Show context menu
+        const syntheticEvent = {
+          clientX: longPressPositionRef.current?.x || window.innerWidth / 2,
+          clientY: longPressPositionRef.current?.y || window.innerHeight / 2,
+          preventDefault: () => {},
+          stopPropagation: () => {},
+        } as React.MouseEvent;
+        handleContextMenu(syntheticEvent, category);
+      }
+    }, MENU_DELAY); // 600ms long press
+  };
+
+  const handleLongPressEnd = () => {
+    // Reset the flag after a short delay to allow click handler to check it
+    setTimeout(() => {
+      longPressTriggeredRef.current = false;
+    }, 100);
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    longPressCategoryIdRef.current = null;
+    longPressPositionRef.current = null;
   };
 
   const handleUpdateCategory = async (
@@ -317,48 +445,78 @@ export function CategoriesModal({
                       key={category._id}
                       className={`categories-modal-item ${
                         selectedCategoryId === category._id ? "active" : ""
-                      }`}
-                      onClick={() => handleCategoryClick(category._id)}
+                      } ${contextMenuCategoryId === category._id ? "context-menu-active" : ""}`}
+                      onClick={() => {
+                        // Don't trigger select if context menu is active or editing
+                        if (contextMenuPosition || editingCategoryId === category._id) {
+                          return;
+                        }
+
+                        // Handle double-click detection (desktop only)
+                        if (!isMobile) {
+                          clickCountRef.current += 1;
+                          
+                          // Clear existing timer
+                          if (clickTimerRef.current) {
+                            clearTimeout(clickTimerRef.current);
+                          }
+                          
+                          // Wait to see if it's a double-click
+                          clickTimerRef.current = window.setTimeout(() => {
+                            // Single click - select category (only if long-press wasn't triggered)
+                            if (clickCountRef.current === 1 && !longPressTriggeredRef.current) {
+                              handleCategoryClick(category._id);
+                            }
+                            clickCountRef.current = 0;
+                          }, 300); // 300ms delay to detect double-click
+                        } else {
+                          // Mobile: immediate select
+                          handleCategoryClick(category._id);
+                        }
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        // Desktop: double-click to edit
+                        if (!isMobile) {
+                          // Clear single-click timer immediately
+                          if (clickTimerRef.current) {
+                            clearTimeout(clickTimerRef.current);
+                            clickTimerRef.current = null;
+                          }
+                          clickCountRef.current = 0;
+                          // Small delay to ensure onClick doesn't fire
+                          setTimeout(() => {
+                            handleEditCategory(category);
+                          }, 0);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        // Desktop: right-click to show context menu
+                        if (!isMobile) {
+                          handleContextMenu(e, category);
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        // Desktop: long-press for menu
+                        if (e.button === 0 && !editingCategoryId && !isMobile) {
+                          handleLongPressStart(category, e);
+                        }
+                      }}
+                      onMouseUp={handleLongPressEnd}
+                      onMouseLeave={handleLongPressEnd}
+                      onTouchStart={(e) => {
+                        // Mobile: long-press for menu
+                        if (!editingCategoryId) {
+                          handleLongPressStart(category, e);
+                        }
+                      }}
+                      onTouchEnd={handleLongPressEnd}
+                      onTouchCancel={handleLongPressEnd}
                     >
-                      <>
-                        <div className="categories-modal-item-content">
-                          <span className="category-name">{category.name}</span>
-                        </div>
-                        <div className="category-actions">
-                          <button
-                            className="edit-button"
-                            onClick={(e) => handleEditCategory(category, e)}
-                            title="Edit category"
-                            disabled={
-                              deletingCategory === category._id ||
-                              updatingCategory === category._id
-                            }
-                          >
-                            ✎
-                          </button>
-                          <button
-                            className="delete-button"
-                            onClick={(e) =>
-                              handleDeleteCategory(
-                                category._id,
-                                category.name,
-                                e
-                              )
-                            }
-                            title="Delete category"
-                            disabled={
-                              deletingCategory === category._id ||
-                              updatingCategory === category._id
-                            }
-                          >
-                            {deletingCategory === category._id ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              "×"
-                            )}
-                          </button>
-                        </div>
-                      </>
+                      <div className="categories-modal-item-content">
+                        <span className="category-name">{category.name}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -479,6 +637,21 @@ export function CategoriesModal({
       )}
 
       {/* Delete Confirmation Modal */}
+      {/* Context Menu */}
+      {contextMenuPosition && contextMenuCategoryId && (
+        <ContextMenu
+          items={getContextMenuItems(
+            filteredCategories.find((c) => c._id === contextMenuCategoryId)!
+          )}
+          position={contextMenuPosition}
+          onClose={() => {
+            setContextMenuPosition(null);
+            setContextMenuCategoryId(null);
+          }}
+          mobile={isMobile}
+        />
+      )}
+
       <ConfirmationModal
         isOpen={deleteConfirmation.isOpen}
         onClose={() =>

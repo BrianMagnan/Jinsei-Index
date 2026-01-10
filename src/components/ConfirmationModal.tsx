@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { hapticFeedback } from "../utils/haptic";
 import "../App.css";
 
@@ -132,7 +133,7 @@ export function ConfirmationModal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <>
       <div
         className="confirmation-modal-overlay"
@@ -140,10 +141,20 @@ export function ConfirmationModal({
       />
       <div
         ref={modalRef}
-        className={`confirmation-modal ${variant === "danger" ? "danger" : variant === "warning" ? "warning" : ""}`}
+        className={`confirmation-modal ${
+          variant === "danger"
+            ? "danger"
+            : variant === "warning"
+            ? "warning"
+            : ""
+        }`}
         style={{
-          transform: modalSwipeOffset > 0 ? `translateY(${modalSwipeOffset}px)` : undefined,
-          opacity: modalSwipeOffset > 0 ? 1 - modalSwipeOffset / 200 : undefined,
+          transform:
+            modalSwipeOffset > 0
+              ? `translate(-50%, calc(-50% + ${modalSwipeOffset}px))`
+              : undefined,
+          opacity:
+            modalSwipeOffset > 0 ? 1 - modalSwipeOffset / 200 : undefined,
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -183,4 +194,7 @@ export function ConfirmationModal({
       </div>
     </>
   );
+
+  // Render modal at document body level using portal to avoid transform issues
+  return createPortal(modalContent, document.body);
 }
