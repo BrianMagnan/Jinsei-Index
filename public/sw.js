@@ -1,7 +1,7 @@
 // Service Worker for Jinsei Index PWA
-const CACHE_NAME = 'jinsei-index-v3';
-const API_CACHE_NAME = 'jinsei-index-api-v3';
-const STATIC_CACHE_NAME = 'jinsei-index-static-v3';
+const CACHE_NAME = 'jinsei-index-v4';
+const API_CACHE_NAME = 'jinsei-index-api-v4';
+const STATIC_CACHE_NAME = 'jinsei-index-static-v4';
 
 // Assets to cache on install
 const STATIC_ASSETS = [
@@ -95,25 +95,33 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle static assets with cache-first strategy
+  // Handle static assets with network-first strategy (ensures fresh HTML with new JS/CSS hashes)
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(request).then((response) => {
-        // Don't cache if not a valid response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+    fetch(request)
+      .then((networkResponse) => {
+        // Cache successful responses
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(STATIC_CACHE_NAME).then((cache) => {
+            cache.put(request, responseToCache);
+          });
         }
-        // Cache the response
-        const responseToCache = response.clone();
-        caches.open(STATIC_CACHE_NAME).then((cache) => {
-          cache.put(request, responseToCache);
+        return networkResponse;
+      })
+      .catch(() => {
+        // Network failed, return cached response if available (offline fallback)
+        return caches.match(request).then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log('[Service Worker] Serving cached static asset:', url.pathname);
+            return cachedResponse;
+          }
+          // No cache available, return error
+          return new Response('Offline and no cached data available', {
+            status: 503,
+            statusText: 'Service Unavailable',
+          });
         });
-        return response;
-      });
-    })
+      })
   );
 });
 
