@@ -98,6 +98,12 @@ h2 {
   box-sizing: border-box;
 }
 
+html {
+  height: 100dvh;
+  height: -webkit-fill-available;
+  overflow: hidden;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, sans-serif;
@@ -4840,6 +4846,18 @@ button:disabled .spinner,
   padding: var(--spacing-sm) 0;
   padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
   backdrop-filter: blur(10px);
+}
+
+/* Fill any gap below bottom-nav on iOS */
+.bottom-nav::after {
+  content: "";
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: var(--color-bg-sidebar);
+  z-index: -1;
 }
 
 .bottom-nav {
