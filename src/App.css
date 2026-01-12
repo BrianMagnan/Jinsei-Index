@@ -4837,27 +4837,15 @@ button:disabled .spinner,
 .bottom-nav {
   display: none;
   position: fixed;
-  bottom: 0;
+  bottom: calc(-1 * env(safe-area-inset-bottom));
   left: 0;
   right: 0;
   background: var(--color-bg-sidebar);
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
   z-index: 998;
   padding: var(--spacing-sm) 0;
-  padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--spacing-sm) + env(safe-area-inset-bottom) * 2);
   backdrop-filter: blur(10px);
-}
-
-/* Fill any gap below bottom-nav on iOS */
-.bottom-nav::after {
-  content: "";
-  position: absolute;
-  bottom: -20px;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: var(--color-bg-sidebar);
-  z-index: -1;
 }
 
 .bottom-nav {
