@@ -10,7 +10,6 @@ import {
   sendNotification,
   rescheduleAllNotifications,
   type NotificationPreferences,
-  type NotificationType,
 } from '../utils/notifications';
 
 export interface UseNotificationsReturn {
@@ -29,7 +28,7 @@ export interface UseNotificationsReturn {
  * Hook for managing browser notifications
  */
 export function useNotifications(): UseNotificationsReturn {
-  const [isSupported, setIsSupported] = useState(isNotificationSupported());
+  const isSupported = isNotificationSupported();
   const [permission, setPermission] = useState<NotificationPermission>(
     getNotificationPermission()
   );

@@ -11,7 +11,6 @@ export function NotificationSettings() {
     isSupported,
     permission,
     preferences,
-    canSend,
     requestPermission,
     updatePreferences,
     enable,
@@ -19,7 +18,6 @@ export function NotificationSettings() {
   } = useNotifications();
 
   const [requestingPermission, setRequestingPermission] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   if (!isSupported) {
     return (
