@@ -1447,10 +1447,6 @@ export function ChallengesList({
                   totalChallenges > 0
                     ? Math.round((completedCount / totalChallenges) * 100)
                     : 0;
-                const totalXPAvailable = skill.challenges.reduce(
-                  (sum, c) => sum + (c.xpReward || 0),
-                  0
-                );
                 return (
                   <div className="list-stats">
                     <span className="list-stat">
