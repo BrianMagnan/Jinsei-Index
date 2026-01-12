@@ -11,6 +11,7 @@ import { Spinner } from "./Spinner";
 import { TodoSkeletonList } from "./TodoSkeleton";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
+import { notifyAchievementUnlocked } from "../utils/notificationTriggers";
 import "../App.css";
 
 interface DailyListProps {
@@ -62,6 +63,8 @@ export function DailyList({ onNavigateToChallenge }: DailyListProps) {
           toast.showSuccess(
             `Challenge "${item.challengeName}" completed! +${challenge.xpReward} XP`
           );
+          // Trigger notification
+          await notifyAchievementUnlocked(challenge.name, challenge.xpReward);
         } catch {
           // If fetching challenge fails, still show success
           hapticFeedback.success();

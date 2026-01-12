@@ -3,6 +3,7 @@ import { authAPI, setCurrentUser, profileAPI } from "../services/api";
 import type { Profile } from "../types";
 import { ProfileSkeleton } from "./ProfileSkeleton";
 import { useToast } from "../contexts/ToastContext";
+import { NotificationSettings } from "./NotificationSettings";
 
 export function ProfilesList() {
   const toast = useToast();
@@ -55,7 +56,9 @@ export function ProfilesList() {
       setCurrentUser(updatedProfile);
       setEditing(false);
     } catch (err) {
-      toast.showError(err instanceof Error ? err.message : "Failed to update profile");
+      toast.showError(
+        err instanceof Error ? err.message : "Failed to update profile"
+      );
     }
   };
 
@@ -178,30 +181,35 @@ export function ProfilesList() {
       )}
 
       {!editing && (
-        <div className="profile-detail">
-          <h3>Profile Details</h3>
-          <div className="profile-detail-content">
-            <div className="detail-row">
-              <strong>Username:</strong> {profile.name}
-            </div>
-            {profile.email && (
+        <>
+          <div className="profile-detail">
+            <h3>Profile Details</h3>
+            <div className="profile-detail-content">
               <div className="detail-row">
-                <strong>Email:</strong> {profile.email}
+                <strong>Username:</strong> {profile.name}
               </div>
-            )}
-            {profile.bio && (
+              {profile.email && (
+                <div className="detail-row">
+                  <strong>Email:</strong> {profile.email}
+                </div>
+              )}
+              {profile.bio && (
+                <div className="detail-row">
+                  <strong>Bio:</strong> {profile.bio}
+                </div>
+              )}
               <div className="detail-row">
-                <strong>Bio:</strong> {profile.bio}
+                <strong>Total XP:</strong> {profile.totalXP || 0}
               </div>
-            )}
-            <div className="detail-row">
-              <strong>Total XP:</strong> {profile.totalXP || 0}
-            </div>
-            <div className="detail-row">
-              <strong>Total LV:</strong> {profile.totalLevel || 1}
+              <div className="detail-row">
+                <strong>Total LV:</strong> {profile.totalLevel || 1}
+              </div>
             </div>
           </div>
-        </div>
+          <div className="profile-settings-section">
+            <NotificationSettings />
+          </div>
+        </>
       )}
     </div>
   );

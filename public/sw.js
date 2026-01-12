@@ -1,21 +1,17 @@
 // Service Worker for Jinsei Index PWA
-const CACHE_NAME = 'jinsei-index-v4';
-const API_CACHE_NAME = 'jinsei-index-api-v4';
-const STATIC_CACHE_NAME = 'jinsei-index-static-v4';
+const CACHE_NAME = "jinsei-index-v4";
+const API_CACHE_NAME = "jinsei-index-api-v4";
+const STATIC_CACHE_NAME = "jinsei-index-static-v4";
 
 // Assets to cache on install
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-];
+const STATIC_ASSETS = ["/", "/index.html", "/manifest.json"];
 
 // Install event - cache static assets
-self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing...');
+self.addEventListener("install", (event) => {
+  console.log("[Service Worker] Installing...");
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Caching static assets');
+      console.log("[Service Worker] Caching static assets");
       return cache.addAll(STATIC_ASSETS);
     })
   );
@@ -24,8 +20,8 @@ self.addEventListener('install', (event) => {
 });
 
 // Activate event - clean up old caches
-self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating...');
+self.addEventListener("activate", (event) => {
+  console.log("[Service Worker] Activating...");
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -39,7 +35,7 @@ self.addEventListener('activate', (event) => {
             );
           })
           .map((cacheName) => {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
+            console.log("[Service Worker] Deleting old cache:", cacheName);
             return caches.delete(cacheName);
           })
       );
@@ -50,17 +46,17 @@ self.addEventListener('activate', (event) => {
 });
 
 // Fetch event - handle network requests
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   // Skip non-GET requests (POST, PUT, DELETE should be handled by offline queue)
-  if (request.method !== 'GET') {
+  if (request.method !== "GET") {
     return;
   }
 
   // Handle API requests with cache-first strategy
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith("/api/")) {
     event.respondWith(
       caches.open(API_CACHE_NAME).then((cache) => {
         return cache.match(request).then((cachedResponse) => {
@@ -76,16 +72,21 @@ self.addEventListener('fetch', (event) => {
             .catch(() => {
               // Network failed, return cached response if available
               if (cachedResponse) {
-                console.log('[Service Worker] Serving cached API response:', url.pathname);
+                console.log(
+                  "[Service Worker] Serving cached API response:",
+                  url.pathname
+                );
                 return cachedResponse;
               }
               // No cache available, return error
               return new Response(
-                JSON.stringify({ error: 'Offline and no cached data available' }),
+                JSON.stringify({
+                  error: "Offline and no cached data available",
+                }),
                 {
                   status: 503,
-                  statusText: 'Service Unavailable',
-                  headers: { 'Content-Type': 'application/json' },
+                  statusText: "Service Unavailable",
+                  headers: { "Content-Type": "application/json" },
                 }
               );
             });
@@ -100,7 +101,11 @@ self.addEventListener('fetch', (event) => {
     fetch(request)
       .then((networkResponse) => {
         // Cache successful responses
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+        if (
+          networkResponse &&
+          networkResponse.status === 200 &&
+          networkResponse.type === "basic"
+        ) {
           const responseToCache = networkResponse.clone();
           caches.open(STATIC_CACHE_NAME).then((cache) => {
             cache.put(request, responseToCache);
@@ -112,13 +117,16 @@ self.addEventListener('fetch', (event) => {
         // Network failed, return cached response if available (offline fallback)
         return caches.match(request).then((cachedResponse) => {
           if (cachedResponse) {
-            console.log('[Service Worker] Serving cached static asset:', url.pathname);
+            console.log(
+              "[Service Worker] Serving cached static asset:",
+              url.pathname
+            );
             return cachedResponse;
           }
           // No cache available, return error
-          return new Response('Offline and no cached data available', {
+          return new Response("Offline and no cached data available", {
             status: 503,
-            statusText: 'Service Unavailable',
+            statusText: "Service Unavailable",
           });
         });
       })
@@ -126,16 +134,54 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Message event - handle messages from the app
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
-  if (event.data && event.data.type === 'CACHE_API') {
+  if (event.data && event.data.type === "CACHE_API") {
     const { url, response } = event.data;
     caches.open(API_CACHE_NAME).then((cache) => {
-      cache.put(url, new Response(JSON.stringify(response), {
-        headers: { 'Content-Type': 'application/json' },
-      }));
+      cache.put(
+        url,
+        new Response(JSON.stringify(response), {
+          headers: { "Content-Type": "application/json" },
+        })
+      );
     });
   }
+});
+
+// Notification click event - handle when user clicks a notification
+self.addEventListener("notificationclick", (event) => {
+  console.log("[Service Worker] Notification clicked:", event.notification);
+
+  event.notification.close();
+
+  // Get the notification data
+  const notificationData = event.notification.data || {};
+  const urlToOpen = notificationData.url || "/";
+
+  // Focus or open the app window
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        // Check if there's already a window open
+        for (let client of clientList) {
+          if (client.url === urlToOpen && "focus" in client) {
+            return client.focus();
+          }
+        }
+
+        // If no window is open, open a new one
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// Notification close event (optional - for analytics)
+self.addEventListener("notificationclose", (event) => {
+  console.log("[Service Worker] Notification closed:", event.notification);
 });

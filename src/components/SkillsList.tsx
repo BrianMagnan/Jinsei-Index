@@ -842,7 +842,28 @@ export function SkillsList({
               </div>
             </form>
           ) : (
-            <h2>{displayCategory?.name || "Skills"}</h2>
+            <>
+              <h2>{displayCategory?.name || "Skills"}</h2>
+              {skills.length > 0 && (
+                <div className="list-stats">
+                  <span className="list-stat">
+                    {skills.length} {skills.length === 1 ? "skill" : "skills"}
+                  </span>
+                  {displayCategory && (
+                    <>
+                      <span className="list-stat-separator"> • </span>
+                      <span className="list-stat">
+                        {displayCategory.xp?.toLocaleString() || 0} XP
+                      </span>
+                      <span className="list-stat-separator"> • </span>
+                      <span className="list-stat">
+                        LV {displayCategory.level || 1}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -1149,6 +1170,13 @@ export function SkillsList({
                 <div className="skill-content">
                   <div className="skill-header">
                     <div className="skill-name">{skill.name}</div>
+                    <div className="skill-item-stats">
+                      <span className="item-stat">
+                        {skill.xp?.toLocaleString() || 0} XP
+                      </span>
+                      <span className="item-stat-separator"> • </span>
+                      <span className="item-stat">LV {skill.level || 1}</span>
+                    </div>
                   </div>
                   {skill.description && (
                     <div className="skill-description">{skill.description}</div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { challengeAPI, achievementAPI, skillAPI } from "../services/api";
-import type { SkillWithHierarchy, Challenge } from "../types";
+import type { SkillWithHierarchy, Challenge, Achievement } from "../types";
 import { Spinner } from "./Spinner";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { BreadcrumbsSkeleton } from "./BreadcrumbsSkeleton";
@@ -22,6 +22,7 @@ import {
   removeDailyItem,
   getDailyItems,
 } from "../utils/dailyStorage";
+import { notifyAchievementUnlocked } from "../utils/notificationTriggers";
 
 interface ChallengesListProps {
   skillId: string;
@@ -60,6 +61,7 @@ export function ChallengesList({
 }: ChallengesListProps) {
   const toast = useToast();
   const [skill, setSkill] = useState<SkillWithHierarchy | null>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [creatingChallenge, setCreatingChallenge] = useState(false);
   const [updatingChallenge, setUpdatingChallenge] = useState<string | null>(
@@ -101,7 +103,9 @@ export function ChallengesList({
     x: number;
     y: number;
   } | null>(null);
-  const [contextMenuChallengeId, setContextMenuChallengeId] = useState<string | null>(null);
+  const [contextMenuChallengeId, setContextMenuChallengeId] = useState<
+    string | null
+  >(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [completedChallengeId, setCompletedChallengeId] = useState<
     string | null
@@ -218,7 +222,10 @@ export function ChallengesList({
   const loadSkill = async () => {
     try {
       setLoading(true);
-      const data = await skillAPI.getById(skillId);
+      const [data, achievementsData] = await Promise.all([
+        skillAPI.getById(skillId),
+        achievementAPI.getAll().catch(() => []), // Fail silently if achievements can't be loaded
+      ]);
 
       // Apply saved order from localStorage if challenges exist
       if (data.challenges && data.challenges.length > 0) {
@@ -246,6 +253,7 @@ export function ChallengesList({
       }
 
       setSkill(data);
+      setAchievements(achievementsData || []);
     } catch (err) {
       console.error("Failed to load skill:", err);
     } finally {
@@ -512,17 +520,30 @@ export function ChallengesList({
       );
 
       hapticFeedback.success();
-      
-      // Reload skill to refresh XP/level
-      const updatedSkill = await skillAPI.getById(skillId);
+
+      // Trigger notifications for completed challenges
+      await Promise.all(
+        selectedChallenges.map((challenge) =>
+          notifyAchievementUnlocked(challenge.name, challenge.xpReward)
+        )
+      );
+
+      // Reload skill and achievements to refresh XP/level and stats
+      const [updatedSkill, updatedAchievements] = await Promise.all([
+        skillAPI.getById(skillId),
+        achievementAPI.getAll().catch(() => []),
+      ]);
       setSkill(updatedSkill);
+      setAchievements(updatedAchievements || []);
 
       // Clear selection and exit selection mode
       setSelectedChallengeIds(new Set());
       setSelectionMode(false);
 
       toast.showSuccess(
-        `Completed ${selectedChallenges.length} challenge${selectedChallenges.length === 1 ? "" : "s"}!`
+        `Completed ${selectedChallenges.length} challenge${
+          selectedChallenges.length === 1 ? "" : "s"
+        }!`
       );
     } catch (err) {
       hapticFeedback.error();
@@ -770,7 +791,11 @@ export function ChallengesList({
     setDragOverChallengeId(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetChallengeId: string, targetIndex: number) => {
+  const handleDrop = (
+    e: React.DragEvent,
+    targetChallengeId: string,
+    targetIndex: number
+  ) => {
     e.preventDefault();
     if (
       !draggedChallengeId ||
@@ -922,8 +947,14 @@ export function ChallengesList({
       await achievementAPI.create({ challenge: challenge._id });
       hapticFeedback.success();
       setCompletedChallengeId(challenge._id);
-      const updatedSkill = await skillAPI.getById(skillId); // Reload to refresh skill data and update XP/level
+      // Trigger notification
+      await notifyAchievementUnlocked(challenge.name, challenge.xpReward);
+      const [updatedSkill, updatedAchievements] = await Promise.all([
+        skillAPI.getById(skillId), // Reload to refresh skill data and update XP/level
+        achievementAPI.getAll().catch(() => []), // Reload achievements to update stats
+      ]);
       setSkill(updatedSkill);
+      setAchievements(updatedAchievements || []);
       // Auto-select next challenge or first if none selected
       if (updatedSkill?.challenges && updatedSkill.challenges.length > 1) {
         const currentIndex = updatedSkill.challenges.findIndex(
@@ -965,37 +996,42 @@ export function ChallengesList({
     event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
     challenge: Challenge
   ) => {
-    if ('preventDefault' in event) {
+    if ("preventDefault" in event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     // For mobile, position doesn't matter (bottom sheet style)
     // For desktop, use cursor position
     if (isMobile) {
       // Mobile: bottom sheet style - position will be handled by ContextMenu component
       setContextMenuPosition({ x: 0, y: 0 });
-    } else if ('clientX' in event && 'clientY' in event) {
+    } else if ("clientX" in event && "clientY" in event) {
       // Desktop: right-click or mouse event - show menu at cursor position
       setContextMenuPosition({ x: event.clientX, y: event.clientY });
     } else {
       // Fallback: center of screen
-      setContextMenuPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      setContextMenuPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
     }
-    
+
     setContextMenuChallengeId(challenge._id);
     hapticFeedback.medium();
   };
 
   // Get context menu items for a challenge
   const getContextMenuItems = (challenge: Challenge): ContextMenuItem[] => {
-    const isProcessing = completingChallenge === challenge._id ||
+    const isProcessing =
+      completingChallenge === challenge._id ||
       deletingChallenge === challenge._id ||
       updatingChallenge === challenge._id;
-    
+
     return [
       {
-        label: completingChallenge === challenge._id ? "Completing..." : "Complete",
+        label:
+          completingChallenge === challenge._id ? "Completing..." : "Complete",
         icon: "✓",
         action: () => {
           handleCompleteChallenge(challenge, {
@@ -1036,22 +1072,31 @@ export function ChallengesList({
   };
 
   // Unified long-press handlers: drag with movement, menu without movement
-  const handleLongPressStart = (challenge: Challenge, event: React.MouseEvent | React.TouchEvent, _index: number) => {
+  const handleLongPressStart = (
+    challenge: Challenge,
+    event: React.MouseEvent | React.TouchEvent,
+    _index: number
+  ) => {
     longPressTriggeredRef.current = false;
     hasMovedRef.current = false;
     longPressChallengeIdRef.current = challenge._id;
-    
+
     // Store initial position for movement detection
-    if ('touches' in event) {
+    if ("touches" in event) {
       const touch = event.touches[0];
       longPressPositionRef.current = { x: touch.clientX, y: touch.clientY };
     } else {
       longPressPositionRef.current = { x: event.clientX, y: event.clientY };
     }
-    
+
     // Start drag timer (shorter - 300ms) - enables drag after this delay if movement occurs
     dragStartTimerRef.current = window.setTimeout(() => {
-      if (longPressChallengeIdRef.current === challenge._id && hasMovedRef.current && !longPressTriggeredRef.current && !draggedChallengeId) {
+      if (
+        longPressChallengeIdRef.current === challenge._id &&
+        hasMovedRef.current &&
+        !longPressTriggeredRef.current &&
+        !draggedChallengeId
+      ) {
         // 300ms passed and movement detected - start drag
         hapticFeedback.medium();
         handleDragStart(challenge._id);
@@ -1062,10 +1107,14 @@ export function ChallengesList({
         }
       }
     }, DRAG_START_DELAY);
-    
+
     // Start menu timer (longer - 600ms, only if no movement)
     longPressTimerRef.current = window.setTimeout(() => {
-      if (longPressChallengeIdRef.current === challenge._id && !hasMovedRef.current && !longPressTriggeredRef.current) {
+      if (
+        longPressChallengeIdRef.current === challenge._id &&
+        !hasMovedRef.current &&
+        !longPressTriggeredRef.current
+      ) {
         // No movement - show menu
         longPressTriggeredRef.current = true;
         hapticFeedback.medium();
@@ -1086,36 +1135,46 @@ export function ChallengesList({
     }, MENU_DELAY);
   };
 
-  const handleLongPressMove = (challenge: Challenge, event: React.MouseEvent | React.TouchEvent, _index: number) => {
-    if (longPressChallengeIdRef.current !== challenge._id || longPressTriggeredRef.current) return;
-    
+  const handleLongPressMove = (
+    challenge: Challenge,
+    event: React.MouseEvent | React.TouchEvent,
+    _index: number
+  ) => {
+    if (
+      longPressChallengeIdRef.current !== challenge._id ||
+      longPressTriggeredRef.current
+    )
+      return;
+
     // Get current position
-    const currentX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-    const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-    
+    const currentX =
+      "touches" in event ? event.touches[0].clientX : event.clientX;
+    const currentY =
+      "touches" in event ? event.touches[0].clientY : event.clientY;
+
     if (longPressPositionRef.current) {
       // Calculate movement distance
       const deltaX = Math.abs(currentX - longPressPositionRef.current.x);
       const deltaY = Math.abs(currentY - longPressPositionRef.current.y);
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      
+
       // If moved beyond threshold, mark as moved
       if (distance > dragThreshold) {
         hasMovedRef.current = true;
-        
+
         // Cancel menu timer if user is moving
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
         }
-        
+
         // Start drag if enough time has passed (DRAG_START_DELAY) and movement detected
         if (!draggedChallengeId && !dragStartTimerRef.current) {
           // Timer already fired (300ms passed) - start drag immediately since movement detected
           hapticFeedback.medium();
           handleDragStart(challenge._id);
         }
-        
+
         // Update position
         longPressPositionRef.current = { x: currentX, y: currentY };
       }
@@ -1366,7 +1425,62 @@ export function ChallengesList({
           onSkillClick={undefined}
         />
         <div className="section-header">
-          <h2>{skill.name}</h2>
+          <div className="header-title-section">
+            <h2>{skill.name}</h2>
+            {skill.challenges &&
+              skill.challenges.length > 0 &&
+              (() => {
+                const completedChallengeIds = new Set(
+                  achievements.map((a) => {
+                    const challengeId =
+                      typeof a.challenge === "string"
+                        ? a.challenge
+                        : a.challenge._id;
+                    return challengeId;
+                  })
+                );
+                const completedCount = skill.challenges.filter((c) =>
+                  completedChallengeIds.has(c._id)
+                ).length;
+                const totalChallenges = skill.challenges.length;
+                const completionRate =
+                  totalChallenges > 0
+                    ? Math.round((completedCount / totalChallenges) * 100)
+                    : 0;
+                const totalXPAvailable = skill.challenges.reduce(
+                  (sum, c) => sum + (c.xpReward || 0),
+                  0
+                );
+                return (
+                  <div className="list-stats">
+                    <span className="list-stat">
+                      {totalChallenges}{" "}
+                      {totalChallenges === 1 ? "challenge" : "challenges"}
+                    </span>
+                    <span className="list-stat-separator"> • </span>
+                    <span className="list-stat">
+                      {completedCount} completed
+                    </span>
+                    {totalChallenges > 0 && (
+                      <>
+                        <span className="list-stat-separator"> • </span>
+                        <span className="list-stat">{completionRate}%</span>
+                      </>
+                    )}
+                    {skill.xp !== undefined && (
+                      <>
+                        <span className="list-stat-separator"> • </span>
+                        <span className="list-stat">
+                          {skill.xp.toLocaleString()} XP
+                        </span>
+                        <span className="list-stat-separator"> • </span>
+                        <span className="list-stat">LV {skill.level || 1}</span>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
+          </div>
         </div>
 
         {skill.description && (
@@ -1398,8 +1512,19 @@ export function ChallengesList({
                   touchDragStart?.challengeId === challenge._id
                     ? "touch-dragging"
                     : ""
-                } ${contextMenuChallengeId === challenge._id ? "context-menu-active" : ""}`}
-                draggable={!isMobile && !selectionMode && editingChallengeId !== challenge._id && draggedChallengeId !== challenge._id && !longPressTriggeredRef.current && (hasMovedRef.current || dragStartTimerRef.current === null)}
+                } ${
+                  contextMenuChallengeId === challenge._id
+                    ? "context-menu-active"
+                    : ""
+                }`}
+                draggable={
+                  !isMobile &&
+                  !selectionMode &&
+                  editingChallengeId !== challenge._id &&
+                  draggedChallengeId !== challenge._id &&
+                  !longPressTriggeredRef.current &&
+                  (hasMovedRef.current || dragStartTimerRef.current === null)
+                }
                 onDragStart={() => {
                   if (!isMobile && !selectionMode && !editingChallengeId) {
                     // Cancel long-press timers when native drag starts
@@ -1444,16 +1569,19 @@ export function ChallengesList({
                     // Handle double-click detection (desktop only)
                     if (!isMobile) {
                       clickCountRef.current += 1;
-                      
+
                       // Clear existing timer
                       if (clickTimerRef.current) {
                         clearTimeout(clickTimerRef.current);
                       }
-                      
+
                       // Wait to see if it's a double-click
                       clickTimerRef.current = window.setTimeout(() => {
                         // Single click - select challenge (only if long-press wasn't triggered)
-                        if (clickCountRef.current === 1 && !longPressTriggeredRef.current) {
+                        if (
+                          clickCountRef.current === 1 &&
+                          !longPressTriggeredRef.current
+                        ) {
                           hapticFeedback.selection();
                           setDetailDirection("forward");
                           setSelectedChallengeId(challenge._id);
@@ -1493,13 +1621,23 @@ export function ChallengesList({
                 }}
                 onMouseDown={(e) => {
                   // Desktop: long-press for drag (with movement) or menu (without movement)
-                  if (e.button === 0 && !editingChallengeId && !selectionMode && !isMobile) {
+                  if (
+                    e.button === 0 &&
+                    !editingChallengeId &&
+                    !selectionMode &&
+                    !isMobile
+                  ) {
                     handleLongPressStart(challenge, e, index);
                   }
                 }}
                 onMouseMove={(e) => {
                   // Desktop: track movement during long-press
-                  if (!isMobile && !editingChallengeId && !selectionMode && longPressChallengeIdRef.current === challenge._id) {
+                  if (
+                    !isMobile &&
+                    !editingChallengeId &&
+                    !selectionMode &&
+                    longPressChallengeIdRef.current === challenge._id
+                  ) {
                     handleLongPressMove(challenge, e, index);
                   }
                 }}
@@ -1670,6 +1808,11 @@ export function ChallengesList({
                   )}
                   <div className="challenge-info">
                     <div className="challenge-name">{challenge.name}</div>
+                    <div className="challenge-item-stats">
+                      <span className="item-stat">
+                        +{challenge.xpReward || 0} XP
+                      </span>
+                    </div>
                     {/* Swipe action indicators */}
                     {swipedChallengeId === challenge._id && (
                       <>
@@ -1708,20 +1851,32 @@ export function ChallengesList({
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onMouseDown={(e) => {
-            if (e.button === 0 && !editingChallengeId && !isMobile && selectedChallenge) {
-              const index = skill?.challenges?.findIndex(
-                (c) => c._id === selectedChallenge._id
-              ) ?? -1;
+            if (
+              e.button === 0 &&
+              !editingChallengeId &&
+              !isMobile &&
+              selectedChallenge
+            ) {
+              const index =
+                skill?.challenges?.findIndex(
+                  (c) => c._id === selectedChallenge._id
+                ) ?? -1;
               if (index >= 0) {
                 handleLongPressStart(selectedChallenge, e, index);
               }
             }
           }}
           onMouseMove={(e) => {
-            if (!isMobile && !editingChallengeId && selectedChallenge && longPressChallengeIdRef.current === selectedChallenge._id) {
-              const index = skill?.challenges?.findIndex(
-                (c) => c._id === selectedChallenge._id
-              ) ?? -1;
+            if (
+              !isMobile &&
+              !editingChallengeId &&
+              selectedChallenge &&
+              longPressChallengeIdRef.current === selectedChallenge._id
+            ) {
+              const index =
+                skill?.challenges?.findIndex(
+                  (c) => c._id === selectedChallenge._id
+                ) ?? -1;
               if (index >= 0) {
                 handleLongPressMove(selectedChallenge, e, index);
               }
@@ -1787,12 +1942,10 @@ export function ChallengesList({
       {contextMenuPosition && contextMenuChallengeId && (
         <ContextMenu
           items={getContextMenuItems(
-            skill?.challenges?.find(
-              (c) => c._id === contextMenuChallengeId
-            ) ||
-            (selectedChallenge?._id === contextMenuChallengeId
-              ? selectedChallenge
-              : null)!
+            skill?.challenges?.find((c) => c._id === contextMenuChallengeId) ||
+              (selectedChallenge?._id === contextMenuChallengeId
+                ? selectedChallenge
+                : null)!
           )}
           position={contextMenuPosition}
           onClose={() => {

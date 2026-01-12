@@ -805,7 +805,42 @@ export function CategoriesList({
     <div className={`categories-list ${animationClass}`}>
       <Breadcrumbs category={null} skill={null} onCategoriesClick={undefined} />
       <div className="section-header">
-        <h2>Categories</h2>
+        <div className="header-title-section">
+          <h2>Categories</h2>
+          {categories.length > 0 && (
+            <div className="list-stats">
+              <span className="list-stat">
+                {categories.length}{" "}
+                {categories.length === 1 ? "category" : "categories"}
+              </span>
+              {(() => {
+                const totalXP = categories.reduce(
+                  (sum, cat) => sum + (cat.xp || 0),
+                  0
+                );
+                const avgLevel =
+                  categories.length > 0
+                    ? Math.round(
+                        categories.reduce(
+                          (sum, cat) => sum + (cat.level || 1),
+                          0
+                        ) / categories.length
+                      )
+                    : 0;
+                return (
+                  <>
+                    <span className="list-stat-separator"> • </span>
+                    <span className="list-stat">
+                      {totalXP.toLocaleString()} XP
+                    </span>
+                    <span className="list-stat-separator"> • </span>
+                    <span className="list-stat">Avg LV {avgLevel}</span>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
       </div>
 
       {categories.length === 0 ? (
@@ -1121,6 +1156,13 @@ export function CategoriesList({
                 )}
                 <div className="categories-list-item-content">
                   <span className="category-name">{category.name}</span>
+                  <div className="category-item-stats">
+                    <span className="item-stat">
+                      {category.xp?.toLocaleString() || 0} XP
+                    </span>
+                    <span className="item-stat-separator"> • </span>
+                    <span className="item-stat">LV {category.level || 1}</span>
+                  </div>
                   {/* Swipe action indicators */}
                   {swipedCategoryId === category._id && (
                     <>

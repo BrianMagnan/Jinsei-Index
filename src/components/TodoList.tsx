@@ -12,6 +12,7 @@ import { Spinner } from "./Spinner";
 import { TodoSkeletonList } from "./TodoSkeleton";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
+import { notifyAchievementUnlocked } from "../utils/notificationTriggers";
 import "../App.css";
 
 interface TodoListProps {
@@ -64,6 +65,8 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
           toast.showSuccess(
             `Challenge "${item.challengeName}" completed! +${challenge.xpReward} XP`
           );
+          // Trigger notification
+          await notifyAchievementUnlocked(challenge.name, challenge.xpReward);
         } catch {
           // If fetching challenge fails, still show success
           hapticFeedback.success();
@@ -141,9 +144,9 @@ export function TodoList({ onNavigateToChallenge }: TodoListProps) {
 
   return (
     <div className="todo-list-container">
-        <div className="todo-list-header">
-          <h1 className="todo-list-title">To-Do List</h1>
-          {todoItems.length > 0 && (
+      <div className="todo-list-header">
+        <h1 className="todo-list-title">To-Do List</h1>
+        {todoItems.length > 0 && (
           <div className="todo-list-stats">
             <span className="todo-stat">
               {activeItems.length} active
