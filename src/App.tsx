@@ -29,7 +29,6 @@ type AuthView = "login" | "register";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUserState] = useState<Profile | null>(null);
   const [authView, setAuthView] = useState<AuthView>("login");
   const [viewMode, setViewMode] = useState<ViewMode>("main");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
@@ -165,7 +164,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-
   // Check authentication on mount
   useEffect(() => {
     checkAuthentication();
@@ -177,7 +175,6 @@ function App() {
       // Verify token is still valid
       try {
         const profile = await authAPI.getCurrentUser();
-        setCurrentUserState(profile);
         setCurrentUser(profile);
         setIsAuthenticated(true);
       } catch (error) {
@@ -266,19 +263,16 @@ function App() {
   };
 
   const handleLoginSuccess = (profile: Profile) => {
-    setCurrentUserState(profile);
     setIsAuthenticated(true);
   };
 
   const handleRegisterSuccess = (profile: Profile) => {
-    setCurrentUserState(profile);
     setIsAuthenticated(true);
   };
 
   const handleLogout = () => {
     setAuthToken(null);
     setCurrentUser(null);
-    setCurrentUserState(null);
     setIsAuthenticated(false);
     setViewMode("main");
     setSelectedCategoryId(null);
