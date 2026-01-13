@@ -1089,6 +1089,11 @@ body {
     gap: var(--spacing-sm);
   }
 
+  /* Account for sidebar when open on mobile (e.g., landscape mode) */
+  body.sidebar-open .categories-list-footer {
+    left: 280px; /* Account for sidebar width */
+  }
+
   .categories-list-footer .add-button,
   .categories-list-footer .select-button,
   .categories-list-footer .delete-button,
