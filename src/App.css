@@ -931,10 +931,8 @@ body {
   left: 0;
   right: 0;
   z-index: 1000; /* Ensure footer is above content but below modals */
-  background: var(--color-bg-dark);
-  border-top: 1px solid var(--color-border);
   z-index: 999; /* Above bottom nav (z-index: 998) */
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); */
   /* Footer is rendered via portal outside animated containers, so no transform issues */
 }
 
