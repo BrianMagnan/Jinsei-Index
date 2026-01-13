@@ -837,15 +837,13 @@ export function SkillsList({
                 />
               )}
               <div className="skill-content">
-                <div className="skill-header">
-                  <div className="skill-name">{skill.name}</div>
-                  <div className="skill-item-stats">
-                    <span className="item-stat">
-                      {skill.xp?.toLocaleString() || 0} XP
-                    </span>
-                    <span className="item-stat-separator"> • </span>
-                    <span className="item-stat">LV {skill.level || 1}</span>
-                  </div>
+                <div className="skill-name">{skill.name}</div>
+                <div className="skill-item-stats">
+                  <span className="item-stat">
+                    {skill.xp?.toLocaleString() || 0} XP
+                  </span>
+                  <span className="item-stat-separator"> • </span>
+                  <span className="item-stat">LV {skill.level || 1}</span>
                 </div>
                 {skill.description && (
                   <div className="skill-description">{skill.description}</div>

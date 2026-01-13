@@ -1547,7 +1547,7 @@ export function ChallengesList({
                   <div className="challenge-name">{challenge.name}</div>
                   <div className="challenge-item-stats">
                     <span className="item-stat">
-                      +{challenge.xpReward || 0} XP
+                      {challenge.xpReward?.toLocaleString() || 0} XP
                     </span>
                   </div>
                 </div>
@@ -1663,6 +1663,12 @@ export function ChallengesList({
                 </p>
               )}
             </div>
+          </div>
+          <div className="challenge-detail-xp">
+            <span className="challenge-detail-xp-label">XP Reward:</span>
+            <span className="challenge-detail-xp-value">
+              {selectedChallenge.xpReward?.toLocaleString() || 0} XP
+            </span>
           </div>
           {/* Actions are now rendered in App.tsx footer */}
         </div>

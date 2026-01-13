@@ -627,6 +627,10 @@
 
 .challenges-container.detail-view .challenge-detail {
   display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-lg);
+  overflow-y: auto;
 }
 
 /* Challenges list now uses unified container styles above */

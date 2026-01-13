@@ -309,8 +309,29 @@
   }
 
   .challenge-detail-xp {
-    width: 100%;
-    justify-content: right;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-top: var(--spacing-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+  }
+
+  .challenge-detail-xp-label {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .challenge-detail-xp-value {
+    font-size: var(--font-size-lg);
+    color: var(--color-primary);
+    font-weight: 700;
+    text-shadow: 0 0 10px var(--color-primary-glow);
   }
 
   .challenge-detail-action-buttons {
@@ -634,7 +655,6 @@
   }
 }
 
-
 /* ============================================
    BOTTOM NAVIGATION BAR
    ============================================ */
@@ -710,4 +730,3 @@
 .bottom-nav-item.active .bottom-nav-label {
   text-shadow: 0 0 5px var(--color-primary-glow);
 }
-

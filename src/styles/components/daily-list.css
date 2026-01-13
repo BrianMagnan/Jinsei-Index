@@ -1,7 +1,7 @@
 /* Daily List Styles */
-.daily-list-container {
-  /* Reuse todo list container styles */
-}
+/* .daily-list-container {
+  Reuse todo list container styles
+} */
 
 .daily-main {
   padding: var(--spacing-lg);
