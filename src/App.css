@@ -1054,7 +1054,8 @@ body {
   cursor: not-allowed;
 }
 
-/* Desktop adjustments for categories list footer */
+/* Categories List Footer - Media Queries */
+/* Desktop: Position at bottom with sidebar */
 @media (min-width: 769px) {
   .categories-list-footer {
     bottom: 0; /* Position at bottom of screen */
@@ -1066,18 +1067,15 @@ body {
     z-index: 1000; /* Ensure footer is above content but below modals */
   }
 
-  /* Adjust for smaller sidebar on tablets */
+  /* Tablet: Smaller sidebar width */
   @media (max-width: 1024px) {
     .categories-list-footer {
       left: 240px;
     }
   }
-
-  /* On desktop, modal is centered and footer is at bottom, so no extra padding needed */
-  /* The default padding from base .confirmation-modal-overlay is sufficient */
 }
 
-/* Mobile adjustments for categories list footer */
+/* Mobile: Position above bottom nav */
 @media (max-width: 768px) {
   .categories-list-footer {
     padding: var(--spacing-md) var(--spacing-sm);
@@ -1087,14 +1085,6 @@ body {
     left: 0; /* Full width on mobile */
     right: 0;
     gap: var(--spacing-sm);
-  }
-}
-
-/* Handle landscape orientation on mobile where sidebar becomes visible */
-@media (max-width: 768px) and (orientation: landscape) {
-  /* When sidebar is visible in landscape, account for it */
-  .categories-list-footer {
-    left: 280px; /* Account for sidebar width when visible in landscape */
   }
 
   .categories-list-footer .add-button,
@@ -1118,6 +1108,13 @@ body {
     letter-spacing: 0.5px;
     font-weight: 600;
     line-height: 1.2;
+  }
+}
+
+/* Mobile Landscape: Account for sidebar when visible */
+@media (max-width: 768px) and (orientation: landscape) {
+  .categories-list-footer {
+    left: 280px; /* Account for sidebar width when visible in landscape */
   }
 }
 
@@ -4908,14 +4905,15 @@ button:disabled .spinner,
   text-shadow: 0 0 5px var(--color-primary-glow);
 }
 
-/* Show bottom nav on mobile */
+/* Bottom Nav - Media Queries */
+/* Mobile: Show bottom nav */
 @media (max-width: 768px) {
   .bottom-nav {
     display: flex;
   }
 }
 
-/* Hide bottom nav on desktop */
+/* Desktop: Hide bottom nav */
 @media (min-width: 769px) {
   .bottom-nav {
     display: none;
@@ -5171,7 +5169,8 @@ button:disabled .spinner,
   box-shadow: var(--shadow-primary);
 }
 
-/* Hide sidebar on mobile */
+/* Sidebar & Modals - Media Queries */
+/* Mobile: Hide sidebar, show modals */
 @media (max-width: 768px) {
   .sidebar {
     display: none;
@@ -5182,7 +5181,7 @@ button:disabled .spinner,
   }
 }
 
-/* Show sidebar on desktop */
+/* Desktop: Show sidebar, hide modals */
 @media (min-width: 769px) {
   .sidebar {
     display: flex;
