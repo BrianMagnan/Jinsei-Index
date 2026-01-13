@@ -1082,7 +1082,7 @@ body {
   .categories-list-footer {
     padding: var(--spacing-md) var(--spacing-sm);
     bottom: calc(
-      60px + var(--spacing-sm) * 2
+      60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
     ); /* Position above bottom nav on mobile */
     left: 0; /* Full width on mobile */
     right: 0;
