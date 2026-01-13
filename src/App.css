@@ -6,7 +6,6 @@
 @import "./styles/layout.css";
 
 /* Component Styles */
-@import "./styles/components/sidebar.css";
 @import "./styles/components/forms.css";
 @import "./styles/components/lists.css";
 @import "./styles/components/modals.css";

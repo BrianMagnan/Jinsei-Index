@@ -466,23 +466,16 @@
 }
 
 /* Categories List Footer - Media Queries */
-/* Desktop: Position at bottom with sidebar */
+/* Desktop: Position at bottom */
 @media (min-width: 769px) {
   .categories-list-footer {
     bottom: 0; /* Position at bottom of screen */
     padding-bottom: calc(
       var(--spacing-lg) + env(safe-area-inset-bottom)
     ); /* Add safe area to padding */
-    left: 280px; /* Account for sidebar width */
+    left: 0;
     right: 0;
     z-index: 1000; /* Ensure footer is above content but below modals */
-  }
-
-  /* Tablet: Smaller sidebar width */
-  @media (max-width: 1024px) {
-    .categories-list-footer {
-      left: 240px;
-    }
   }
 }
 
@@ -519,13 +512,6 @@
     letter-spacing: 0.5px;
     font-weight: 600;
     line-height: 1.2;
-  }
-}
-
-/* Mobile Landscape: Account for sidebar when visible */
-@media (max-width: 768px) and (orientation: landscape) {
-  .categories-list-footer {
-    left: 280px; /* Account for sidebar width when visible in landscape */
   }
 }
 
@@ -629,7 +615,6 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: var(--spacing-lg);
   overflow-y: auto;
 }
 

@@ -74,13 +74,6 @@
     display: flex;
   }
 
-  /* Show sidebar close button */
-  .sidebar-close-button {
-    display: flex;
-  }
-
-  /* Sidebar is hidden on mobile, categories modal is used instead */
-
   /* App layout adjustments */
   .app {
     flex-direction: column;
@@ -166,12 +159,6 @@
   textarea:focus {
     scroll-margin-top: calc(var(--spacing-md) + 20px);
     scroll-margin-bottom: calc(var(--spacing-md) + 20px);
-  }
-
-  /* Menu items larger */
-  .sidebar-menu-item {
-    min-height: 44px;
-    padding: var(--spacing-md) var(--spacing-lg);
   }
 
   /* Stats and info spacing */
@@ -640,12 +627,7 @@
 }
 
 /* Tablet - Media Queries */
-/* Tablet: Adjust sidebar width and spacing */
 @media (min-width: 769px) and (max-width: 1024px) {
-  .sidebar {
-    width: 240px;
-  }
-
   .app-main {
     padding: var(--spacing-lg);
   }

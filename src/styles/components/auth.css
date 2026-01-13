@@ -5,11 +5,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--spacing-xl);
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-dark) 0%,
-    var(--color-bg-darker) 100%
-  );
+  width: 100%;
 }
 
 .auth-card {
@@ -150,4 +146,3 @@
   text-shadow: 0 0 5px var(--color-primary), 0 0 10px var(--color-primary),
     0 0 15px var(--color-primary-glow), 0 0 20px var(--color-primary-glow);
 }
-

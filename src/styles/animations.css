@@ -66,9 +66,6 @@
   animation: slideOutRight 0.3s ease-in;
 }
 
-/* Unified list item styles - used by all three lists */
-.category-item,
-
 @keyframes scaleInSpring {
   0% {
     transform: scale(0.9);
@@ -177,7 +174,6 @@
 
 /* Improved Loading States */
 .loading,
-.sidebar-loading,
 .profiles-loading {
   display: flex;
   align-items: center;
@@ -189,7 +185,6 @@
 }
 
 .loading .spinner,
-.sidebar-loading .spinner,
 .profiles-loading .spinner {
   margin: 0;
 }
@@ -222,27 +217,27 @@ button:disabled .spinner,
   }
 }
 
-  @keyframes slideOutLeft {
-    0% {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    100% {
-      transform: translateX(-100%);
-      opacity: 0;
-    }
+@keyframes slideOutLeft {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
   }
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
 
-  @keyframes slideOutRight {
-    0% {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    100% {
-      transform: translateX(100%);
-      opacity: 0;
-    }
+@keyframes slideOutRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
   }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
 
 @keyframes slideUpSpring {
   0% {
@@ -259,7 +254,6 @@ button:disabled .spinner,
   }
 }
 
-
 @keyframes fadeInOverlay {
   from {
     opacity: 0;
@@ -268,5 +262,3 @@ button:disabled .spinner,
     opacity: 1;
   }
 }
-
-

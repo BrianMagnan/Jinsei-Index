@@ -6,7 +6,6 @@ import {
   setAuthToken,
   authAPI,
 } from "./services/api";
-import { Sidebar } from "./components/Sidebar";
 import { SkillsList } from "./components/SkillsList";
 import { ChallengesList } from "./components/ChallengesList";
 import { ProfilesList } from "./components/ProfilesList";
@@ -43,8 +42,6 @@ function App() {
   const [initialChallengeId, setInitialChallengeId] = useState<
     string | undefined
   >(undefined);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [navDirection, setNavDirection] = useState<
@@ -168,17 +165,6 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Lock body scroll when sidebar is open on mobile
-  useEffect(() => {
-    if (sidebarOpen && window.innerWidth <= 768) {
-      document.body.classList.add("sidebar-open");
-    } else {
-      document.body.classList.remove("sidebar-open");
-    }
-    return () => {
-      document.body.classList.remove("sidebar-open");
-    };
-  }, [sidebarOpen]);
 
   // Check authentication on mount
   useEffect(() => {
@@ -229,7 +215,6 @@ function App() {
     }
     setSelectedCategoryId(categoryId);
     setSelectedSkillId(null); // Reset skill selection when category changes
-    setSidebarOpen(false); // Close sidebar on mobile when category is selected
   };
 
   const handleSkillSelect = (skillId: string) => {
@@ -241,7 +226,6 @@ function App() {
       setNavDirection("backward");
     }
     setSelectedSkillId(skillId);
-    setSidebarOpen(false); // Close sidebar on mobile when skill is selected
   };
 
   const handleViewModeChange = (mode: ViewMode) => {
@@ -264,7 +248,6 @@ function App() {
     setSelectedSkillId(null);
     setSelectedCategory(null);
     setInitialChallengeId(undefined);
-    setSidebarOpen(false);
     setSearchModalOpen(false);
     setCategoriesModalOpen(false);
   };
@@ -278,7 +261,6 @@ function App() {
     setSelectedCategoryId(categoryId);
     setSelectedSkillId(skillId);
     setInitialChallengeId(challengeId);
-    setSidebarOpen(false);
     setSearchModalOpen(false);
     setCategoriesModalOpen(false);
   };
@@ -329,21 +311,6 @@ function App() {
         <NetworkStatusIndicator />
         {viewMode === "main" ? (
           <>
-            <ErrorBoundary>
-              <Sidebar
-                selectedCategoryId={selectedCategoryId}
-                onCategorySelect={handleCategorySelect}
-                onSkillSelect={handleSkillSelect}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                searchOpen={searchOpen}
-                onSearchToggle={() => setSearchOpen(!searchOpen)}
-              />
-            </ErrorBoundary>
             <ErrorBoundary>
               <main className="app-main">
                 {selectedCategoryId && !selectedSkillId && (
@@ -821,21 +788,6 @@ function App() {
         ) : viewMode === "todo" ? (
           <>
             <ErrorBoundary>
-              <Sidebar
-                selectedCategoryId={null}
-                onCategorySelect={() => {}}
-                onSkillSelect={handleSkillSelect}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                searchOpen={searchOpen}
-                onSearchToggle={() => setSearchOpen(!searchOpen)}
-              />
-            </ErrorBoundary>
-            <ErrorBoundary>
               <main className="app-main todo-main">
                 <TodoList onNavigateToChallenge={handleNavigateToChallenge} />
               </main>
@@ -862,21 +814,6 @@ function App() {
         ) : viewMode === "daily" ? (
           <>
             <ErrorBoundary>
-              <Sidebar
-                selectedCategoryId={null}
-                onCategorySelect={() => {}}
-                onSkillSelect={handleSkillSelect}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                searchOpen={searchOpen}
-                onSearchToggle={() => setSearchOpen(!searchOpen)}
-              />
-            </ErrorBoundary>
-            <ErrorBoundary>
               <main className="app-main daily-main">
                 <DailyList onNavigateToChallenge={handleNavigateToChallenge} />
               </main>
@@ -902,21 +839,6 @@ function App() {
           </>
         ) : (
           <>
-            <ErrorBoundary>
-              <Sidebar
-                selectedCategoryId={null}
-                onCategorySelect={() => {}}
-                onSkillSelect={handleSkillSelect}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                currentUser={currentUser}
-                onLogout={handleLogout}
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-                searchOpen={searchOpen}
-                onSearchToggle={() => setSearchOpen(!searchOpen)}
-              />
-            </ErrorBoundary>
             <ErrorBoundary>
               <main className="app-main profiles-main">
                 <ProfilesList />

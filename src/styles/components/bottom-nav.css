@@ -262,24 +262,14 @@
   box-shadow: var(--shadow-primary);
 }
 
-/* Sidebar & Modals - Media Queries */
-/* Mobile: Hide sidebar, show modals */
+/* Modals - Media Queries */
+/* Mobile: Show modals */
 @media (max-width: 768px) {
-  .sidebar {
-    display: none;
-  }
-
-  .sidebar-overlay {
-    display: none;
-  }
+  /* Modals are shown on mobile */
 }
 
-/* Desktop: Show sidebar, hide modals */
+/* Desktop: Hide modals */
 @media (min-width: 769px) {
-  .sidebar {
-    display: flex;
-  }
-
   .categories-modal {
     display: none;
   }
@@ -541,4 +531,3 @@
   color: var(--color-text-primary);
   opacity: 1;
 }
-
