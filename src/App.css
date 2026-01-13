@@ -1088,10 +1088,13 @@ body {
     right: 0;
     gap: var(--spacing-sm);
   }
+}
 
-  /* Account for sidebar when open on mobile (e.g., landscape mode) */
-  body.sidebar-open .categories-list-footer {
-    left: 280px; /* Account for sidebar width */
+/* Handle landscape orientation on mobile where sidebar becomes visible */
+@media (max-width: 768px) and (orientation: landscape) {
+  /* When sidebar is visible in landscape, account for it */
+  .categories-list-footer {
+    left: 280px; /* Account for sidebar width when visible in landscape */
   }
 
   .categories-list-footer .add-button,
