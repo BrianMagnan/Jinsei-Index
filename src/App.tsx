@@ -262,11 +262,11 @@ function App() {
     setCategoriesModalOpen(false);
   };
 
-  const handleLoginSuccess = (profile: Profile) => {
+  const handleLoginSuccess = (_profile: Profile) => {
     setIsAuthenticated(true);
   };
 
-  const handleRegisterSuccess = (profile: Profile) => {
+  const handleRegisterSuccess = (_profile: Profile) => {
     setIsAuthenticated(true);
   };
 
