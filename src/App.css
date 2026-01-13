@@ -3550,7 +3550,8 @@ body {
   border-color: var(--color-accent-blue-dark);
 }
 
-/* Mobile styles for todo list */
+/* Todo/Daily List - Media Queries */
+/* Mobile: Compact styles for todo and daily lists */
 @media (max-width: 768px) {
   .todo-main {
     padding: var(--spacing-md);
@@ -4807,7 +4808,8 @@ button:disabled .spinner,
   }
 }
 
-/* Tablet Media Queries */
+/* Tablet - Media Queries */
+/* Tablet: Adjust sidebar width and spacing */
 @media (min-width: 769px) and (max-width: 1024px) {
   .sidebar {
     width: 240px;
@@ -4822,12 +4824,6 @@ button:disabled .spinner,
   }
 }
 
-/* Prevent body scroll when sidebar is open on mobile */
-@media (max-width: 768px) {
-  body.sidebar-open {
-    overflow: hidden;
-  }
-}
 
 /* ============================================
    BOTTOM NAVIGATION BAR
@@ -5726,7 +5722,8 @@ button:disabled .spinner,
   font-weight: 600;
 }
 
-/* Mobile Search Modal Enhancements */
+/* Search Modal - Media Queries */
+/* Mobile: Wrap actions for better mobile layout */
 @media (max-width: 768px) {
   .search-modal-actions {
     flex-wrap: wrap;
@@ -5894,7 +5891,8 @@ button:disabled .spinner,
   transform: scale(0.95);
 }
 
-/* Mobile Toast Styles */
+/* Toast - Media Queries */
+/* Mobile: Adjust positioning above bottom nav */
 @media (max-width: 768px) {
   .toast-container {
     bottom: calc(80px + var(--spacing-sm) + env(safe-area-inset-bottom));
@@ -5981,7 +5979,8 @@ button:disabled .spinner,
   }
 }
 
-/* Mobile Network Status Indicator */
+/* Network Status Indicator - Media Queries */
+/* Mobile: Adjust positioning for safe areas */
 @media (max-width: 768px) {
   .network-status-indicator {
     top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
@@ -6144,7 +6143,8 @@ button:disabled .spinner,
   opacity: 0.9;
 }
 
-/* Mobile Error Boundary Styles */
+/* Error Boundary - Media Queries */
+/* Mobile: Compact layout and spacing adjustments */
 @media (max-width: 768px) {
   .error-boundary {
     padding: var(--spacing-md);
@@ -6389,6 +6389,8 @@ button:disabled .spinner,
   line-height: 1.6;
 }
 
+/* Notification Settings - Media Queries */
+/* Mobile: Compact layout adjustments */
 @media (max-width: 768px) {
   .notification-settings {
     padding: var(--spacing-md);
