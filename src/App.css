@@ -925,14 +925,12 @@ body {
   gap: var(--spacing-md);
   padding: var(--spacing-lg) var(--spacing-lg);
   position: fixed;
-  bottom: calc(
-    60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
-  ); /* Position above bottom nav */
+  background: var(--color-bg-dark);
+  border-top: 1px solid var(--color-border);
+  bottom: calc(60px + var(--spacing-sm) * 2); /* Position above bottom nav */
   left: 0;
   right: 0;
-  z-index: 1000; /* Ensure footer is above content but below modals */
   z-index: 999; /* Above bottom nav (z-index: 998) */
-  /* box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); */
   /* Footer is rendered via portal outside animated containers, so no transform issues */
 }
 
@@ -1059,10 +1057,10 @@ body {
 /* Desktop adjustments for categories list footer */
 @media (min-width: 769px) {
   .categories-list-footer {
-    bottom: env(
-      safe-area-inset-bottom,
-      0px
-    ); /* No bottom nav on desktop, position at bottom */
+    bottom: 0; /* Position at bottom of screen */
+    padding-bottom: calc(
+      var(--spacing-lg) + env(safe-area-inset-bottom)
+    ); /* Add safe area to padding */
     left: 280px; /* Account for sidebar width */
     right: 0;
     z-index: 1000; /* Ensure footer is above content but below modals */
@@ -1084,7 +1082,7 @@ body {
   .categories-list-footer {
     padding: var(--spacing-md) var(--spacing-sm);
     bottom: calc(
-      60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
+      60px + var(--spacing-sm) * 2
     ); /* Position above bottom nav on mobile */
     left: 0; /* Full width on mobile */
     right: 0;
