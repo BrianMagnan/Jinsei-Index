@@ -22,7 +22,6 @@ export function getOfflineQueue(): QueuedRequest[] {
     const queueStr = localStorage.getItem(QUEUE_STORAGE_KEY);
     return queueStr ? JSON.parse(queueStr) : [];
   } catch (error) {
-    console.error('Error reading offline queue:', error);
     return [];
   }
 }
@@ -34,7 +33,7 @@ export function saveOfflineQueue(queue: QueuedRequest[]): void {
   try {
     localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
   } catch (error) {
-    console.error('Error saving offline queue:', error);
+    // Failed to save offline queue
   }
 }
 
@@ -68,7 +67,6 @@ export function addToOfflineQueue(
   queue.push(request);
   saveOfflineQueue(queue);
   
-  console.log('[Offline Queue] Added request:', request.id, endpoint);
   return request.id;
 }
 
@@ -94,8 +92,6 @@ export async function processOfflineQueue(
     return { success: 0, failed: 0 };
   }
 
-  console.log(`[Offline Queue] Processing ${queue.length} queued requests...`);
-
   let success = 0;
   let failed = 0;
   const remaining: QueuedRequest[] = [];
@@ -110,7 +106,6 @@ export async function processOfflineQueue(
 
       if (response.ok) {
         success++;
-        console.log('[Offline Queue] Successfully processed:', request.id);
         if (onSuccess) {
           onSuccess(request);
         }
@@ -119,10 +114,8 @@ export async function processOfflineQueue(
         if (request.retries < MAX_RETRIES) {
           request.retries++;
           remaining.push(request);
-          console.log('[Offline Queue] Retrying:', request.id, `(attempt ${request.retries})`);
         } else {
           failed++;
-          console.error('[Offline Queue] Failed after retries:', request.id);
           if (onError) {
             onError(request, new Error(`HTTP ${response.status}`));
           }
@@ -133,10 +126,8 @@ export async function processOfflineQueue(
       if (request.retries < MAX_RETRIES) {
         request.retries++;
         remaining.push(request);
-        console.log('[Offline Queue] Retrying after error:', request.id, `(attempt ${request.retries})`);
       } else {
         failed++;
-        console.error('[Offline Queue] Failed after retries:', request.id, error);
         if (onError) {
           onError(request, error as Error);
         }
@@ -147,7 +138,6 @@ export async function processOfflineQueue(
   // Save remaining requests (those that need retries)
   saveOfflineQueue(remaining);
 
-  console.log(`[Offline Queue] Processed: ${success} success, ${failed} failed, ${remaining.length} retrying`);
   return { success, failed };
 }
 
@@ -156,7 +146,6 @@ export async function processOfflineQueue(
  */
 export function clearOfflineQueue(): void {
   localStorage.removeItem(QUEUE_STORAGE_KEY);
-  console.log('[Offline Queue] Cleared');
 }
 
 /**

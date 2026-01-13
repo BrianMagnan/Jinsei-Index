@@ -14,8 +14,8 @@ if (import.meta.env.PROD) {
       // Initialize notifications after service worker is ready
       initializeNotifications();
     })
-    .catch((error) => {
-      console.error("Service Worker registration failed:", error);
+    .catch(() => {
+      // Service Worker registration failed
     });
 }
 

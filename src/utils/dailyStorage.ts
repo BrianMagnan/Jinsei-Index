@@ -22,7 +22,7 @@ export function saveDailyItems(items: DailyItem[]): void {
   try {
     localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(items));
   } catch (error) {
-    console.error("Failed to save daily items:", error);
+    // Failed to save daily items
   }
 }
 

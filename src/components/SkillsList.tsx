@@ -8,9 +8,17 @@ import { Skeleton } from "./Skeleton";
 import { SkillSkeletonList } from "./SkillSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { type ContextMenuItem } from "./ContextMenu";
 import { hapticFeedback } from "../utils/haptic";
 import { useToast } from "../contexts/ToastContext";
+import {
+  validateItem,
+  getValidationFeedback,
+  validateName,
+  validateDescription,
+} from "../utils/validation";
+import { BaseList } from "./BaseList";
+import { FormModal } from "./FormModal";
 
 interface SkillsListProps {
   categoryId: string;
@@ -51,8 +59,17 @@ export function SkillsList({
   }, [showAddFormProp]);
   const [newSkillName, setNewSkillName] = useState("");
   const [newSkillDescription, setNewSkillDescription] = useState("");
+  const [newSkillNameError, setNewSkillNameError] = useState<string | null>(
+    null
+  );
+  const [newSkillDescriptionError, setNewSkillDescriptionError] = useState<
+    string | null
+  >(null);
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
   const [editSkillName, setEditSkillName] = useState("");
+  const [editSkillNameError, setEditSkillNameError] = useState<string | null>(
+    null
+  );
   const [draggedSkillId, setDraggedSkillId] = useState<string | null>(null);
   const [dragOverSkillId, setDragOverSkillId] = useState<string | null>(null);
 
@@ -82,43 +99,7 @@ export function SkillsList({
   );
   const [deletingSkills, setDeletingSkills] = useState(false);
 
-  // Swipe gesture state for skill list items
-  const [itemSwipeStart, setItemSwipeStart] = useState<{
-    x: number;
-    y: number;
-    skillId: string;
-  } | null>(null);
-  const [itemSwipeEnd, setItemSwipeEnd] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [swipedSkillId, setSwipedSkillId] = useState<string | null>(null);
-  const [swipeOffset, setSwipeOffset] = useState<number>(0);
-
-  // Context menu state
-  const [contextMenuPosition, setContextMenuPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [contextMenuSkillId, setContextMenuSkillId] = useState<string | null>(
-    null
-  );
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  // Long press state (unified drag + menu)
-  const longPressTimerRef = useRef<number | null>(null);
-  const dragStartTimerRef = useRef<number | null>(null);
-  const longPressSkillIdRef = useRef<string | null>(null);
-  const longPressTriggeredRef = useRef<boolean>(false);
-  const longPressPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const hasMovedRef = useRef<boolean>(false);
-  const dragThreshold = 10; // pixels - movement distance before drag starts
-  const DRAG_START_DELAY = 300; // ms - time before drag can start
-  const MENU_DELAY = 600; // ms - time before menu shows if no movement
-
-  // Track clicks for double-click detection
-  const clickTimerRef = useRef<number | null>(null);
-  const clickCountRef = useRef<number>(0);
 
   // Update mobile state on resize
   useEffect(() => {
@@ -129,15 +110,9 @@ export function SkillsList({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Cleanup long press and drag timers on unmount
+  // Cleanup touch drag timer on unmount
   useEffect(() => {
     return () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-      if (dragStartTimerRef.current) {
-        clearTimeout(dragStartTimerRef.current);
-      }
       if (touchDragTimerRef.current) {
         clearTimeout(touchDragTimerRef.current);
       }
@@ -145,15 +120,6 @@ export function SkillsList({
   }, []);
 
   // Swipe to close modal state
-  const [modalSwipeStart, setModalSwipeStart] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [modalSwipeEnd, setModalSwipeEnd] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [modalSwipeOffset, setModalSwipeOffset] = useState<number>(0);
 
   const loadSkills = async () => {
     try {
@@ -202,7 +168,7 @@ export function SkillsList({
         setSkills(sorted);
       }
     } catch (err) {
-      console.error("Failed to load skills:", err);
+      // Failed to load skills
     } finally {
       setLoading(false);
     }
@@ -251,9 +217,51 @@ export function SkillsList({
     onShowAddFormChange,
   ]);
 
+  // Real-time validation for new skill
+  useEffect(() => {
+    if (newSkillName.trim() || newSkillDescription.trim()) {
+      const nameValidation = validateName(newSkillName);
+      setNewSkillNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+
+      const descValidation = validateDescription(newSkillDescription);
+      setNewSkillDescriptionError(
+        descValidation.isValid ? null : descValidation.error || null
+      );
+    } else {
+      setNewSkillNameError(null);
+      setNewSkillDescriptionError(null);
+    }
+  }, [newSkillName, newSkillDescription]);
+
   const handleCreateSkill = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSkillName.trim() || creatingSkill) return;
+
+    // Validate input
+    const validation = validateItem({
+      name: newSkillName,
+      description: newSkillDescription,
+    });
+
+    if (!validation.isValid) {
+      const errorMsg = getValidationFeedback(validation);
+      // Show field-specific errors
+      const nameValidation = validateName(newSkillName);
+      setNewSkillNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+      const descValidation = validateDescription(newSkillDescription);
+      setNewSkillDescriptionError(
+        descValidation.isValid ? null : descValidation.error || null
+      );
+
+      toast.showError(errorMsg || "Invalid input");
+      hapticFeedback.error();
+      return;
+    }
+
+    if (creatingSkill) return;
 
     setCreatingSkill(true);
     try {
@@ -294,6 +302,8 @@ export function SkillsList({
 
       setNewSkillName("");
       setNewSkillDescription("");
+      setNewSkillNameError(null);
+      setNewSkillDescriptionError(null);
       setShowAddForm(false);
       if (onShowAddFormChange) onShowAddFormChange(false);
       await loadSkills();
@@ -316,8 +326,38 @@ export function SkillsList({
     setEditSkillName(skill.name);
   };
 
+  // Real-time validation for edit skill
+  useEffect(() => {
+    if (editingSkillId && editSkillName.trim()) {
+      const nameValidation = validateName(editSkillName);
+      setEditSkillNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+    } else {
+      setEditSkillNameError(null);
+    }
+  }, [editSkillName, editingSkillId]);
+
   const handleUpdateSkill = async (skillId: string, e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate input
+    const validation = validateItem({
+      name: editSkillName,
+    });
+
+    if (!validation.isValid) {
+      const errorMsg = getValidationFeedback(validation);
+      const nameValidation = validateName(editSkillName);
+      setEditSkillNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+
+      toast.showError(errorMsg || "Invalid input");
+      hapticFeedback.error();
+      return;
+    }
+
     if (updatingSkill === skillId) return;
 
     hapticFeedback.medium();
@@ -327,6 +367,7 @@ export function SkillsList({
         name: editSkillName.trim(),
       });
       setEditingSkillId(null);
+      setEditSkillNameError(null);
       await loadSkills();
       hapticFeedback.success();
     } catch (err) {
@@ -463,35 +504,7 @@ export function SkillsList({
     setTouchDragOffset(0);
   };
 
-  // Handle context menu (right-click or long-press)
-  const handleContextMenu = (
-    event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
-    skill: Skill
-  ) => {
-    if ("preventDefault" in event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    // For mobile, position doesn't matter (bottom sheet style)
-    // For desktop, use cursor position
-    if (isMobile) {
-      // Mobile: bottom sheet style - position will be handled by ContextMenu component
-      setContextMenuPosition({ x: 0, y: 0 });
-    } else if ("clientX" in event && "clientY" in event) {
-      // Desktop: right-click or mouse event - show menu at cursor position
-      setContextMenuPosition({ x: event.clientX, y: event.clientY });
-    } else {
-      // Fallback: center of screen
-      setContextMenuPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      });
-    }
-
-    setContextMenuSkillId(skill._id);
-    hapticFeedback.medium();
-  };
+  // Context menu is now handled by BaseList
 
   // Get context menu items for a skill
   const getContextMenuItems = (skill: Skill): ContextMenuItem[] => {
@@ -516,133 +529,23 @@ export function SkillsList({
     ];
   };
 
-  // Unified long-press handlers: drag with movement, menu without movement
-  const handleLongPressStart = (
-    skill: Skill,
-    event: React.MouseEvent | React.TouchEvent,
-    _index: number
-  ) => {
-    longPressTriggeredRef.current = false;
-    hasMovedRef.current = false;
-    longPressSkillIdRef.current = skill._id;
-
-    // Store initial position for movement detection
-    if ("touches" in event) {
-      const touch = event.touches[0];
-      longPressPositionRef.current = { x: touch.clientX, y: touch.clientY };
+  // Wrap onItemSelect to handle selection mode
+  const handleItemSelect = (skillId: string) => {
+    if (selectionMode) {
+      setSelectedSkillIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(skillId)) {
+          next.delete(skillId);
+          hapticFeedback.light();
+        } else {
+          next.add(skillId);
+          hapticFeedback.selection();
+        }
+        return next;
+      });
     } else {
-      longPressPositionRef.current = { x: event.clientX, y: event.clientY };
+      onSkillSelect(skillId);
     }
-
-    // Start drag timer (shorter - 300ms) - enables drag after this delay if movement occurs
-    dragStartTimerRef.current = window.setTimeout(() => {
-      if (
-        longPressSkillIdRef.current === skill._id &&
-        hasMovedRef.current &&
-        !longPressTriggeredRef.current &&
-        !draggedSkillId
-      ) {
-        // 300ms passed and movement detected - start drag
-        hapticFeedback.medium();
-        handleDragStart(skill._id);
-        // Cancel menu timer since we're dragging
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-      }
-    }, DRAG_START_DELAY);
-
-    // Start menu timer (longer - 600ms, only if no movement)
-    longPressTimerRef.current = window.setTimeout(() => {
-      if (
-        longPressSkillIdRef.current === skill._id &&
-        !hasMovedRef.current &&
-        !longPressTriggeredRef.current
-      ) {
-        // No movement - show menu
-        longPressTriggeredRef.current = true;
-        hapticFeedback.medium();
-        // Cancel drag timer if it's still running
-        if (dragStartTimerRef.current) {
-          clearTimeout(dragStartTimerRef.current);
-          dragStartTimerRef.current = null;
-        }
-        // Show context menu
-        const syntheticEvent = {
-          clientX: longPressPositionRef.current?.x || window.innerWidth / 2,
-          clientY: longPressPositionRef.current?.y || window.innerHeight / 2,
-          preventDefault: () => {},
-          stopPropagation: () => {},
-        } as React.MouseEvent;
-        handleContextMenu(syntheticEvent, skill);
-      }
-    }, MENU_DELAY);
-  };
-
-  const handleLongPressMove = (
-    skill: Skill,
-    event: React.MouseEvent | React.TouchEvent,
-    _index: number
-  ) => {
-    if (
-      longPressSkillIdRef.current !== skill._id ||
-      longPressTriggeredRef.current
-    )
-      return;
-
-    // Get current position
-    const currentX =
-      "touches" in event ? event.touches[0].clientX : event.clientX;
-    const currentY =
-      "touches" in event ? event.touches[0].clientY : event.clientY;
-
-    if (longPressPositionRef.current) {
-      // Calculate movement distance
-      const deltaX = Math.abs(currentX - longPressPositionRef.current.x);
-      const deltaY = Math.abs(currentY - longPressPositionRef.current.y);
-      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-      // If moved beyond threshold, mark as moved
-      if (distance > dragThreshold) {
-        hasMovedRef.current = true;
-
-        // Cancel menu timer if user is moving
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-
-        // Start drag if enough time has passed (DRAG_START_DELAY) and movement detected
-        if (!draggedSkillId && !dragStartTimerRef.current) {
-          // Timer already fired (300ms passed) - start drag immediately since movement detected
-          hapticFeedback.medium();
-          handleDragStart(skill._id);
-        }
-
-        // Update position
-        longPressPositionRef.current = { x: currentX, y: currentY };
-      }
-    }
-  };
-
-  const handleLongPressEnd = () => {
-    // Reset the flag after a short delay to allow click handler to check it
-    setTimeout(() => {
-      longPressTriggeredRef.current = false;
-    }, 100);
-
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    if (dragStartTimerRef.current) {
-      clearTimeout(dragStartTimerRef.current);
-      dragStartTimerRef.current = null;
-    }
-    longPressSkillIdRef.current = null;
-    longPressPositionRef.current = null;
-    hasMovedRef.current = false;
   };
 
   const handleUpdateCategory = async (e: React.FormEvent) => {
@@ -781,7 +684,7 @@ export function SkillsList({
     if (navDirection && onAnimationComplete) {
       const timer = setTimeout(() => {
         onAnimationComplete();
-      }, 350); // Match animation duration
+      }, 300); // Match unified transition duration
       return () => clearTimeout(timer);
     }
   }, [navDirection, onAnimationComplete]);
@@ -877,582 +780,232 @@ export function SkillsList({
           onAction={() => setShowAddForm(true)}
         />
       ) : (
-        <ul className="skill-list">
-          {skills.map((skill, index) => (
-            <li
-              key={skill._id}
-              className={`skill-item ${
-                selectionMode && selectedSkillIds.has(skill._id)
-                  ? "selected"
-                  : ""
-              } ${
-                draggedSkillId === skill._id ||
-                touchDragStart?.skillId === skill._id
-                  ? "dragging"
-                  : ""
-              } ${dragOverSkillId === skill._id ? "drag-over" : ""} ${
-                swipedSkillId === skill._id ? "swiping" : ""
-              } ${
-                contextMenuSkillId === skill._id ? "context-menu-active" : ""
-              }`}
-              draggable={
-                !isMobile &&
-                !editingSkillId &&
-                !selectionMode &&
-                draggedSkillId !== skill._id &&
-                !longPressTriggeredRef.current &&
-                (hasMovedRef.current || dragStartTimerRef.current === null)
-              }
-              onDragStart={() => {
-                if (!isMobile && !editingSkillId) {
-                  // Cancel long-press timers when native drag starts
-                  handleLongPressEnd();
-                  handleDragStart(skill._id, index);
+        <BaseList<Skill>
+          items={skills}
+          selectedItemId={null}
+          editingItemId={editingSkillId}
+          selectionMode={selectionMode}
+          selectedItemIds={selectedSkillIds}
+          isMobile={isMobile}
+          onItemSelect={handleItemSelect}
+          onItemEdit={handleEditSkill}
+          onItemDelete={(skillId, skillName, e) => {
+            handleDeleteSkill(skillId, skillName, e);
+          }}
+          getContextMenuItems={getContextMenuItems}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onDragEnd={handleDragEnd}
+          onTouchDragStart={handleTouchDragStart}
+          onTouchDragMove={handleTouchDragMove}
+          onTouchDragEnd={handleTouchDragEnd}
+          draggedItemId={draggedSkillId}
+          dragOverItemId={dragOverSkillId}
+          touchDragStart={
+            touchDragStart
+              ? {
+                  itemId: touchDragStart.skillId,
+                  initialIndex: touchDragStart.initialIndex,
                 }
-              }}
-              onDragOver={(e) => {
-                if (!isMobile) {
-                  handleDragOver(e, skill._id);
-                }
-              }}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => {
-                if (!isMobile) {
-                  handleDrop(e, skill._id, index);
-                }
-              }}
-              onDragEnd={handleDragEnd}
-              onClick={() => {
-                // Don't trigger click if long press was just triggered or if swiping or dragging
-                if (
-                  longPressTriggeredRef.current ||
-                  swipedSkillId === skill._id ||
-                  contextMenuPosition ||
-                  draggedSkillId ||
-                  touchDragStart?.skillId === skill._id
-                ) {
-                  return;
-                }
-
-                if (selectionMode) {
-                  setSelectedSkillIds((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(skill._id)) {
-                      next.delete(skill._id);
-                      hapticFeedback.light();
-                    } else {
-                      next.add(skill._id);
-                      hapticFeedback.selection();
-                    }
-                    return next;
-                  });
-                } else if (editingSkillId !== skill._id) {
-                  // Handle double-click detection (desktop only)
-                  if (!isMobile) {
-                    clickCountRef.current += 1;
-
-                    // Clear existing timer
-                    if (clickTimerRef.current) {
-                      clearTimeout(clickTimerRef.current);
-                    }
-
-                    // Wait to see if it's a double-click
-                    clickTimerRef.current = window.setTimeout(() => {
-                      // Single click - select skill (only if long-press wasn't triggered)
-                      if (
-                        clickCountRef.current === 1 &&
-                        !longPressTriggeredRef.current
-                      ) {
-                        onSkillSelect(skill._id);
-                      }
-                      clickCountRef.current = 0;
-                    }, 300); // 300ms delay to detect double-click
-                  } else {
-                    // Mobile: immediate select
-                    onSkillSelect(skill._id);
-                  }
-                }
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                // Desktop: double-click to edit
-                if (!isMobile && !selectionMode) {
-                  // Clear single-click timer immediately
-                  if (clickTimerRef.current) {
-                    clearTimeout(clickTimerRef.current);
-                    clickTimerRef.current = null;
-                  }
-                  clickCountRef.current = 0;
-                  // Small delay to ensure onClick doesn't fire
-                  setTimeout(() => {
-                    handleEditSkill(skill);
-                  }, 0);
-                }
-              }}
-              onContextMenu={(e) => {
-                // Desktop: right-click to show context menu
-                if (!isMobile && !selectionMode) {
-                  handleContextMenu(e, skill);
-                }
-              }}
-              onMouseDown={(e) => {
-                // Desktop: long-press for drag (with movement) or menu (without movement)
-                if (
-                  e.button === 0 &&
-                  !editingSkillId &&
-                  !selectionMode &&
-                  !isMobile
-                ) {
-                  handleLongPressStart(skill, e, index);
-                }
-              }}
-              onMouseMove={(e) => {
-                // Desktop: track movement during long-press
-                if (
-                  !isMobile &&
-                  !editingSkillId &&
-                  !selectionMode &&
-                  longPressSkillIdRef.current === skill._id
-                ) {
-                  handleLongPressMove(skill, e, index);
-                }
-              }}
-              onMouseUp={handleLongPressEnd}
-              onMouseLeave={handleLongPressEnd}
-              onTouchStart={(e) => {
-                if (editingSkillId !== skill._id && !selectionMode) {
-                  const touch = e.touches[0];
-                  const initialIndex = skills.findIndex(
-                    (s) => s._id === skill._id
-                  );
-
-                  // Start long-press timer for menu
-                  if (!editingSkillId) {
-                    handleLongPressStart(skill, e, index);
-                  }
-                  // Start touch drag timer for reordering
-                  if (initialIndex >= 0) {
-                    handleTouchDragStart(skill._id, initialIndex);
-                  }
-
-                  // Track swipe for delete (horizontal)
-                  setItemSwipeStart({
-                    x: touch.clientX,
-                    y: touch.clientY,
-                    skillId: skill._id,
-                  });
-                  setItemSwipeEnd(null);
-                  setSwipeOffset(0);
-                }
-              }}
-              onTouchMove={(e) => {
-                if (itemSwipeStart && itemSwipeStart.skillId === skill._id) {
-                  const currentX = e.touches[0].clientX;
-                  const currentY = e.touches[0].clientY;
-                  setItemSwipeEnd({ x: currentX, y: currentY });
-
-                  // Calculate swipe offset for visual feedback
-                  const deltaX = currentX - itemSwipeStart.x;
-                  const deltaY = Math.abs(currentY - itemSwipeStart.y);
-
-                  // If touch drag is active, handle vertical drag
-                  if (touchDragStart?.skillId === skill._id) {
-                    handleTouchDragMove(e, skill._id);
-                    // Cancel swipe and long press when dragging
-                    handleLongPressEnd();
-                    setItemSwipeStart(null);
-                    return;
-                  }
-
-                  // Only allow horizontal swipes (ignore if vertical movement is too large)
-                  if (deltaY < 30) {
-                    setSwipeOffset(deltaX);
-                    setSwipedSkillId(skill._id);
-                    // Cancel long press and drag if swiping horizontally
-                    if (Math.abs(deltaX) > 10) {
-                      handleLongPressEnd();
-                      handleTouchDragEnd();
-                    }
-                  } else if (deltaY > 30) {
-                    // Cancel horizontal swipe if vertical movement is too large
-                    setItemSwipeStart(null);
-                    setSwipedSkillId(null);
-                    setSwipeOffset(0);
-                  }
-                }
-              }}
-              onTouchEnd={() => {
-                handleLongPressEnd();
-                handleTouchDragEnd();
-
-                if (
-                  itemSwipeStart &&
-                  itemSwipeStart.skillId === skill._id &&
-                  itemSwipeEnd &&
-                  !touchDragStart
-                ) {
-                  const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
-                  const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
-                  const minSwipeDistance = 80;
-
-                  // Only handle horizontal swipes
-                  if (deltaY < 50 && Math.abs(deltaX) > minSwipeDistance) {
-                    if (deltaX < 0) {
-                      // Swipe left - delete
-                      hapticFeedback.medium();
-                      handleDeleteSkill(skill._id, skill.name, {
-                        stopPropagation: () => {},
-                      } as React.MouseEvent);
-                    }
-                  }
-                }
-
-                // Reset swipe state
-                setItemSwipeStart(null);
-                setItemSwipeEnd(null);
-                setSwipedSkillId(null);
-                setSwipeOffset(0);
-              }}
-              onTouchCancel={() => {
-                handleLongPressEnd();
-                handleTouchDragEnd();
-                setItemSwipeStart(null);
-                setItemSwipeEnd(null);
-                setSwipedSkillId(null);
-                setSwipeOffset(0);
-              }}
-              style={{
-                transform:
-                  touchDragStart?.skillId === skill._id
-                    ? `translateY(${touchDragOffset}px)`
-                    : swipedSkillId === skill._id
-                    ? `translateX(${Math.max(
-                        -100,
-                        Math.min(100, swipeOffset)
-                      )}px)`
-                    : undefined,
-                transition:
-                  touchDragStart?.skillId === skill._id ||
-                  swipedSkillId === skill._id ||
-                  draggedSkillId === skill._id
-                    ? "none"
-                    : "transform 0.2s ease-out",
-              }}
-            >
-              <>
-                {/* Selection checkbox - only visible in selection mode */}
-                {selectionMode && (
-                  <input
-                    type="checkbox"
-                    className="challenge-selection-checkbox skill-selection-checkbox"
-                    checked={selectedSkillIds.has(skill._id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setSelectedSkillIds((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(skill._id)) {
-                          next.delete(skill._id);
-                          hapticFeedback.light();
-                        } else {
-                          next.add(skill._id);
-                          hapticFeedback.selection();
-                        }
-                        return next;
-                      });
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                    aria-label={`Select ${skill.name}`}
-                  />
-                )}
-                <div className="skill-content">
-                  <div className="skill-header">
-                    <div className="skill-name">{skill.name}</div>
-                    <div className="skill-item-stats">
-                      <span className="item-stat">
-                        {skill.xp?.toLocaleString() || 0} XP
-                      </span>
-                      <span className="item-stat-separator"> • </span>
-                      <span className="item-stat">LV {skill.level || 1}</span>
-                    </div>
+              : null
+          }
+          touchDragOffset={touchDragOffset}
+          itemClassName="skill-item"
+          listClassName="skill-list"
+          renderItemContent={(
+            skill,
+            selectionMode,
+            selectedItemIds,
+            onSelectionToggle
+          ) => (
+            <>
+              {selectionMode && (
+                <input
+                  type="checkbox"
+                  className="challenge-selection-checkbox skill-selection-checkbox"
+                  checked={selectedItemIds.has(skill._id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onSelectionToggle(skill);
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  aria-label={`Select ${skill.name}`}
+                />
+              )}
+              <div className="skill-content">
+                <div className="skill-header">
+                  <div className="skill-name">{skill.name}</div>
+                  <div className="skill-item-stats">
+                    <span className="item-stat">
+                      {skill.xp?.toLocaleString() || 0} XP
+                    </span>
+                    <span className="item-stat-separator"> • </span>
+                    <span className="item-stat">LV {skill.level || 1}</span>
                   </div>
-                  {skill.description && (
-                    <div className="skill-description">{skill.description}</div>
-                  )}
-                  {/* Swipe action indicators */}
-                  {swipedSkillId === skill._id && (
-                    <>
-                      {swipeOffset < 0 && (
-                        <div className="challenge-swipe-indicator swipe-delete">
-                          <span className="swipe-icon">🗑️</span>
-                          <span className="swipe-text">Delete</span>
-                        </div>
-                      )}
-                    </>
-                  )}
                 </div>
-              </>
-            </li>
-          ))}
-        </ul>
+                {skill.description && (
+                  <div className="skill-description">{skill.description}</div>
+                )}
+              </div>
+            </>
+          )}
+          renderSwipeActions={(_skill, swipeOffset) =>
+            swipeOffset < 0 ? (
+              <div className="challenge-swipe-indicator swipe-delete">
+                <span className="swipe-icon">🗑️</span>
+                <span className="swipe-text">Delete</span>
+              </div>
+            ) : null
+          }
+        />
       )}
 
       {/* Add Skill Modal */}
-      {showAddForm && (
-        <div
-          className="challenge-edit-modal-overlay"
-          onClick={() => {
-            hapticFeedback.light();
-            setShowAddForm(false);
-            if (onShowAddFormChange) onShowAddFormChange(false);
-          }}
-          onTouchStart={(e) => {
-            setModalSwipeStart({
-              x: e.touches[0].clientX,
-              y: e.touches[0].clientY,
-            });
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-          onTouchMove={(e) => {
-            if (modalSwipeStart) {
-              const currentY = e.touches[0].clientY;
-              const currentX = e.touches[0].clientX;
-              setModalSwipeEnd({ x: currentX, y: currentY });
-              const deltaY = currentY - modalSwipeStart.y;
-              const deltaX = Math.abs(currentX - modalSwipeStart.x);
-              // Only allow vertical swipes down
-              if (deltaY > 0 && deltaY > deltaX) {
-                setModalSwipeOffset(deltaY);
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (modalSwipeStart && modalSwipeEnd) {
-              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
-              const minSwipeDistance = 100;
-              if (deltaY > minSwipeDistance) {
+      <FormModal
+        isOpen={showAddForm}
+        onClose={() => {
+          setShowAddForm(false);
+          setNewSkillNameError(null);
+          setNewSkillDescriptionError(null);
+          if (onShowAddFormChange) onShowAddFormChange(false);
+        }}
+        title="Add Skill"
+        loading={creatingSkill}
+      >
+        <form className="edit-form" onSubmit={handleCreateSkill}>
+          <div className="auth-field">
+            <label htmlFor="new-skill-name">Name *</label>
+            <input
+              id="new-skill-name"
+              type="text"
+              placeholder="Skill name"
+              value={newSkillName}
+              onChange={(e) => setNewSkillName(e.target.value)}
+              className={newSkillNameError ? "input-error" : ""}
+              required
+              autoFocus
+            />
+            {newSkillNameError && (
+              <span className="field-error">{newSkillNameError}</span>
+            )}
+          </div>
+          <div className="auth-field">
+            <label htmlFor="new-skill-description">Description</label>
+            <textarea
+              id="new-skill-description"
+              placeholder="Skill description (optional)"
+              value={newSkillDescription}
+              onChange={(e) => setNewSkillDescription(e.target.value)}
+              className={newSkillDescriptionError ? "input-error" : ""}
+              rows={3}
+            />
+            {newSkillDescriptionError && (
+              <span className="field-error">{newSkillDescriptionError}</span>
+            )}
+          </div>
+          <div className="edit-form-actions">
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={() => {
                 hapticFeedback.light();
                 setShowAddForm(false);
                 if (onShowAddFormChange) onShowAddFormChange(false);
-              }
-            }
-            setModalSwipeStart(null);
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-        >
-          <div
-            className="challenge-edit-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              transform:
-                modalSwipeOffset > 0
-                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
-                  : undefined,
-              transition:
-                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
-            }}
-          >
-            <div className="challenge-action-modal-header">
-              <h3>Add Skill</h3>
-              <button
-                className="challenge-action-modal-close"
-                onClick={() => {
-                  hapticFeedback.light();
-                  setShowAddForm(false);
-                  if (onShowAddFormChange) onShowAddFormChange(false);
-                }}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <form className="edit-form" onSubmit={handleCreateSkill}>
-              <div className="auth-field">
-                <label htmlFor="new-skill-name">Name *</label>
-                <input
-                  id="new-skill-name"
-                  type="text"
-                  placeholder="Skill name"
-                  value={newSkillName}
-                  onChange={(e) => setNewSkillName(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              <div className="edit-form-actions">
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() => {
-                    hapticFeedback.light();
-                    setShowAddForm(false);
-                    if (onShowAddFormChange) onShowAddFormChange(false);
-                  }}
-                  disabled={creatingSkill}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="save-button"
-                  disabled={creatingSkill}
-                >
-                  {creatingSkill ? (
-                    <>
-                      <Spinner size="sm" />
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    "Add"
-                  )}
-                </button>
-              </div>
-            </form>
+              }}
+              disabled={creatingSkill}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="save-button"
+              disabled={creatingSkill}
+            >
+              {creatingSkill ? (
+                <>
+                  <Spinner size="sm" />
+                  <span>Adding...</span>
+                </>
+              ) : (
+                "Add"
+              )}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </FormModal>
 
       {/* Edit Skill Modal */}
-      {editingSkillId && (
-        <div
-          className="challenge-edit-modal-overlay"
-          onClick={() => {
-            hapticFeedback.light();
-            setEditingSkillId(null);
-          }}
-          onTouchStart={(e) => {
-            setModalSwipeStart({
-              x: e.touches[0].clientX,
-              y: e.touches[0].clientY,
-            });
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-          onTouchMove={(e) => {
-            if (modalSwipeStart) {
-              const currentY = e.touches[0].clientY;
-              const currentX = e.touches[0].clientX;
-              setModalSwipeEnd({ x: currentX, y: currentY });
-              const deltaY = currentY - modalSwipeStart.y;
-              const deltaX = Math.abs(currentX - modalSwipeStart.x);
-              // Only allow vertical swipes down
-              if (deltaY > 0 && deltaY > deltaX) {
-                setModalSwipeOffset(deltaY);
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (modalSwipeStart && modalSwipeEnd) {
-              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
-              const minSwipeDistance = 100;
-              if (deltaY > minSwipeDistance) {
-                hapticFeedback.light();
+      {editingSkillId &&
+        (() => {
+          const skill = skills.find((s) => s._id === editingSkillId);
+          if (!skill) return null;
+
+          return (
+            <FormModal
+              isOpen={!!editingSkillId}
+              onClose={() => {
                 setEditingSkillId(null);
-              }
-            }
-            setModalSwipeStart(null);
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-        >
-          <div
-            className="challenge-edit-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              transform:
-                modalSwipeOffset > 0
-                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
-                  : undefined,
-              transition:
-                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
-            }}
-          >
-            {(() => {
-              const skill = skills.find((s) => s._id === editingSkillId);
-              if (!skill) return null;
-
-              return (
-                <>
-                  <div className="challenge-action-modal-header">
-                    <h3>Edit Skill</h3>
-                    <button
-                      className="challenge-action-modal-close"
-                      onClick={() => {
-                        hapticFeedback.light();
-                        setEditingSkillId(null);
-                      }}
-                      aria-label="Close"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <form
-                    className="edit-form"
-                    onSubmit={(e) => handleUpdateSkill(skill._id, e)}
+                setEditSkillNameError(null);
+              }}
+              title="Edit Skill"
+              loading={updatingSkill === skill._id}
+            >
+              <form
+                className="edit-form"
+                onSubmit={(e) => handleUpdateSkill(skill._id, e)}
+              >
+                <div className="auth-field">
+                  <label htmlFor="edit-skill-name">Name *</label>
+                  <input
+                    id="edit-skill-name"
+                    type="text"
+                    value={editSkillName}
+                    onChange={(e) => setEditSkillName(e.target.value)}
+                    className={editSkillNameError ? "input-error" : ""}
+                    required
+                    autoFocus
+                  />
+                  {editSkillNameError && (
+                    <span className="field-error">{editSkillNameError}</span>
+                  )}
+                </div>
+                <div className="edit-form-actions">
+                  <button
+                    type="button"
+                    className="cancel-button"
+                    onClick={() => {
+                      hapticFeedback.light();
+                      setEditingSkillId(null);
+                    }}
+                    disabled={updatingSkill === skill._id}
                   >
-                    <div className="auth-field">
-                      <label htmlFor="edit-skill-name">Name *</label>
-                      <input
-                        id="edit-skill-name"
-                        type="text"
-                        value={editSkillName}
-                        onChange={(e) => setEditSkillName(e.target.value)}
-                        required
-                        autoFocus
-                      />
-                    </div>
-                    <div className="edit-form-actions">
-                      <button
-                        type="button"
-                        className="cancel-button"
-                        onClick={() => {
-                          hapticFeedback.light();
-                          setEditingSkillId(null);
-                        }}
-                        disabled={updatingSkill === skill._id}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="save-button"
-                        disabled={updatingSkill === skill._id}
-                      >
-                        {updatingSkill === skill._id ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Saving...</span>
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="save-button"
+                    disabled={updatingSkill === skill._id}
+                  >
+                    {updatingSkill === skill._id ? (
+                      <>
+                        <Spinner size="sm" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      "Save"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </FormModal>
+          );
+        })()}
 
-      {/* Context Menu */}
-      {contextMenuPosition && contextMenuSkillId && (
-        <ContextMenu
-          items={getContextMenuItems(
-            skills.find((s) => s._id === contextMenuSkillId)!
-          )}
-          position={contextMenuPosition}
-          onClose={() => {
-            setContextMenuPosition(null);
-            setContextMenuSkillId(null);
-          }}
-        />
-      )}
+      {/* Context Menu is now handled by BaseList */}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

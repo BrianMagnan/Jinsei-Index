@@ -73,7 +73,6 @@ export function useNotifications(): UseNotificationsReturn {
       
       return newPermission;
     } catch (error) {
-      console.error('Failed to request notification permission:', error);
       throw error;
     }
   }, [preferences.enabled]);

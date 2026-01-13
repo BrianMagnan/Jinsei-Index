@@ -1,0 +1,103 @@
+/* App Layout Styles */
+
+.app {
+  height: 100dvh; /* Use dynamic viewport height for better iOS support */
+  display: flex;
+  flex-direction: row;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-dark) 0%,
+    var(--color-bg-darker) 100%
+  );
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  padding: var(--spacing-md);
+  padding-top: calc(var(--spacing-md) + env(safe-area-inset-top, 0px));
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-dark) 0%,
+    var(--color-bg-darker) 100%
+  );
+  height: 100dvh; /* Use dynamic viewport height for better iOS support */
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main::-webkit-scrollbar {
+  width: 12px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: var(--color-bg-scrollbar);
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  background: var(--color-bg-scrollbar-thumb);
+  border-radius: var(--radius-md);
+}
+
+.app-main::-webkit-scrollbar-thumb:hover {
+  background: var(--color-bg-scrollbar-thumb-hover);
+}
+
+.welcome-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--color-text-dim);
+}
+
+.welcome-message h1 {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+  color: var(--color-primary);
+  text-shadow: 0 0 20px var(--color-primary-glow);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.welcome-message p {
+  font-size: 1.25rem;
+  color: var(--color-text-muted);
+}
+
+.profiles-main {
+  padding: var(--spacing-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.todo-main {
+  padding: var(--spacing-xl);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Mobile Layout Adjustments */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
+
+  .app-main {
+    width: 100%;
+    padding: var(--spacing-md);
+    padding-bottom: calc(80px + var(--spacing-md));
+  }
+
+  .welcome-message h1 {
+    font-size: 2rem;
+  }
+
+  .welcome-message p {
+    font-size: 1rem;
+  }
+}

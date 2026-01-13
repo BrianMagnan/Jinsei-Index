@@ -215,7 +215,7 @@ function App() {
       const category = await categoryAPI.getById(selectedCategoryId);
       setSelectedCategory(category);
     } catch (err) {
-      console.error("Failed to load category:", err);
+      // Failed to load category
     }
   };
 

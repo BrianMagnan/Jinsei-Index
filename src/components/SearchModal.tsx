@@ -128,7 +128,7 @@ export function SearchModal({
       setAllChallenges(challenges);
       setAchievements(achievementsData || []);
     } catch (err) {
-      console.error("Failed to load data for search:", err);
+      // Failed to load data for search
     } finally {
       setLoading(false);
     }

@@ -43,7 +43,6 @@ export const haptic = (pattern: number | number[] = [10]): void => {
     navigator.vibrate(patternArray);
   } catch (error) {
     // Silently fail if vibration fails
-    console.debug("Haptic feedback not available:", error);
   }
 };
 

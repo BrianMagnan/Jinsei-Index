@@ -26,7 +26,7 @@ export function ProfilesList() {
       setProfile(data);
       setCurrentUser(data);
     } catch (err) {
-      console.error("Failed to load profile:", err);
+      // Failed to load profile
     } finally {
       setLoading(false);
     }

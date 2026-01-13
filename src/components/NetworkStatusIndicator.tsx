@@ -41,8 +41,7 @@ export function NetworkStatusIndicator() {
               toast.showSuccess("Connection restored.");
             }
           })
-          .catch((error) => {
-            console.error('Error syncing offline queue:', error);
+          .catch(() => {
             toast.showSuccess("Connection restored.");
           });
       }

@@ -102,7 +102,7 @@ export function CategoriesModal({
         setCategories(data);
       }
     } catch (err) {
-      console.error("Failed to load categories:", err);
+      // Failed to load categories
     } finally {
       setLoading(false);
     }

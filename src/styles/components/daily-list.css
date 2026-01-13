@@ -1,0 +1,84 @@
+/* Daily List Styles */
+.daily-list-container {
+  /* Reuse todo list container styles */
+}
+
+.daily-main {
+  padding: var(--spacing-lg);
+}
+
+/* Daily Button in Challenge Detail */
+.challenge-detail-action-button.daily {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-primary);
+  color: var(--color-text-primary);
+}
+
+.challenge-detail-action-button.daily:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  border-color: var(--color-accent-blue);
+}
+
+.challenge-detail-action-button.daily.in-daily {
+  background: var(--color-accent-blue);
+  border-color: var(--color-accent-blue);
+  color: white;
+}
+
+.challenge-detail-action-button.daily.in-daily:hover:not(:disabled) {
+  background: var(--color-accent-blue-dark);
+  border-color: var(--color-accent-blue-dark);
+}
+
+/* Todo/Daily List - Media Queries */
+/* Mobile: Compact styles for todo and daily lists */
+@media (max-width: 768px) {
+  .todo-main {
+    padding: var(--spacing-md);
+  }
+
+  .todo-list-title {
+    font-size: var(--font-size-2xl);
+  }
+
+  .todo-item {
+    padding: var(--spacing-sm);
+  }
+
+  .todo-item-content {
+    gap: var(--spacing-sm);
+  }
+
+  .todo-checkbox {
+    width: 28px;
+    height: 28px;
+  }
+
+  .todo-remove-button {
+    width: 28px;
+    height: 28px;
+    font-size: var(--font-size-xl);
+  }
+
+  .todo-item-name {
+    font-size: var(--font-size-base);
+  }
+
+  .todo-item-path {
+    font-size: var(--font-size-xs);
+  }
+
+  .todo-list-actions {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+  }
+
+  .todo-clear-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .daily-main {
+    padding: var(--spacing-md);
+  }
+}

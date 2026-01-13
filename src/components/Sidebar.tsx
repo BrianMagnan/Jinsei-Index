@@ -87,7 +87,9 @@ export function Sidebar({
     x: number;
     y: number;
   } | null>(null);
-  const [contextMenuCategoryId, setContextMenuCategoryId] = useState<string | null>(null);
+  const [contextMenuCategoryId, setContextMenuCategoryId] = useState<
+    string | null
+  >(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   // Long press state (unified drag + menu)
@@ -159,7 +161,7 @@ export function Sidebar({
         setCategories(data);
       }
     } catch (err) {
-      console.error("Failed to load categories:", err);
+      // Failed to load categories
     } finally {
       setLoading(false);
     }
@@ -185,7 +187,11 @@ export function Sidebar({
     setDragOverCategoryId(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetCategoryId: string, targetIndex: number) => {
+  const handleDrop = (
+    e: React.DragEvent,
+    targetCategoryId: string,
+    targetIndex: number
+  ) => {
     e.preventDefault();
     if (!draggedCategoryId || draggedCategoryId === targetCategoryId) {
       setDraggedCategoryId(null);
@@ -224,7 +230,7 @@ export function Sidebar({
       setAllSkills(skills);
       setAllChallenges(challenges);
     } catch (err) {
-      console.error("Failed to load skills and challenges:", err);
+      // Failed to load skills and challenges
     }
   };
 
@@ -366,24 +372,27 @@ export function Sidebar({
     event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
     category: Category
   ) => {
-    if ('preventDefault' in event) {
+    if ("preventDefault" in event) {
       event.preventDefault();
       event.stopPropagation();
     }
-    
+
     // For mobile, position doesn't matter (bottom sheet style)
     // For desktop, use cursor position
     if (isMobile) {
       // Mobile: bottom sheet style - position will be handled by ContextMenu component
       setContextMenuPosition({ x: 0, y: 0 });
-    } else if ('clientX' in event && 'clientY' in event) {
+    } else if ("clientX" in event && "clientY" in event) {
       // Desktop: right-click or mouse event - show menu at cursor position
       setContextMenuPosition({ x: event.clientX, y: event.clientY });
     } else {
       // Fallback: center of screen
-      setContextMenuPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      setContextMenuPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
     }
-    
+
     setContextMenuCategoryId(category._id);
     hapticFeedback.medium();
   };
@@ -416,22 +425,31 @@ export function Sidebar({
   };
 
   // Unified long-press handlers: drag with movement, menu without movement
-  const handleLongPressStart = (category: Category, event: React.MouseEvent | React.TouchEvent, _index: number) => {
+  const handleLongPressStart = (
+    category: Category,
+    event: React.MouseEvent | React.TouchEvent,
+    _index: number
+  ) => {
     longPressTriggeredRef.current = false;
     hasMovedRef.current = false;
     longPressCategoryIdRef.current = category._id;
-    
+
     // Store initial position for movement detection
-    if ('touches' in event) {
+    if ("touches" in event) {
       const touch = event.touches[0];
       longPressPositionRef.current = { x: touch.clientX, y: touch.clientY };
     } else {
       longPressPositionRef.current = { x: event.clientX, y: event.clientY };
     }
-    
+
     // Start drag timer (shorter - 300ms) - enables drag after this delay if movement occurs
     dragStartTimerRef.current = window.setTimeout(() => {
-      if (longPressCategoryIdRef.current === category._id && hasMovedRef.current && !longPressTriggeredRef.current && !draggedCategoryId) {
+      if (
+        longPressCategoryIdRef.current === category._id &&
+        hasMovedRef.current &&
+        !longPressTriggeredRef.current &&
+        !draggedCategoryId
+      ) {
         // 300ms passed and movement detected - start drag
         hapticFeedback.medium();
         handleDragStart(category._id);
@@ -442,10 +460,14 @@ export function Sidebar({
         }
       }
     }, DRAG_START_DELAY);
-    
+
     // Start menu timer (longer - 600ms, only if no movement)
     longPressTimerRef.current = window.setTimeout(() => {
-      if (longPressCategoryIdRef.current === category._id && !hasMovedRef.current && !longPressTriggeredRef.current) {
+      if (
+        longPressCategoryIdRef.current === category._id &&
+        !hasMovedRef.current &&
+        !longPressTriggeredRef.current
+      ) {
         // No movement - show menu
         longPressTriggeredRef.current = true;
         hapticFeedback.medium();
@@ -466,36 +488,46 @@ export function Sidebar({
     }, MENU_DELAY);
   };
 
-  const handleLongPressMove = (category: Category, event: React.MouseEvent | React.TouchEvent, _index: number) => {
-    if (longPressCategoryIdRef.current !== category._id || longPressTriggeredRef.current) return;
-    
+  const handleLongPressMove = (
+    category: Category,
+    event: React.MouseEvent | React.TouchEvent,
+    _index: number
+  ) => {
+    if (
+      longPressCategoryIdRef.current !== category._id ||
+      longPressTriggeredRef.current
+    )
+      return;
+
     // Get current position
-    const currentX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-    const currentY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-    
+    const currentX =
+      "touches" in event ? event.touches[0].clientX : event.clientX;
+    const currentY =
+      "touches" in event ? event.touches[0].clientY : event.clientY;
+
     if (longPressPositionRef.current) {
       // Calculate movement distance
       const deltaX = Math.abs(currentX - longPressPositionRef.current.x);
       const deltaY = Math.abs(currentY - longPressPositionRef.current.y);
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      
+
       // If moved beyond threshold, mark as moved
       if (distance > dragThreshold) {
         hasMovedRef.current = true;
-        
+
         // Cancel menu timer if user is moving
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
           longPressTimerRef.current = null;
         }
-        
+
         // Start drag if enough time has passed (DRAG_START_DELAY) and movement detected
         if (!draggedCategoryId && !dragStartTimerRef.current) {
           // Timer already fired (300ms passed) - start drag immediately since movement detected
           hapticFeedback.medium();
           handleDragStart(category._id);
         }
-        
+
         // Update position
         longPressPositionRef.current = { x: currentX, y: currentY };
       }
@@ -768,8 +800,19 @@ export function Sidebar({
                         draggedCategoryId === category._id ? "dragging" : ""
                       } ${
                         dragOverCategoryId === category._id ? "drag-over" : ""
-                      } ${contextMenuCategoryId === category._id ? "context-menu-active" : ""}`}
-                      draggable={!isMobile && !editingCategoryId && draggedCategoryId !== category._id && !longPressTriggeredRef.current && (hasMovedRef.current || dragStartTimerRef.current === null)}
+                      } ${
+                        contextMenuCategoryId === category._id
+                          ? "context-menu-active"
+                          : ""
+                      }`}
+                      draggable={
+                        !isMobile &&
+                        !editingCategoryId &&
+                        draggedCategoryId !== category._id &&
+                        !longPressTriggeredRef.current &&
+                        (hasMovedRef.current ||
+                          dragStartTimerRef.current === null)
+                      }
                       onDragStart={() => {
                         if (!isMobile && !editingCategoryId) {
                           // Cancel long-press timers when native drag starts
@@ -791,23 +834,30 @@ export function Sidebar({
                       onDragEnd={handleDragEnd}
                       onClick={() => {
                         // Don't trigger select if context menu is active or dragging
-                        if (contextMenuPosition || draggedCategoryId || editingCategoryId === category._id) {
+                        if (
+                          contextMenuPosition ||
+                          draggedCategoryId ||
+                          editingCategoryId === category._id
+                        ) {
                           return;
                         }
 
                         // Handle double-click detection (desktop only)
                         if (!isMobile) {
                           clickCountRef.current += 1;
-                          
+
                           // Clear existing timer
                           if (clickTimerRef.current) {
                             clearTimeout(clickTimerRef.current);
                           }
-                          
+
                           // Wait to see if it's a double-click
                           clickTimerRef.current = window.setTimeout(() => {
                             // Single click - select category (only if long-press wasn't triggered)
-                            if (clickCountRef.current === 1 && !longPressTriggeredRef.current) {
+                            if (
+                              clickCountRef.current === 1 &&
+                              !longPressTriggeredRef.current
+                            ) {
                               onCategorySelect(category._id);
                             }
                             clickCountRef.current = 0;
@@ -848,7 +898,11 @@ export function Sidebar({
                       }}
                       onMouseMove={(e) => {
                         // Desktop: track movement during long-press
-                        if (!isMobile && !editingCategoryId && longPressCategoryIdRef.current === category._id) {
+                        if (
+                          !isMobile &&
+                          !editingCategoryId &&
+                          longPressCategoryIdRef.current === category._id
+                        ) {
                           handleLongPressMove(category, e, index);
                         }
                       }}

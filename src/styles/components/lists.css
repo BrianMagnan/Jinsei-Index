@@ -1,0 +1,819 @@
+/* ============================================
+   UNIFIED PAGE DESIGN SYSTEM
+   ============================================ */
+
+/* Unified Page Container */
+.page-container {
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+/* Unified Header Style */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  border-bottom: 2px solid var(--color-border-primary);
+  background: var(--color-bg-dark);
+  position: relative;
+}
+
+.page-header h2 {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 15px var(--color-primary-glow);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.page-header .header-title-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+  gap: var(--spacing-md);
+}
+
+/* Unified List Item/Card Style */
+.page-list-item {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 80px;
+}
+
+.page-list-item:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-border-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.page-list-item.active,
+.page-list-item.selected {
+  background: var(--color-primary-light);
+  border-color: var(--color-border-primary);
+  box-shadow: var(--shadow-primary);
+}
+
+.page-list-item .item-name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.page-list-item.active .item-name,
+.page-list-item.selected .item-name {
+  text-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+/* Unified Content Area */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-md) var(--spacing-lg);
+}
+
+.page-content-scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Unified List Container */
+.page-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.page-list-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-md);
+}
+
+/* ============================================
+   CATEGORIES PAGE
+   ============================================ */
+
+/* Unified header stats - used by all three lists */
+.categories-header-stats,
+.challenges-header-stats {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.categories-header-stats .header-stat,
+.challenges-header-stats .header-stat {
+  display: flex;
+  align-items: center;
+}
+
+/* Unified list container - used by all three lists */
+.category-list,
+.skill-list,
+.challenge-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  height: 80vh;
+  padding-bottom: 60px;
+  padding-top: 10px;
+}
+
+/* Slide transitions for navigation */
+.categories-list,
+.skills-list,
+.challenges-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.categories-list.slide-in-left,
+.skills-list.slide-in-left,
+.challenges-container.slide-in-left {
+  animation: slideInLeft 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.categories-list.slide-in-right,
+.skills-list.slide-in-right,
+.challenges-container.slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Footer is now rendered via portal outside animated containers, so no special handling needed */
+
+/* Keyframes for slide animations - defined globally for both desktop and mobile */
+@keyframes slideInRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-2%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(2%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.categories-list.slide-out-left,
+.skills-list.slide-out-left,
+.challenges-container.slide-out-left {
+  animation: slideOutLeft 0.3s ease-in;
+}
+
+.categories-list.slide-out-right,
+.skills-list.slide-out-right,
+.challenges-container.slide-out-right {
+  animation: slideOutRight 0.3s ease-in;
+}
+
+/* Unified list item styles - used by all three lists */
+.category-item,
+.skill-item,
+.challenge-item {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  min-height: 80px;
+  max-height: 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  z-index: 1;
+}
+
+/* Unified hover and active states */
+.category-item:hover,
+.skill-item:hover,
+.challenge-item:hover {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border-primary);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.category-item.active,
+.skill-item.active,
+.challenge-item.active {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border-primary);
+  box-shadow: var(--shadow-primary);
+}
+
+.category-item.selected,
+.skill-item.selected,
+.challenge-item.selected {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.category-item.selected .category-name,
+.skill-item.selected .skill-name,
+.challenge-item.selected .challenge-name {
+  color: var(--color-primary);
+}
+
+/* Unified dragging states */
+.category-item.dragging,
+.skill-item.dragging,
+.challenge-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.category-item.drag-over,
+.skill-item.drag-over,
+.challenge-item.drag-over {
+  border: 1px solid var(--color-border-primary);
+  background: var(--color-primary-light);
+}
+
+.category-item.context-menu-active,
+.skill-item.context-menu-active,
+.challenge-item.context-menu-active {
+  background: var(--color-primary-light);
+  border: 1px solid var(--color-border-primary);
+}
+
+/* Hide inline edit buttons in main category list (use context menu instead) */
+.category-list .category-item .edit-button {
+  display: none;
+}
+
+/* Unified item content containers - used by all three lists */
+.categories-list-item-content,
+.skill-content,
+.challenge-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  position: relative;
+}
+
+/* Challenge info additional properties for challenge-specific features (swipe indicators, etc.) */
+.challenge-info {
+  z-index: 2;
+  background: transparent;
+}
+
+.category-name,
+.skill-name,
+.challenge-name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.category-item.active .category-name,
+.skill-item.active .skill-name,
+.challenge-item.active .challenge-name {
+  color: var(--color-primary);
+  text-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.categories-list-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-lg);
+  position: fixed;
+  background: var(--color-bg-dark);
+  border-top: 1px solid var(--color-border);
+  bottom: calc(60px + var(--spacing-sm) * 2); /* Position above bottom nav */
+  left: 0;
+  right: 0;
+  z-index: 999; /* Above bottom nav (z-index: 998) */
+  /* Footer is rendered via portal outside animated containers, so no transform issues */
+}
+
+.categories-list-footer .add-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  min-height: 48px;
+}
+
+.categories-list-footer .add-button:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.categories-list-footer .select-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  min-height: 48px;
+}
+
+.categories-list-footer .select-button:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.categories-list-footer .select-button.active {
+  background: var(--color-primary);
+  color: var(--color-text-dark);
+  border-color: var(--color-primary);
+}
+
+.categories-list-footer .delete-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid rgba(252, 165, 165, 0.5);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+  background: transparent;
+  color: #fca5a5;
+  min-height: 48px;
+}
+
+.categories-list-footer .delete-button:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 0 10px rgba(252, 165, 165, 0.5);
+}
+
+.categories-list-footer .delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.categories-list-footer .add-to-list-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid var(--color-border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  min-height: 48px;
+}
+
+.categories-list-footer .add-to-list-button:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.categories-list-footer .add-to-list-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Categories List Footer - Media Queries */
+/* Desktop: Position at bottom with sidebar */
+@media (min-width: 769px) {
+  .categories-list-footer {
+    bottom: 0; /* Position at bottom of screen */
+    padding-bottom: calc(
+      var(--spacing-lg) + env(safe-area-inset-bottom)
+    ); /* Add safe area to padding */
+    left: 280px; /* Account for sidebar width */
+    right: 0;
+    z-index: 1000; /* Ensure footer is above content but below modals */
+  }
+
+  /* Tablet: Smaller sidebar width */
+  @media (max-width: 1024px) {
+    .categories-list-footer {
+      left: 240px;
+    }
+  }
+}
+
+/* Mobile: Position above bottom nav */
+@media (max-width: 768px) {
+  .categories-list-footer {
+    padding: var(--spacing-md) var(--spacing-sm);
+    bottom: calc(
+      60px + var(--spacing-sm) * 2 + env(safe-area-inset-bottom)
+    ); /* Position above bottom nav on mobile */
+    left: 0; /* Full width on mobile */
+    right: 0;
+    gap: var(--spacing-sm);
+  }
+
+  .categories-list-footer .add-button,
+  .categories-list-footer .select-button,
+  .categories-list-footer .delete-button,
+  .categories-list-footer .add-to-list-button {
+    flex: 1;
+    min-height: 48px;
+    font-size: var(--font-size-xs);
+    padding: var(--spacing-sm) var(--spacing-xs);
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .categories-list-footer .add-button span:not(.button-icon),
+  .categories-list-footer .select-button span:not(.button-icon),
+  .categories-list-footer .delete-button span:not(.button-icon),
+  .categories-list-footer .add-to-list-button span:not(.button-icon) {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+}
+
+/* Mobile Landscape: Account for sidebar when visible */
+@media (max-width: 768px) and (orientation: landscape) {
+  .categories-list-footer {
+    left: 280px; /* Account for sidebar width when visible in landscape */
+  }
+}
+
+/* Skills List */
+/* Skills list now uses unified container styles above */
+
+/* Unified section header - used by all three lists */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 2px solid var(--color-border-primary);
+  position: relative;
+  margin-top: 0;
+  margin-bottom: var(--spacing-sm);
+  min-height: fit-content;
+  height: auto;
+  flex-shrink: 0;
+  gap: var(--spacing-md);
+}
+
+/* Challenges header stats now uses unified styles above */
+
+.challenges-header .add-button {
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+}
+
+/* Unified header title styling - used by all three lists */
+.section-header h2 {
+  font-size: var(--font-size-4xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 0 0 15px var(--color-primary-glow);
+  line-height: 1.2;
+  margin: 0;
+  flex: 1;
+}
+
+/* Header title section wrapper - used for headers with additional functionality */
+.section-header .header-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+}
+
+.section-header .header-title-section h2 {
+  margin: 0;
+}
+
+.skill-level {
+  display: inline-block;
+  background: var(--color-accent-gold);
+  padding: 0.4rem var(--spacing-md);
+  border-radius: 20px;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  box-shadow: 0 0 15px var(--color-accent-gold-glow);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Skill item dragging states now use unified styles above */
+
+/* Skill-specific styles - description for list items */
+.skill-description {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-top: var(--spacing-xs);
+}
+
+/* Challenges Container */
+.challenges-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 100%;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
+}
+
+.challenges-container.list-view {
+  flex-direction: column;
+}
+
+.challenges-container.detail-view .challenges-list {
+  display: none;
+}
+
+.challenges-container.detail-view .challenge-detail {
+  display: flex;
+}
+
+/* Challenges list now uses unified container styles above */
+
+.challenges-list.hidden {
+  display: none;
+}
+
+/* Challenge list now uses unified list container styles above */
+
+/* Challenge item swiping state - specific to challenges */
+.challenge-item.swiping {
+  z-index: 10;
+}
+
+.challenge-item:active {
+  cursor: grabbing;
+}
+
+.challenge-stats {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  transition: margin-right var(--transition-normal);
+}
+
+.challenge-item:hover .challenge-stats {
+  margin-right: var(--spacing-md);
+}
+
+.challenge-xp {
+  display: inline-block;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.challenge-delete-button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+  background: transparent;
+  color: #fca5a5;
+  flex-shrink: 0;
+  margin-left: var(--spacing-sm);
+}
+
+.challenge-delete-button:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 0 10px rgba(252, 165, 165, 0.5);
+  transform: scale(1.05);
+}
+
+.challenge-delete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.challenge-delete-button .button-icon {
+  font-size: var(--font-size-md);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.challenge-complete-button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid var(--color-accent-green);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-green-dark) 0%,
+    var(--color-accent-green) 100%
+  );
+  color: var(--color-text-primary);
+  flex-shrink: 0;
+  margin-left: var(--spacing-sm);
+}
+
+.challenge-complete-button:hover:not(:disabled) {
+  box-shadow: 0 0 15px var(--color-accent-green-glow);
+  text-shadow: 0 0 5px var(--color-accent-green),
+    0 0 10px var(--color-accent-green), 0 0 15px var(--color-accent-green-glow),
+    0 0 20px var(--color-accent-green-glow);
+  transform: scale(1.05);
+}
+
+.challenge-complete-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.challenge-complete-button .button-icon {
+  font-size: var(--font-size-md);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.challenge-complete-button .complete-button-text {
+  display: inline;
+}
+
+/* Swipe Action Indicators */
+.category-item,
+.skill-item,
+.challenge-item {
+  position: relative;
+  overflow: visible;
+}
+
+.challenge-swipe-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  text-transform: uppercase;
+  z-index: 1;
+  pointer-events: none;
+  width: 100px;
+}
+
+.challenge-swipe-indicator.swipe-complete {
+  left: -100px;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-green) 0%,
+    var(--color-accent-green-dark) 100%
+  );
+  color: var(--color-text-primary);
+  box-shadow: inset -10px 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.challenge-swipe-indicator.swipe-delete {
+  right: -100px;
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  /* border-radius: var(--radius-md); */
+  background: linear-gradient(
+    135deg,
+    rgba(239, 68, 68, 0.9) 0%,
+    rgba(220, 38, 38, 0.9) 100%
+  );
+  color: white;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.challenge-swipe-indicator .swipe-icon {
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
+.challenge-swipe-indicator .swipe-text {
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.5px;
+}

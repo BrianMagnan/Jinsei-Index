@@ -73,7 +73,6 @@ function getCachedResponse(endpoint: string): any | null {
 
     return cached.data;
   } catch (error) {
-    console.error('Error reading API cache:', error);
     return null;
   }
 }
@@ -91,7 +90,7 @@ function setCachedResponse(endpoint: string, data: any): void {
 
     localStorage.setItem(API_CACHE_KEY, JSON.stringify(cache));
   } catch (error) {
-    console.error('Error saving API cache:', error);
+    // Failed to save API cache
   }
 }
 
@@ -113,7 +112,6 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
   if (method === 'GET' && !isOnline()) {
     const cached = getCachedResponse(endpoint);
     if (cached) {
-      console.log('[API] Serving cached response (offline):', endpoint);
       return cached;
     }
     throw new Error('Offline and no cached data available');
@@ -154,7 +152,6 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     if (method === 'GET' && error instanceof TypeError) {
       const cached = getCachedResponse(endpoint);
       if (cached) {
-        console.log('[API] Network error, serving cached response:', endpoint);
         return cached;
       }
     }

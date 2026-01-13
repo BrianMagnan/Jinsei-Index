@@ -8,10 +8,19 @@ import { Skeleton } from "./Skeleton";
 import { ChallengeSkeletonList } from "./ChallengeSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { type ContextMenuItem } from "./ContextMenu";
 import { hapticFeedback } from "../utils/haptic";
 import { linkifyText } from "../utils/linkifyText";
 import { useToast } from "../contexts/ToastContext";
+import {
+  validateItem,
+  getValidationFeedback,
+  validateName,
+  validateDescription,
+  validateXPReward,
+} from "../utils/validation";
+import { BaseList } from "./BaseList";
+import { FormModal } from "./FormModal";
 import {
   addTodoItem,
   removeTodoItem,
@@ -77,6 +86,14 @@ export function ChallengesList({
   const [newChallengeName, setNewChallengeName] = useState("");
   const [newChallengeDescription, setNewChallengeDescription] = useState("");
   const [newChallengeXPReward, setNewChallengeXPReward] = useState(5);
+  const [newChallengeNameError, setNewChallengeNameError] = useState<
+    string | null
+  >(null);
+  const [newChallengeDescriptionError, setNewChallengeDescriptionError] =
+    useState<string | null>(null);
+  const [newChallengeXPRewardError, setNewChallengeXPRewardError] = useState<
+    string | null
+  >(null);
   const [selectedChallengeId, setSelectedChallengeId] = useState<string | null>(
     null
   );
@@ -86,6 +103,14 @@ export function ChallengesList({
   const [editChallengeName, setEditChallengeName] = useState("");
   const [editChallengeDescription, setEditChallengeDescription] = useState("");
   const [editChallengeXPReward, setEditChallengeXPReward] = useState(5);
+  const [editChallengeNameError, setEditChallengeNameError] = useState<
+    string | null
+  >(null);
+  const [editChallengeDescriptionError, setEditChallengeDescriptionError] =
+    useState<string | null>(null);
+  const [editChallengeXPRewardError, setEditChallengeXPRewardError] = useState<
+    string | null
+  >(null);
   const [draggedChallengeId, setDraggedChallengeId] = useState<string | null>(
     null
   );
@@ -98,14 +123,6 @@ export function ChallengesList({
   const [dailyChallengeIds, setDailyChallengeIds] = useState<Set<string>>(
     new Set()
   );
-  // Context menu state
-  const [contextMenuPosition, setContextMenuPosition] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [contextMenuChallengeId, setContextMenuChallengeId] = useState<
-    string | null
-  >(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [completedChallengeId, setCompletedChallengeId] = useState<
     string | null
@@ -124,17 +141,6 @@ export function ChallengesList({
     challengeName: "",
     isBulk: false,
   });
-
-  // Swipe to close modal state
-  const [modalSwipeStart, setModalSwipeStart] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [modalSwipeEnd, setModalSwipeEnd] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [modalSwipeOffset, setModalSwipeOffset] = useState<number>(0);
 
   // Direction tracking for challenge detail view
   const [detailDirection, setDetailDirection] = useState<
@@ -165,36 +171,6 @@ export function ChallengesList({
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(
     null
   );
-
-  // Swipe gesture state for challenge list items
-  const [itemSwipeStart, setItemSwipeStart] = useState<{
-    x: number;
-    y: number;
-    challengeId: string;
-  } | null>(null);
-  const [itemSwipeEnd, setItemSwipeEnd] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-  const [swipedChallengeId, setSwipedChallengeId] = useState<string | null>(
-    null
-  );
-  const [swipeOffset, setSwipeOffset] = useState<number>(0);
-
-  // Long press state (unified drag + menu)
-  const longPressTimerRef = useRef<number | null>(null);
-  const dragStartTimerRef = useRef<number | null>(null);
-  const longPressChallengeIdRef = useRef<string | null>(null);
-  const longPressTriggeredRef = useRef<boolean>(false);
-  const longPressPositionRef = useRef<{ x: number; y: number } | null>(null);
-  const hasMovedRef = useRef<boolean>(false);
-  const dragThreshold = 10; // pixels - movement distance before drag starts
-  const DRAG_START_DELAY = 300; // ms - time before drag can start
-  const MENU_DELAY = 600; // ms - time before menu shows if no movement
-
-  // Track clicks for double-click detection
-  const clickTimerRef = useRef<number | null>(null);
-  const clickCountRef = useRef<number>(0);
 
   // Update mobile state on resize
   useEffect(() => {
@@ -255,7 +231,7 @@ export function ChallengesList({
       setSkill(data);
       setAchievements(achievementsData || []);
     } catch (err) {
-      console.error("Failed to load skill:", err);
+      // Failed to load skill
     } finally {
       setLoading(false);
     }
@@ -297,12 +273,9 @@ export function ChallengesList({
 
   // Removed auto-select - user must click to view challenge details
 
-  // Cleanup long press and drag timers on unmount
+  // Cleanup touch drag timer on unmount
   useEffect(() => {
     return () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
       if (touchDragTimerRef.current) {
         clearTimeout(touchDragTimerRef.current);
       }
@@ -314,7 +287,7 @@ export function ChallengesList({
     if (navDirection && onAnimationComplete) {
       const timer = setTimeout(() => {
         onAnimationComplete();
-      }, 350); // Match animation duration
+      }, 300); // Match unified transition duration
       return () => clearTimeout(timer);
     }
   }, [navDirection, onAnimationComplete]);
@@ -324,7 +297,7 @@ export function ChallengesList({
     if (detailDirection) {
       const timer = setTimeout(() => {
         setDetailDirection(null);
-      }, 350); // Match animation duration
+      }, 300); // Match unified transition duration
       return () => clearTimeout(timer);
     }
   }, [detailDirection]);
@@ -342,10 +315,7 @@ export function ChallengesList({
       const target = event.target as HTMLElement;
       // Close context menu if clicking outside
       if (!target.closest(".context-menu")) {
-        if (contextMenuChallengeId) {
-          setContextMenuPosition(null);
-          setContextMenuChallengeId(null);
-        }
+        // Context menu is now handled by BaseList
       }
       // Close list selection modals if clicking outside
       if (!target.closest(".list-selection-modal")) {
@@ -360,10 +330,7 @@ export function ChallengesList({
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (contextMenuChallengeId) {
-          setContextMenuPosition(null);
-          setContextMenuChallengeId(null);
-        }
+        // Context menu is now handled by BaseList
         if (listSelectionModalOpen) {
           handleCloseListSelection();
         }
@@ -373,7 +340,7 @@ export function ChallengesList({
       }
     };
 
-    if (contextMenuChallengeId || listSelectionModalOpen) {
+    if (listSelectionModalOpen) {
       document.addEventListener("mousedown", handleClickOutside);
       document.addEventListener("keydown", handleEscape);
       return () => {
@@ -381,7 +348,7 @@ export function ChallengesList({
         document.removeEventListener("keydown", handleEscape);
       };
     }
-  }, [contextMenuChallengeId, listSelectionModalOpen]);
+  }, [listSelectionModalOpen]);
 
   const handleOpenListSelection = () => {
     if (!selectedChallenge || !skill) return;
@@ -904,9 +871,66 @@ export function ChallengesList({
     setTouchDragOffset(0);
   };
 
+  // Real-time validation for new challenge
+  useEffect(() => {
+    if (
+      newChallengeName.trim() ||
+      newChallengeDescription.trim() ||
+      newChallengeXPReward !== 5
+    ) {
+      const nameValidation = validateName(newChallengeName);
+      setNewChallengeNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+
+      const descValidation = validateDescription(newChallengeDescription);
+      setNewChallengeDescriptionError(
+        descValidation.isValid ? null : descValidation.error || null
+      );
+
+      const xpValidation = validateXPReward(newChallengeXPReward);
+      setNewChallengeXPRewardError(
+        xpValidation.isValid ? null : xpValidation.error || null
+      );
+    } else {
+      setNewChallengeNameError(null);
+      setNewChallengeDescriptionError(null);
+      setNewChallengeXPRewardError(null);
+    }
+  }, [newChallengeName, newChallengeDescription, newChallengeXPReward]);
+
   const handleCreateChallenge = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newChallengeName.trim() || creatingChallenge) return;
+
+    // Validate input
+    const validation = validateItem({
+      name: newChallengeName,
+      description: newChallengeDescription,
+      xpReward: newChallengeXPReward,
+    });
+
+    if (!validation.isValid) {
+      const errorMsg = getValidationFeedback(validation);
+      // Show field-specific errors
+      const nameValidation = validateName(newChallengeName);
+      setNewChallengeNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+      const descValidation = validateDescription(newChallengeDescription);
+      setNewChallengeDescriptionError(
+        descValidation.isValid ? null : descValidation.error || null
+      );
+      const xpValidation = validateXPReward(newChallengeXPReward);
+      setNewChallengeXPRewardError(
+        xpValidation.isValid ? null : xpValidation.error || null
+      );
+
+      toast.showError(errorMsg || "Invalid input");
+      hapticFeedback.error();
+      return;
+    }
+
+    if (creatingChallenge) return;
 
     hapticFeedback.medium();
     setCreatingChallenge(true);
@@ -920,6 +944,9 @@ export function ChallengesList({
       setNewChallengeName("");
       setNewChallengeDescription("");
       setNewChallengeXPReward(5);
+      setNewChallengeNameError(null);
+      setNewChallengeDescriptionError(null);
+      setNewChallengeXPRewardError(null);
       setShowAddForm(false);
       await loadSkill();
       setSelectedChallengeId(null); // Stay on list view
@@ -991,35 +1018,7 @@ export function ChallengesList({
     setEditChallengeXPReward(challenge.xpReward);
   };
 
-  // Handle context menu (right-click or long-press)
-  const handleContextMenu = (
-    event: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent,
-    challenge: Challenge
-  ) => {
-    if ("preventDefault" in event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-
-    // For mobile, position doesn't matter (bottom sheet style)
-    // For desktop, use cursor position
-    if (isMobile) {
-      // Mobile: bottom sheet style - position will be handled by ContextMenu component
-      setContextMenuPosition({ x: 0, y: 0 });
-    } else if ("clientX" in event && "clientY" in event) {
-      // Desktop: right-click or mouse event - show menu at cursor position
-      setContextMenuPosition({ x: event.clientX, y: event.clientY });
-    } else {
-      // Fallback: center of screen
-      setContextMenuPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      });
-    }
-
-    setContextMenuChallengeId(challenge._id);
-    hapticFeedback.medium();
-  };
+  // Context menu is now handled by BaseList
 
   // Get context menu items for a challenge
   const getContextMenuItems = (challenge: Challenge): ContextMenuItem[] => {
@@ -1037,8 +1036,7 @@ export function ChallengesList({
           handleCompleteChallenge(challenge, {
             stopPropagation: () => {},
           } as React.MouseEvent);
-          setContextMenuPosition(null);
-          setContextMenuChallengeId(null);
+          // Context menu is now handled by BaseList
         },
         disabled: isProcessing,
       },
@@ -1046,8 +1044,7 @@ export function ChallengesList({
         label: "Edit",
         icon: "✏️",
         action: () => {
-          setContextMenuPosition(null);
-          setContextMenuChallengeId(null);
+          // Context menu is now handled by BaseList
           // Small delay to ensure context menu closes before edit modal opens
           setTimeout(() => {
             handleEditChallenge(challenge);
@@ -1062,8 +1059,7 @@ export function ChallengesList({
           handleDeleteChallenge(challenge._id, challenge.name, {
             stopPropagation: () => {},
           } as React.MouseEvent);
-          setContextMenuPosition(null);
-          setContextMenuChallengeId(null);
+          // Context menu is now handled by BaseList
         },
         destructive: true,
         disabled: isProcessing,
@@ -1071,134 +1067,85 @@ export function ChallengesList({
     ];
   };
 
-  // Unified long-press handlers: drag with movement, menu without movement
-  const handleLongPressStart = (
-    challenge: Challenge,
-    event: React.MouseEvent | React.TouchEvent,
-    _index: number
-  ) => {
-    longPressTriggeredRef.current = false;
-    hasMovedRef.current = false;
-    longPressChallengeIdRef.current = challenge._id;
-
-    // Store initial position for movement detection
-    if ("touches" in event) {
-      const touch = event.touches[0];
-      longPressPositionRef.current = { x: touch.clientX, y: touch.clientY };
+  // Wrap onItemSelect to handle selection mode
+  const handleItemSelect = (challengeId: string) => {
+    if (selectionMode) {
+      setSelectedChallengeIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(challengeId)) {
+          next.delete(challengeId);
+          hapticFeedback.light();
+        } else {
+          next.add(challengeId);
+          hapticFeedback.selection();
+        }
+        return next;
+      });
     } else {
-      longPressPositionRef.current = { x: event.clientX, y: event.clientY };
+      hapticFeedback.selection();
+      setDetailDirection("forward");
+      setSelectedChallengeId(challengeId);
     }
-
-    // Start drag timer (shorter - 300ms) - enables drag after this delay if movement occurs
-    dragStartTimerRef.current = window.setTimeout(() => {
-      if (
-        longPressChallengeIdRef.current === challenge._id &&
-        hasMovedRef.current &&
-        !longPressTriggeredRef.current &&
-        !draggedChallengeId
-      ) {
-        // 300ms passed and movement detected - start drag
-        hapticFeedback.medium();
-        handleDragStart(challenge._id);
-        // Cancel menu timer since we're dragging
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-      }
-    }, DRAG_START_DELAY);
-
-    // Start menu timer (longer - 600ms, only if no movement)
-    longPressTimerRef.current = window.setTimeout(() => {
-      if (
-        longPressChallengeIdRef.current === challenge._id &&
-        !hasMovedRef.current &&
-        !longPressTriggeredRef.current
-      ) {
-        // No movement - show menu
-        longPressTriggeredRef.current = true;
-        hapticFeedback.medium();
-        // Cancel drag timer if it's still running
-        if (dragStartTimerRef.current) {
-          clearTimeout(dragStartTimerRef.current);
-          dragStartTimerRef.current = null;
-        }
-        // Show context menu
-        const syntheticEvent = {
-          clientX: longPressPositionRef.current?.x || window.innerWidth / 2,
-          clientY: longPressPositionRef.current?.y || window.innerHeight / 2,
-          preventDefault: () => {},
-          stopPropagation: () => {},
-        } as React.MouseEvent;
-        handleContextMenu(syntheticEvent, challenge);
-      }
-    }, MENU_DELAY);
   };
 
-  const handleLongPressMove = (
-    challenge: Challenge,
-    event: React.MouseEvent | React.TouchEvent,
+  // No-op handlers for detail view (not part of list interactions)
+  const handleLongPressEnd = () => {};
+  const handleLongPressStart = (
+    _challenge: Challenge,
+    _e: React.MouseEvent,
     _index: number
+  ) => {};
+  const handleLongPressMove = (
+    _challenge: Challenge,
+    _e: React.MouseEvent,
+    _index: number
+  ) => {};
+
+  // Context menu handler for detail view
+  const handleContextMenuDetail = (
+    e: React.MouseEvent,
+    _challenge: Challenge
   ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // For detail view, we can still show context menu
+    // But BaseList handles it for list items
+    hapticFeedback.medium();
+  };
+
+  // Real-time validation for edit challenge
+  useEffect(() => {
     if (
-      longPressChallengeIdRef.current !== challenge._id ||
-      longPressTriggeredRef.current
-    )
-      return;
+      editingChallengeId &&
+      (editChallengeName.trim() ||
+        editChallengeDescription.trim() ||
+        editChallengeXPReward !== 5)
+    ) {
+      const nameValidation = validateName(editChallengeName);
+      setEditChallengeNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
 
-    // Get current position
-    const currentX =
-      "touches" in event ? event.touches[0].clientX : event.clientX;
-    const currentY =
-      "touches" in event ? event.touches[0].clientY : event.clientY;
+      const descValidation = validateDescription(editChallengeDescription);
+      setEditChallengeDescriptionError(
+        descValidation.isValid ? null : descValidation.error || null
+      );
 
-    if (longPressPositionRef.current) {
-      // Calculate movement distance
-      const deltaX = Math.abs(currentX - longPressPositionRef.current.x);
-      const deltaY = Math.abs(currentY - longPressPositionRef.current.y);
-      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-      // If moved beyond threshold, mark as moved
-      if (distance > dragThreshold) {
-        hasMovedRef.current = true;
-
-        // Cancel menu timer if user is moving
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-
-        // Start drag if enough time has passed (DRAG_START_DELAY) and movement detected
-        if (!draggedChallengeId && !dragStartTimerRef.current) {
-          // Timer already fired (300ms passed) - start drag immediately since movement detected
-          hapticFeedback.medium();
-          handleDragStart(challenge._id);
-        }
-
-        // Update position
-        longPressPositionRef.current = { x: currentX, y: currentY };
-      }
+      const xpValidation = validateXPReward(editChallengeXPReward);
+      setEditChallengeXPRewardError(
+        xpValidation.isValid ? null : xpValidation.error || null
+      );
+    } else {
+      setEditChallengeNameError(null);
+      setEditChallengeDescriptionError(null);
+      setEditChallengeXPRewardError(null);
     }
-  };
-
-  const handleLongPressEnd = () => {
-    // Reset the flag after a short delay to allow click handler to check it
-    setTimeout(() => {
-      longPressTriggeredRef.current = false;
-    }, 100);
-
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    if (dragStartTimerRef.current) {
-      clearTimeout(dragStartTimerRef.current);
-      dragStartTimerRef.current = null;
-    }
-    longPressChallengeIdRef.current = null;
-    longPressPositionRef.current = null;
-    hasMovedRef.current = false;
-  };
+  }, [
+    editChallengeName,
+    editChallengeDescription,
+    editChallengeXPReward,
+    editingChallengeId,
+  ]);
 
   const handleUpdateChallenge = async (
     challengeId: string,
@@ -1206,7 +1153,36 @@ export function ChallengesList({
   ) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!editChallengeName.trim() || updatingChallenge === challengeId) return;
+
+    // Validate input
+    const validation = validateItem({
+      name: editChallengeName,
+      description: editChallengeDescription,
+      xpReward: editChallengeXPReward,
+    });
+
+    if (!validation.isValid) {
+      const errorMsg = getValidationFeedback(validation);
+      // Show field-specific errors
+      const nameValidation = validateName(editChallengeName);
+      setEditChallengeNameError(
+        nameValidation.isValid ? null : nameValidation.error || null
+      );
+      const descValidation = validateDescription(editChallengeDescription);
+      setEditChallengeDescriptionError(
+        descValidation.isValid ? null : descValidation.error || null
+      );
+      const xpValidation = validateXPReward(editChallengeXPReward);
+      setEditChallengeXPRewardError(
+        xpValidation.isValid ? null : xpValidation.error || null
+      );
+
+      toast.showError(errorMsg || "Invalid input");
+      hapticFeedback.error();
+      return;
+    }
+
+    if (updatingChallenge === challengeId) return;
 
     hapticFeedback.medium();
     setUpdatingChallenge(challengeId);
@@ -1217,6 +1193,9 @@ export function ChallengesList({
         xpReward: editChallengeXPReward,
       });
       setEditingChallengeId(null);
+      setEditChallengeNameError(null);
+      setEditChallengeDescriptionError(null);
+      setEditChallengeXPRewardError(null);
       await loadSkill();
       setSelectedChallengeId(null); // Return to list view
       hapticFeedback.success();
@@ -1431,13 +1410,16 @@ export function ChallengesList({
               skill.challenges.length > 0 &&
               (() => {
                 const completedChallengeIds = new Set(
-                  achievements.map((a) => {
-                    const challengeId =
-                      typeof a.challenge === "string"
-                        ? a.challenge
-                        : a.challenge._id;
-                    return challengeId;
-                  })
+                  achievements
+                    .map((a) => {
+                      if (!a.challenge) return null;
+                      const challengeId =
+                        typeof a.challenge === "string"
+                          ? a.challenge
+                          : a.challenge._id;
+                      return challengeId;
+                    })
+                    .filter((id): id is string => id !== null)
                 );
                 const completedCount = skill.challenges.filter((c) =>
                   completedChallengeIds.has(c._id)
@@ -1492,345 +1474,102 @@ export function ChallengesList({
             onAction={() => setShowAddForm(true)}
           />
         ) : (
-          <ul className="challenge-list">
-            {skill.challenges?.map((challenge, index) => (
-              <li
-                key={challenge._id}
-                className={`challenge-item ${
-                  selectedChallengeId === challenge._id ? "selected" : ""
-                } ${
-                  selectionMode && selectedChallengeIds.has(challenge._id)
-                    ? "selected"
-                    : ""
-                } ${draggedChallengeId === challenge._id ? "dragging" : ""} ${
-                  dragOverChallengeId === challenge._id ? "drag-over" : ""
-                } ${swipedChallengeId === challenge._id ? "swiping" : ""} ${
-                  touchDragStart?.challengeId === challenge._id
-                    ? "touch-dragging"
-                    : ""
-                } ${
-                  contextMenuChallengeId === challenge._id
-                    ? "context-menu-active"
-                    : ""
-                }`}
-                draggable={
-                  !isMobile &&
-                  !selectionMode &&
-                  editingChallengeId !== challenge._id &&
-                  draggedChallengeId !== challenge._id &&
-                  !longPressTriggeredRef.current &&
-                  (hasMovedRef.current || dragStartTimerRef.current === null)
-                }
-                onDragStart={() => {
-                  if (!isMobile && !selectionMode && !editingChallengeId) {
-                    // Cancel long-press timers when native drag starts
-                    handleLongPressEnd();
-                    handleDragStart(challenge._id, index);
+          <BaseList<Challenge>
+            items={skill?.challenges || []}
+            selectedItemId={selectedChallengeId}
+            editingItemId={editingChallengeId}
+            selectionMode={selectionMode}
+            selectedItemIds={selectedChallengeIds}
+            isMobile={isMobile}
+            onItemSelect={handleItemSelect}
+            onItemEdit={handleEditChallenge}
+            onItemDelete={(challengeId, challengeName, e) => {
+              handleDeleteChallenge(challengeId, challengeName, e);
+            }}
+            onItemComplete={(challenge, e) => {
+              // Challenges-specific: Complete action
+              handleCompleteChallenge(challenge, e);
+            }}
+            getContextMenuItems={getContextMenuItems}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
+            onTouchDragStart={handleTouchDragStart}
+            onTouchDragMove={handleTouchDragMove}
+            onTouchDragEnd={handleTouchDragEnd}
+            draggedItemId={draggedChallengeId}
+            dragOverItemId={dragOverChallengeId}
+            touchDragStart={
+              touchDragStart
+                ? {
+                    itemId: touchDragStart.challengeId,
+                    initialIndex: touchDragStart.initialIndex,
                   }
-                }}
-                onDragOver={(e) => {
-                  if (!isMobile) {
-                    handleDragOver(e, challenge._id);
-                  }
-                }}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => {
-                  if (!isMobile) {
-                    handleDrop(e, challenge._id, index);
-                  }
-                }}
-                onDragEnd={handleDragEnd}
-                onClick={() => {
-                  // Don't trigger click if long press was just triggered or if swiping or dragging
-                  if (
-                    longPressTriggeredRef.current ||
-                    swipedChallengeId === challenge._id ||
-                    contextMenuPosition ||
-                    draggedChallengeId
-                  ) {
-                    return;
-                  }
-
-                  if (selectionMode) {
-                    setSelectedChallengeIds((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(challenge._id)) {
-                        next.delete(challenge._id);
-                      } else {
-                        next.add(challenge._id);
-                      }
-                      return next;
-                    });
-                  } else if (editingChallengeId !== challenge._id) {
-                    // Handle double-click detection (desktop only)
-                    if (!isMobile) {
-                      clickCountRef.current += 1;
-
-                      // Clear existing timer
-                      if (clickTimerRef.current) {
-                        clearTimeout(clickTimerRef.current);
-                      }
-
-                      // Wait to see if it's a double-click
-                      clickTimerRef.current = window.setTimeout(() => {
-                        // Single click - select challenge (only if long-press wasn't triggered)
-                        if (
-                          clickCountRef.current === 1 &&
-                          !longPressTriggeredRef.current
-                        ) {
-                          hapticFeedback.selection();
-                          setDetailDirection("forward");
-                          setSelectedChallengeId(challenge._id);
-                        }
-                        clickCountRef.current = 0;
-                      }, 300); // 300ms delay to detect double-click
-                    } else {
-                      // Mobile: immediate select
-                      hapticFeedback.selection();
-                      setDetailDirection("forward");
-                      setSelectedChallengeId(challenge._id);
-                    }
-                  }
-                }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  // Desktop: double-click to edit
-                  if (!isMobile && !selectionMode) {
-                    // Clear single-click timer immediately
-                    if (clickTimerRef.current) {
-                      clearTimeout(clickTimerRef.current);
-                      clickTimerRef.current = null;
-                    }
-                    clickCountRef.current = 0;
-                    // Small delay to ensure onClick doesn't fire
-                    setTimeout(() => {
-                      handleEditChallenge(challenge);
-                    }, 0);
-                  }
-                }}
-                onContextMenu={(e) => {
-                  // Desktop: right-click to show context menu
-                  if (!isMobile && !selectionMode) {
-                    handleContextMenu(e, challenge);
-                  }
-                }}
-                onMouseDown={(e) => {
-                  // Desktop: long-press for drag (with movement) or menu (without movement)
-                  if (
-                    e.button === 0 &&
-                    !editingChallengeId &&
-                    !selectionMode &&
-                    !isMobile
-                  ) {
-                    handleLongPressStart(challenge, e, index);
-                  }
-                }}
-                onMouseMove={(e) => {
-                  // Desktop: track movement during long-press
-                  if (
-                    !isMobile &&
-                    !editingChallengeId &&
-                    !selectionMode &&
-                    longPressChallengeIdRef.current === challenge._id
-                  ) {
-                    handleLongPressMove(challenge, e, index);
-                  }
-                }}
-                onMouseUp={handleLongPressEnd}
-                onMouseLeave={handleLongPressEnd}
-                onTouchStart={(e) => {
-                  if (editingChallengeId !== challenge._id) {
-                    const touch = e.touches[0];
-                    const initialIndex =
-                      skill?.challenges?.findIndex(
-                        (c) => c._id === challenge._id
-                      ) ?? -1;
-
-                    // Start long press timer for menu
-                    if (!selectionMode) {
-                      handleLongPressStart(challenge, e, index);
-                    }
-                    // Start touch drag timer for reordering
-                    if (initialIndex >= 0 && !selectionMode) {
-                      handleTouchDragStart(challenge._id, initialIndex);
-                    }
-                    // Also track for swipe
-                    setItemSwipeStart({
-                      x: touch.clientX,
-                      y: touch.clientY,
-                      challengeId: challenge._id,
-                    });
-                    setItemSwipeEnd(null);
-                    setSwipeOffset(0);
-                  }
-                }}
-                onTouchMove={(e) => {
-                  if (
-                    itemSwipeStart &&
-                    itemSwipeStart.challengeId === challenge._id
-                  ) {
-                    const currentX = e.touches[0].clientX;
-                    const currentY = e.touches[0].clientY;
-                    setItemSwipeEnd({ x: currentX, y: currentY });
-
-                    // Calculate swipe offset for visual feedback
-                    const deltaX = currentX - itemSwipeStart.x;
-                    const deltaY = Math.abs(currentY - itemSwipeStart.y);
-
-                    // If touch drag is active, handle vertical drag
-                    if (touchDragStart?.challengeId === challenge._id) {
-                      handleTouchDragMove(e, challenge._id);
-                      // Cancel swipe and long press when dragging
-                      handleLongPressEnd();
-                      setItemSwipeStart(null);
-                      return;
-                    }
-
-                    // Only allow horizontal swipes (ignore if vertical movement is too large)
-                    if (deltaY < 30) {
-                      setSwipeOffset(deltaX);
-                      setSwipedChallengeId(challenge._id);
-                      // Cancel long press and drag if swiping horizontally
-                      if (Math.abs(deltaX) > 10) {
-                        handleLongPressEnd();
-                        handleTouchDragEnd();
-                      }
-                    } else if (deltaY > 30) {
-                      // Cancel horizontal swipe if vertical movement is too large
-                      setItemSwipeStart(null);
-                      setSwipedChallengeId(null);
-                      setSwipeOffset(0);
-                    }
-                  }
-                }}
-                onTouchEnd={() => {
-                  handleLongPressEnd();
-                  handleTouchDragEnd();
-
-                  if (
-                    itemSwipeStart &&
-                    itemSwipeStart.challengeId === challenge._id &&
-                    itemSwipeEnd &&
-                    !touchDragStart
-                  ) {
-                    const deltaX = itemSwipeEnd.x - itemSwipeStart.x;
-                    const deltaY = Math.abs(itemSwipeEnd.y - itemSwipeStart.y);
-                    const minSwipeDistance = 80;
-
-                    // Only handle horizontal swipes
-                    if (deltaY < 50 && Math.abs(deltaX) > minSwipeDistance) {
-                      if (deltaX > 0) {
-                        // Swipe right - complete
-                        hapticFeedback.success();
-                        handleCompleteChallenge(challenge, {
-                          stopPropagation: () => {},
-                        } as React.MouseEvent);
-                      } else {
-                        // Swipe left - delete
-                        hapticFeedback.medium();
-                        handleDeleteChallenge(challenge._id, challenge.name, {
-                          stopPropagation: () => {},
-                        } as React.MouseEvent);
-                      }
-                    }
-                  }
-
-                  // Reset swipe state
-                  setItemSwipeStart(null);
-                  setItemSwipeEnd(null);
-                  setSwipedChallengeId(null);
-                  setSwipeOffset(0);
-                }}
-                onTouchCancel={() => {
-                  handleLongPressEnd();
-                  handleTouchDragEnd();
-                  setItemSwipeStart(null);
-                  setItemSwipeEnd(null);
-                  setSwipedChallengeId(null);
-                  setSwipeOffset(0);
-                }}
-                style={{
-                  transform:
-                    touchDragStart?.challengeId === challenge._id
-                      ? `translateY(${touchDragOffset}px)`
-                      : swipedChallengeId === challenge._id
-                      ? `translateX(${Math.max(
-                          -100,
-                          Math.min(100, swipeOffset)
-                        )}px)`
-                      : undefined,
-                  transition:
-                    touchDragStart?.challengeId === challenge._id ||
-                    swipedChallengeId === challenge._id
-                      ? "none"
-                      : "transform 0.2s ease-out",
-                  zIndex:
-                    touchDragStart?.challengeId === challenge._id
-                      ? 1000
-                      : undefined,
-                  opacity:
-                    touchDragStart?.challengeId === challenge._id
-                      ? 0.8
-                      : undefined,
-                }}
-              >
-                <>
-                  {/* Selection checkbox - only visible in selection mode */}
-                  {selectionMode && (
-                    <input
-                      type="checkbox"
-                      className="challenge-selection-checkbox"
-                      checked={selectedChallengeIds.has(challenge._id)}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedChallengeIds((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(challenge._id)) {
-                            next.delete(challenge._id);
-                            hapticFeedback.light();
-                          } else {
-                            next.add(challenge._id);
-                            hapticFeedback.selection();
-                          }
-                          return next;
-                        });
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                      aria-label={`Select ${challenge.name}`}
-                    />
-                  )}
-                  <div className="challenge-info">
-                    <div className="challenge-name">{challenge.name}</div>
-                    <div className="challenge-item-stats">
-                      <span className="item-stat">
-                        +{challenge.xpReward || 0} XP
-                      </span>
-                    </div>
-                    {/* Swipe action indicators */}
-                    {swipedChallengeId === challenge._id && (
-                      <>
-                        {swipeOffset > 0 && (
-                          <div className="challenge-swipe-indicator swipe-complete">
-                            <span className="swipe-icon">✓</span>
-                            <span className="swipe-text">Complete</span>
-                          </div>
-                        )}
-                        {swipeOffset < 0 && (
-                          <div className="challenge-swipe-indicator swipe-delete">
-                            <span className="swipe-icon">🗑️</span>
-                            <span className="swipe-text">Delete</span>
-                          </div>
-                        )}
-                      </>
-                    )}
+                : null
+            }
+            touchDragOffset={touchDragOffset}
+            itemClassName="challenge-item"
+            listClassName="challenge-list"
+            getItemStyle={(challenge, baseStyle) => ({
+              ...baseStyle,
+              zIndex:
+                touchDragStart?.challengeId === challenge._id
+                  ? 1000
+                  : undefined,
+              opacity:
+                touchDragStart?.challengeId === challenge._id ? 0.8 : undefined,
+            })}
+            renderItemContent={(
+              challenge,
+              selectionMode,
+              selectedItemIds,
+              onSelectionToggle
+            ) => (
+              <>
+                {selectionMode && (
+                  <input
+                    type="checkbox"
+                    className="challenge-selection-checkbox"
+                    checked={selectedItemIds.has(challenge._id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onSelectionToggle(challenge);
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                    aria-label={`Select ${challenge.name}`}
+                  />
+                )}
+                <div className="challenge-info">
+                  <div className="challenge-name">{challenge.name}</div>
+                  <div className="challenge-item-stats">
+                    <span className="item-stat">
+                      +{challenge.xpReward || 0} XP
+                    </span>
                   </div>
-                </>
-              </li>
-            ))}
-          </ul>
+                </div>
+              </>
+            )}
+            renderSwipeActions={(_challenge, swipeOffset) => (
+              <>
+                {swipeOffset > 0 && (
+                  <div className="challenge-swipe-indicator swipe-complete">
+                    <span className="swipe-icon">✓</span>
+                    <span className="swipe-text">Complete</span>
+                  </div>
+                )}
+                {swipeOffset < 0 && (
+                  <div className="challenge-swipe-indicator swipe-delete">
+                    <span className="swipe-icon">🗑️</span>
+                    <span className="swipe-text">Delete</span>
+                  </div>
+                )}
+              </>
+            )}
+          />
         )}
       </div>
 
@@ -1863,12 +1602,7 @@ export function ChallengesList({
             }
           }}
           onMouseMove={(e) => {
-            if (
-              !isMobile &&
-              !editingChallengeId &&
-              selectedChallenge &&
-              longPressChallengeIdRef.current === selectedChallenge._id
-            ) {
+            if (!isMobile && !editingChallengeId && selectedChallenge) {
               const index =
                 skill?.challenges?.findIndex(
                   (c) => c._id === selectedChallenge._id
@@ -1883,7 +1617,7 @@ export function ChallengesList({
           onContextMenu={(e) => {
             // Desktop: right-click to show context menu
             if (!isMobile && selectedChallenge) {
-              handleContextMenu(e, selectedChallenge);
+              handleContextMenuDetail(e, selectedChallenge);
             }
           }}
         >
@@ -1934,23 +1668,7 @@ export function ChallengesList({
         </div>
       )}
 
-      {/* Context Menu */}
-      {contextMenuPosition && contextMenuChallengeId && (
-        <ContextMenu
-          items={getContextMenuItems(
-            skill?.challenges?.find((c) => c._id === contextMenuChallengeId) ||
-              (selectedChallenge?._id === contextMenuChallengeId
-                ? selectedChallenge
-                : null)!
-          )}
-          position={contextMenuPosition}
-          onClose={() => {
-            setContextMenuPosition(null);
-            setContextMenuChallengeId(null);
-          }}
-          mobile={isMobile}
-        />
-      )}
+      {/* Context Menu is now handled by BaseList */}
 
       {/* List Selection Modal */}
       {listSelectionModalOpen && selectedChallenge && (
@@ -2147,299 +1865,214 @@ export function ChallengesList({
       )}
 
       {/* Edit Challenge Modal */}
-      {editingChallengeId && (
-        <div
-          className="challenge-edit-modal-overlay"
-          onClick={() => {
-            hapticFeedback.light();
-            setEditingChallengeId(null);
-          }}
-          onTouchStart={(e) => {
-            setModalSwipeStart({
-              x: e.touches[0].clientX,
-              y: e.touches[0].clientY,
-            });
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-          onTouchMove={(e) => {
-            if (modalSwipeStart) {
-              const currentY = e.touches[0].clientY;
-              const currentX = e.touches[0].clientX;
-              setModalSwipeEnd({ x: currentX, y: currentY });
-              const deltaY = currentY - modalSwipeStart.y;
-              const deltaX = Math.abs(currentX - modalSwipeStart.x);
-              // Only allow vertical swipes down
-              if (deltaY > 0 && deltaY > deltaX) {
-                setModalSwipeOffset(deltaY);
-              }
-            }
-          }}
-          onTouchEnd={() => {
-            if (modalSwipeStart && modalSwipeEnd) {
-              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
-              const minSwipeDistance = 100;
-              if (deltaY > minSwipeDistance) {
-                hapticFeedback.light();
-                setEditingChallengeId(null);
-              }
-            }
-            setModalSwipeStart(null);
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-        >
-          <div
-            className="challenge-edit-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              transform:
-                modalSwipeOffset > 0
-                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
-                  : undefined,
-              transition:
-                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
-            }}
-          >
-            {(() => {
-              const challenge =
-                skill?.challenges?.find((c) => c._id === editingChallengeId) ||
-                (selectedChallenge?._id === editingChallengeId
-                  ? selectedChallenge
-                  : null);
-              if (!challenge) return null;
+      {editingChallengeId &&
+        (() => {
+          const challenge =
+            skill?.challenges?.find((c) => c._id === editingChallengeId) ||
+            (selectedChallenge?._id === editingChallengeId
+              ? selectedChallenge
+              : null);
+          if (!challenge) return null;
 
-              return (
-                <>
-                  <div className="challenge-action-modal-header">
-                    <h3>Edit Challenge</h3>
-                    <button
-                      className="challenge-action-modal-close"
-                      onClick={() => {
-                        hapticFeedback.light();
-                        setEditingChallengeId(null);
-                      }}
-                      aria-label="Close"
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <form
-                    className="edit-form"
-                    onSubmit={(e) => handleUpdateChallenge(challenge._id, e)}
+          return (
+            <FormModal
+              isOpen={!!editingChallengeId}
+              onClose={() => {
+                setEditingChallengeId(null);
+                setEditChallengeNameError(null);
+                setEditChallengeDescriptionError(null);
+                setEditChallengeXPRewardError(null);
+              }}
+              title="Edit Challenge"
+              loading={updatingChallenge === challenge._id}
+            >
+              <form
+                className="edit-form"
+                onSubmit={(e) => handleUpdateChallenge(challenge._id, e)}
+              >
+                <div className="auth-field">
+                  <label htmlFor="edit-challenge-name">Name *</label>
+                  <input
+                    id="edit-challenge-name"
+                    type="text"
+                    value={editChallengeName}
+                    onChange={(e) => setEditChallengeName(e.target.value)}
+                    className={editChallengeNameError ? "input-error" : ""}
+                    required
+                    autoFocus
+                  />
+                  {editChallengeNameError && (
+                    <span className="field-error">
+                      {editChallengeNameError}
+                    </span>
+                  )}
+                </div>
+                <div className="auth-field">
+                  <label htmlFor="edit-challenge-description">
+                    Description
+                  </label>
+                  <textarea
+                    id="edit-challenge-description"
+                    placeholder="Description (optional)"
+                    value={editChallengeDescription}
+                    onChange={(e) =>
+                      setEditChallengeDescription(e.target.value)
+                    }
+                    className={
+                      editChallengeDescriptionError ? "input-error" : ""
+                    }
+                    rows={4}
+                  />
+                  {editChallengeDescriptionError && (
+                    <span className="field-error">
+                      {editChallengeDescriptionError}
+                    </span>
+                  )}
+                </div>
+                <div className="auth-field">
+                  <label htmlFor="edit-challenge-xp">XP Reward *</label>
+                  <input
+                    id="edit-challenge-xp"
+                    type="number"
+                    placeholder="XP Reward"
+                    value={editChallengeXPReward}
+                    onChange={(e) =>
+                      setEditChallengeXPReward(parseInt(e.target.value) || 5)
+                    }
+                    className={editChallengeXPRewardError ? "input-error" : ""}
+                    min="1"
+                    required
+                  />
+                  {editChallengeXPRewardError && (
+                    <span className="field-error">
+                      {editChallengeXPRewardError}
+                    </span>
+                  )}
+                </div>
+                <div className="edit-form-actions">
+                  <button
+                    type="button"
+                    className="cancel-button"
+                    onClick={() => {
+                      hapticFeedback.light();
+                      setEditingChallengeId(null);
+                    }}
+                    disabled={updatingChallenge === challenge._id}
                   >
-                    <div className="auth-field">
-                      <label htmlFor="edit-challenge-name">Name *</label>
-                      <input
-                        id="edit-challenge-name"
-                        type="text"
-                        value={editChallengeName}
-                        onChange={(e) => setEditChallengeName(e.target.value)}
-                        required
-                        autoFocus
-                      />
-                    </div>
-                    <div className="auth-field">
-                      <label htmlFor="edit-challenge-description">
-                        Description
-                      </label>
-                      <textarea
-                        id="edit-challenge-description"
-                        placeholder="Description (optional)"
-                        value={editChallengeDescription}
-                        onChange={(e) =>
-                          setEditChallengeDescription(e.target.value)
-                        }
-                        rows={4}
-                      />
-                    </div>
-                    <div className="auth-field">
-                      <label htmlFor="edit-challenge-xp">XP Reward *</label>
-                      <input
-                        id="edit-challenge-xp"
-                        type="number"
-                        placeholder="XP Reward"
-                        value={editChallengeXPReward}
-                        onChange={(e) =>
-                          setEditChallengeXPReward(
-                            parseInt(e.target.value) || 5
-                          )
-                        }
-                        min="1"
-                        required
-                      />
-                    </div>
-                    <div className="edit-form-actions">
-                      <button
-                        type="button"
-                        className="cancel-button"
-                        onClick={() => {
-                          hapticFeedback.light();
-                          setEditingChallengeId(null);
-                        }}
-                        disabled={updatingChallenge === challenge._id}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="save-button"
-                        disabled={updatingChallenge === challenge._id}
-                      >
-                        {updatingChallenge === challenge._id ? (
-                          <>
-                            <Spinner size="sm" />
-                            <span>Saving...</span>
-                          </>
-                        ) : (
-                          "Save"
-                        )}
-                      </button>
-                    </div>
-                  </form>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="save-button"
+                    disabled={updatingChallenge === challenge._id}
+                  >
+                    {updatingChallenge === challenge._id ? (
+                      <>
+                        <Spinner size="sm" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      "Save"
+                    )}
+                  </button>
+                </div>
+              </form>
+            </FormModal>
+          );
+        })()}
 
       {/* Add Challenge Modal */}
-      {showAddForm && (
-        <div
-          className="challenge-edit-modal-overlay"
-          onClick={() => {
-            hapticFeedback.light();
-            setShowAddForm(false);
-          }}
-          onTouchStart={(e) => {
-            setModalSwipeStart({
-              x: e.touches[0].clientX,
-              y: e.touches[0].clientY,
-            });
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-          onTouchMove={(e) => {
-            if (modalSwipeStart) {
-              const currentY = e.touches[0].clientY;
-              const currentX = e.touches[0].clientX;
-              setModalSwipeEnd({ x: currentX, y: currentY });
-              const deltaY = currentY - modalSwipeStart.y;
-              const deltaX = Math.abs(currentX - modalSwipeStart.x);
-              // Only allow vertical swipes down
-              if (deltaY > 0 && deltaY > deltaX) {
-                setModalSwipeOffset(deltaY);
+      <FormModal
+        isOpen={showAddForm}
+        onClose={() => {
+          setShowAddForm(false);
+          setNewChallengeNameError(null);
+          setNewChallengeDescriptionError(null);
+          setNewChallengeXPRewardError(null);
+        }}
+        title="Add Challenge"
+        loading={creatingChallenge}
+      >
+        <form className="edit-form" onSubmit={handleCreateChallenge}>
+          <div className="auth-field">
+            <label htmlFor="new-challenge-name">Name *</label>
+            <input
+              id="new-challenge-name"
+              type="text"
+              placeholder="Challenge name"
+              value={newChallengeName}
+              onChange={(e) => setNewChallengeName(e.target.value)}
+              className={newChallengeNameError ? "input-error" : ""}
+              required
+              autoFocus
+            />
+            {newChallengeNameError && (
+              <span className="field-error">{newChallengeNameError}</span>
+            )}
+          </div>
+          <div className="auth-field">
+            <label htmlFor="new-challenge-description">Description</label>
+            <textarea
+              id="new-challenge-description"
+              placeholder="Description (optional)"
+              value={newChallengeDescription}
+              onChange={(e) => setNewChallengeDescription(e.target.value)}
+              className={newChallengeDescriptionError ? "input-error" : ""}
+              rows={4}
+            />
+            {newChallengeDescriptionError && (
+              <span className="field-error">
+                {newChallengeDescriptionError}
+              </span>
+            )}
+          </div>
+          <div className="auth-field">
+            <label htmlFor="new-challenge-xp">XP Reward *</label>
+            <input
+              id="new-challenge-xp"
+              type="number"
+              placeholder="XP Reward"
+              value={newChallengeXPReward}
+              onChange={(e) =>
+                setNewChallengeXPReward(parseInt(e.target.value) || 5)
               }
-            }
-          }}
-          onTouchEnd={() => {
-            if (modalSwipeStart && modalSwipeEnd) {
-              const deltaY = modalSwipeEnd.y - modalSwipeStart.y;
-              const minSwipeDistance = 100;
-              if (deltaY > minSwipeDistance) {
+              className={newChallengeXPRewardError ? "input-error" : ""}
+              min="1"
+              required
+            />
+            {newChallengeXPRewardError && (
+              <span className="field-error">{newChallengeXPRewardError}</span>
+            )}
+          </div>
+          <div className="edit-form-actions">
+            <button
+              type="button"
+              className="cancel-button"
+              onClick={() => {
                 hapticFeedback.light();
                 setShowAddForm(false);
-              }
-            }
-            setModalSwipeStart(null);
-            setModalSwipeEnd(null);
-            setModalSwipeOffset(0);
-          }}
-        >
-          <div
-            className="challenge-edit-modal"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              transform:
-                modalSwipeOffset > 0
-                  ? `translateY(${Math.min(modalSwipeOffset, 200)}px)`
-                  : undefined,
-              transition:
-                modalSwipeOffset > 0 ? "none" : "transform 0.2s ease-out",
-            }}
-          >
-            <div className="challenge-action-modal-header">
-              <h3>Add Challenge</h3>
-              <button
-                className="challenge-action-modal-close"
-                onClick={() => {
-                  hapticFeedback.light();
-                  setShowAddForm(false);
-                }}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-            <form className="edit-form" onSubmit={handleCreateChallenge}>
-              <div className="auth-field">
-                <label htmlFor="new-challenge-name">Name *</label>
-                <input
-                  id="new-challenge-name"
-                  type="text"
-                  placeholder="Challenge name"
-                  value={newChallengeName}
-                  onChange={(e) => setNewChallengeName(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              <div className="auth-field">
-                <label htmlFor="new-challenge-description">Description</label>
-                <textarea
-                  id="new-challenge-description"
-                  placeholder="Description (optional)"
-                  value={newChallengeDescription}
-                  onChange={(e) => setNewChallengeDescription(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <div className="auth-field">
-                <label htmlFor="new-challenge-xp">XP Reward *</label>
-                <input
-                  id="new-challenge-xp"
-                  type="number"
-                  placeholder="XP Reward"
-                  value={newChallengeXPReward}
-                  onChange={(e) =>
-                    setNewChallengeXPReward(parseInt(e.target.value) || 5)
-                  }
-                  min="1"
-                  required
-                />
-              </div>
-              <div className="edit-form-actions">
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() => {
-                    hapticFeedback.light();
-                    setShowAddForm(false);
-                  }}
-                  disabled={creatingChallenge}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="save-button"
-                  disabled={creatingChallenge}
-                >
-                  {creatingChallenge ? (
-                    <>
-                      <Spinner size="sm" />
-                      <span>Adding...</span>
-                    </>
-                  ) : (
-                    "Add"
-                  )}
-                </button>
-              </div>
-            </form>
+              }}
+              disabled={creatingChallenge}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="save-button"
+              disabled={creatingChallenge}
+            >
+              {creatingChallenge ? (
+                <>
+                  <Spinner size="sm" />
+                  <span>Adding...</span>
+                </>
+              ) : (
+                "Add"
+              )}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </FormModal>
 
       {/* Challenge Completion Modal */}
       {completedChallengeId && (

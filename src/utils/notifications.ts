@@ -102,7 +102,7 @@ export function getNotificationPreferences(): NotificationPreferences {
       return JSON.parse(prefsStr);
     }
   } catch (error) {
-    console.error('Error loading notification preferences:', error);
+    // Failed to load notification preferences
   }
   return DEFAULT_PREFERENCES;
 }
@@ -114,7 +114,7 @@ export function saveNotificationPreferences(prefs: NotificationPreferences): voi
   try {
     localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs));
   } catch (error) {
-    console.error('Error saving notification preferences:', error);
+    // Failed to save notification preferences
   }
 }
 
@@ -134,7 +134,6 @@ export async function sendNotification(
   options?: NotificationOptions
 ): Promise<void> {
   if (!canSendNotifications()) {
-    console.warn('Notifications are disabled or permission not granted');
     return;
   }
 

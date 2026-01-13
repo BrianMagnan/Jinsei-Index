@@ -1,0 +1,692 @@
+/* Challenge Action Modal */
+.challenge-action-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+.challenge-action-modal {
+  background: var(--color-bg-card);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 500px;
+  padding: var(--spacing-lg);
+  padding-bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideUpSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.challenge-action-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.challenge-action-modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.challenge-action-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  line-height: 1;
+  padding: 0;
+}
+
+.challenge-action-modal-close:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.challenge-action-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* Edit Challenge Modal - Centered */
+.challenge-edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease-out;
+  padding: var(--spacing-lg);
+}
+
+.challenge-edit-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  padding: var(--spacing-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow-y: auto;
+}
+
+@keyframes scaleInSpring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Challenge Completion Modal */
+.challenge-completion-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  padding: var(--spacing-xl);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: visible;
+  position: relative;
+  text-align: center;
+}
+
+.challenge-completion-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.challenge-completion-icon {
+  font-size: 4rem;
+  line-height: 1;
+  animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.challenge-completion-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.challenge-completion-name {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin: 0;
+  font-weight: 600;
+}
+
+.challenge-completion-xp {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  color: var(--color-accent-gold);
+  text-shadow: 0 0 15px var(--color-accent-gold-glow);
+  margin-top: var(--spacing-sm);
+}
+
+.challenge-completion-close {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-md);
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.challenge-completion-close:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.challenge-action-button {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  min-height: 52px;
+}
+
+.challenge-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.challenge-action-button .button-icon {
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.challenge-action-button.complete {
+  background: linear-gradient(
+    135deg,
+    var(--color-accent-green-dark) 0%,
+    var(--color-accent-green) 100%
+  );
+  color: var(--color-text-primary);
+  border-color: var(--color-accent-green);
+}
+
+.challenge-action-button.complete:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.challenge-action-button.edit {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-primary);
+}
+
+.challenge-action-button.edit:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.challenge-action-button.delete {
+  background: transparent;
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.challenge-action-button.delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 0 10px rgba(252, 165, 165, 0.5);
+  transform: scale(1.02);
+}
+
+/* List Selection Modal */
+.list-selection-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 10001;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+.list-selection-modal {
+  background: var(--color-bg-card);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 500px;
+  padding: var(--spacing-lg);
+  padding-bottom: calc(var(--spacing-lg) + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideUpSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.list-selection-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.list-selection-modal-header h3 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.list-selection-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  line-height: 1;
+  padding: 0;
+}
+
+.list-selection-modal-close:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.list-selection-modal-content {
+  margin-bottom: var(--spacing-lg);
+}
+
+.list-selection-modal-description {
+  margin-bottom: var(--spacing-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-md);
+}
+
+.list-selection-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.list-selection-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--color-bg-secondary);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.list-selection-option:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-border-primary);
+}
+
+.list-selection-option input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* Challenge selection checkbox - visible only in selection mode */
+.challenge-selection-checkbox {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: var(--spacing-md);
+  accent-color: var(--color-primary);
+  border: 2px solid var(--color-border-primary);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-normal);
+}
+
+.challenge-selection-checkbox:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 8px var(--color-primary-glow);
+  transform: scale(1.1);
+}
+
+.challenge-selection-checkbox:checked {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.challenge-selection-checkbox:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.challenge-selection-checkbox:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.list-selection-option-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+}
+
+.list-selection-option-icon {
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.list-selection-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
+.list-selection-option-name {
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+}
+
+.list-selection-option-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.list-selection-option-status {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.list-selection-modal-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+}
+
+.list-selection-button {
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.list-selection-button.cancel {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-primary);
+}
+
+.list-selection-button.cancel:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.list-selection-button.confirm {
+  background: var(--color-primary);
+  color: var(--color-text-dark);
+  border-color: var(--color-primary);
+}
+
+.list-selection-button.confirm:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+/* Confirmation Modal */
+.confirmation-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInOverlay 0.2s ease-out;
+  padding: var(--spacing-lg);
+  overflow-y: auto; /* Allow scrolling if modal is too tall */
+}
+
+.confirmation-modal {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 500px;
+  max-height: calc(100vh - 120px);
+  padding: var(--spacing-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: scaleInSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) translateZ(0);
+  z-index: 10003;
+  backdrop-filter: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  will-change: transform;
+  overflow-y: auto; /* Allow scrolling if content is too tall */
+}
+
+.confirmation-modal.danger .confirmation-modal-title {
+  color: #fca5a5;
+}
+
+.confirmation-modal.warning .confirmation-modal-title {
+  color: #fbbf24;
+}
+
+.confirmation-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.confirmation-modal-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.confirmation-modal-close {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  line-height: 1;
+  padding: 0;
+}
+
+.confirmation-modal-close:hover {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+
+.confirmation-modal-content {
+  margin-bottom: var(--spacing-lg);
+}
+
+.confirmation-modal-message {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.confirmation-modal-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: flex-end;
+}
+
+.confirmation-modal-button {
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  border: 2px solid;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 100px;
+}
+
+.confirmation-modal-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirmation-modal-button.cancel {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-primary);
+}
+
+.confirmation-modal-button.cancel:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.confirmation-modal-button.confirm {
+  background: var(--color-primary);
+  color: var(--color-text-dark);
+  border-color: var(--color-primary);
+}
+
+.confirmation-modal-button.confirm:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+.confirmation-modal-button.confirm.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.confirmation-modal-button.confirm.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.7);
+  color: #fca5a5;
+  box-shadow: 0 0 10px rgba(252, 165, 165, 0.5);
+}
+
+.confirmation-modal-button.confirm.warning {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.confirmation-modal-button.confirm.warning:hover:not(:disabled) {
+  background: rgba(251, 191, 36, 0.2);
+  border-color: rgba(251, 191, 36, 0.7);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+}
+
+/* Challenge detail action button list style */
+.challenge-detail-action-button.list {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-primary);
+}
+
+.challenge-detail-action-button.list:hover:not(:disabled) {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 0 10px var(--color-primary-glow);
+}

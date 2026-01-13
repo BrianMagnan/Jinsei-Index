@@ -22,7 +22,7 @@ export function saveTodoItems(items: TodoItem[]): void {
   try {
     localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(items));
   } catch (error) {
-    console.error("Failed to save todo items:", error);
+    // Failed to save todo items
   }
 }
 
