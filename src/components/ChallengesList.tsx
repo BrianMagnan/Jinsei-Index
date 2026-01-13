@@ -982,16 +982,9 @@ export function ChallengesList({
       ]);
       setSkill(updatedSkill);
       setAchievements(updatedAchievements || []);
-      // Auto-select next challenge or first if none selected
-      if (updatedSkill?.challenges && updatedSkill.challenges.length > 1) {
-        const currentIndex = updatedSkill.challenges.findIndex(
-          (c: Challenge) => c._id === challenge._id
-        );
-        const nextIndex = (currentIndex + 1) % updatedSkill.challenges.length;
-        // Auto-selecting next = forward direction
-        setDetailDirection("forward");
-        setSelectedChallengeId(updatedSkill.challenges[nextIndex]._id);
-      }
+      // Stay on current challenge when completing from detail view
+      // Stay on list view when completing from list view
+      // No auto-navigation after completion
 
       // Auto-close modal after 3 seconds
       setTimeout(() => {
